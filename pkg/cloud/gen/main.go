@@ -31,12 +31,12 @@ import (
 	"text/template"
 	"time"
 
-	"k8s.io/kubernetes/pkg/cloudprovider/providers/gce/cloud/meta"
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/meta"
 )
 
 const (
 	gofmt       = "gofmt"
-	packageRoot = "k8s.io/kubernetes/pkg/cloudprovider/providers/gce/cloud"
+	packageRoot = "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
 
 	// readOnly specifies that the given resource is read-only and should not
 	// have insert() or delete() methods generated for the wrapper.

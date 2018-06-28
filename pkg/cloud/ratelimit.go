@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"k8s.io/kubernetes/pkg/cloudprovider/providers/gce/cloud/meta"
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/meta"
 )
 
 // RateLimitKey is a key identifying the operation to be rate limited. The rate limit

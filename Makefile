@@ -22,6 +22,7 @@ gen:
 .PHONY: build
 build: gen
 	go build ./...
+	mkdir -p bin
 
 .PHONY: test
 test:
@@ -29,3 +30,7 @@ test:
 	# We cannot use golint currently due to errors in the GCP API naming.
 	# golint ./...
 	go vet ./...
+
+.PHONY: clean
+clean:
+	rm -rf ./bin

@@ -225,9 +225,9 @@ var AllServices = []*ServiceInfo{
 		Object:      "HealthCheck",
 		Service:     "HealthChecks",
 		Resource:    "healthChecks",
-		version:     VersionBeta,
+		version:     VersionAlpha,
 		keyType:     Global,
-		serviceType: reflect.TypeOf(&beta.HealthChecksService{}),
+		serviceType: reflect.TypeOf(&alpha.HealthChecksService{}),
 		additionalMethods: []string{
 			"Update",
 		},
@@ -236,9 +236,9 @@ var AllServices = []*ServiceInfo{
 		Object:      "HealthCheck",
 		Service:     "HealthChecks",
 		Resource:    "healthChecks",
-		version:     VersionAlpha,
+		version:     VersionBeta,
 		keyType:     Global,
-		serviceType: reflect.TypeOf(&alpha.HealthChecksService{}),
+		serviceType: reflect.TypeOf(&beta.HealthChecksService{}),
 		additionalMethods: []string{
 			"Update",
 		},

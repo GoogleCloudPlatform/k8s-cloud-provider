@@ -54,8 +54,8 @@ type Cloud interface {
 	AlphaForwardingRules() AlphaForwardingRules
 	GlobalForwardingRules() GlobalForwardingRules
 	HealthChecks() HealthChecks
-	BetaHealthChecks() BetaHealthChecks
 	AlphaHealthChecks() AlphaHealthChecks
+	BetaHealthChecks() BetaHealthChecks
 	HttpHealthChecks() HttpHealthChecks
 	HttpsHealthChecks() HttpsHealthChecks
 	InstanceGroups() InstanceGroups
@@ -95,8 +95,8 @@ func NewGCE(s *Service) *GCE {
 		gceAlphaForwardingRules:       &GCEAlphaForwardingRules{s},
 		gceGlobalForwardingRules:      &GCEGlobalForwardingRules{s},
 		gceHealthChecks:               &GCEHealthChecks{s},
-		gceBetaHealthChecks:           &GCEBetaHealthChecks{s},
 		gceAlphaHealthChecks:          &GCEAlphaHealthChecks{s},
+		gceBetaHealthChecks:           &GCEBetaHealthChecks{s},
 		gceHttpHealthChecks:           &GCEHttpHealthChecks{s},
 		gceHttpsHealthChecks:          &GCEHttpsHealthChecks{s},
 		gceInstanceGroups:             &GCEInstanceGroups{s},
@@ -140,8 +140,8 @@ type GCE struct {
 	gceAlphaForwardingRules       *GCEAlphaForwardingRules
 	gceGlobalForwardingRules      *GCEGlobalForwardingRules
 	gceHealthChecks               *GCEHealthChecks
-	gceBetaHealthChecks           *GCEBetaHealthChecks
 	gceAlphaHealthChecks          *GCEAlphaHealthChecks
+	gceBetaHealthChecks           *GCEBetaHealthChecks
 	gceHttpHealthChecks           *GCEHttpHealthChecks
 	gceHttpsHealthChecks          *GCEHttpsHealthChecks
 	gceInstanceGroups             *GCEInstanceGroups
@@ -242,14 +242,14 @@ func (gce *GCE) HealthChecks() HealthChecks {
 	return gce.gceHealthChecks
 }
 
-// BetaHealthChecks returns the interface for the beta HealthChecks.
-func (gce *GCE) BetaHealthChecks() BetaHealthChecks {
-	return gce.gceBetaHealthChecks
-}
-
 // AlphaHealthChecks returns the interface for the alpha HealthChecks.
 func (gce *GCE) AlphaHealthChecks() AlphaHealthChecks {
 	return gce.gceAlphaHealthChecks
+}
+
+// BetaHealthChecks returns the interface for the beta HealthChecks.
+func (gce *GCE) BetaHealthChecks() BetaHealthChecks {
+	return gce.gceBetaHealthChecks
 }
 
 // HttpHealthChecks returns the interface for the ga HttpHealthChecks.
@@ -387,8 +387,8 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockAlphaForwardingRules:       NewMockAlphaForwardingRules(projectRouter, mockForwardingRulesObjs),
 		MockGlobalForwardingRules:      NewMockGlobalForwardingRules(projectRouter, mockGlobalForwardingRulesObjs),
 		MockHealthChecks:               NewMockHealthChecks(projectRouter, mockHealthChecksObjs),
-		MockBetaHealthChecks:           NewMockBetaHealthChecks(projectRouter, mockHealthChecksObjs),
 		MockAlphaHealthChecks:          NewMockAlphaHealthChecks(projectRouter, mockHealthChecksObjs),
+		MockBetaHealthChecks:           NewMockBetaHealthChecks(projectRouter, mockHealthChecksObjs),
 		MockHttpHealthChecks:           NewMockHttpHealthChecks(projectRouter, mockHttpHealthChecksObjs),
 		MockHttpsHealthChecks:          NewMockHttpsHealthChecks(projectRouter, mockHttpsHealthChecksObjs),
 		MockInstanceGroups:             NewMockInstanceGroups(projectRouter, mockInstanceGroupsObjs),
@@ -432,8 +432,8 @@ type MockGCE struct {
 	MockAlphaForwardingRules       *MockAlphaForwardingRules
 	MockGlobalForwardingRules      *MockGlobalForwardingRules
 	MockHealthChecks               *MockHealthChecks
-	MockBetaHealthChecks           *MockBetaHealthChecks
 	MockAlphaHealthChecks          *MockAlphaHealthChecks
+	MockBetaHealthChecks           *MockBetaHealthChecks
 	MockHttpHealthChecks           *MockHttpHealthChecks
 	MockHttpsHealthChecks          *MockHttpsHealthChecks
 	MockInstanceGroups             *MockInstanceGroups
@@ -534,14 +534,14 @@ func (mock *MockGCE) HealthChecks() HealthChecks {
 	return mock.MockHealthChecks
 }
 
-// BetaHealthChecks returns the interface for the beta HealthChecks.
-func (mock *MockGCE) BetaHealthChecks() BetaHealthChecks {
-	return mock.MockBetaHealthChecks
-}
-
 // AlphaHealthChecks returns the interface for the alpha HealthChecks.
 func (mock *MockGCE) AlphaHealthChecks() AlphaHealthChecks {
 	return mock.MockAlphaHealthChecks
+}
+
+// BetaHealthChecks returns the interface for the beta HealthChecks.
+func (mock *MockGCE) BetaHealthChecks() BetaHealthChecks {
+	return mock.MockBetaHealthChecks
 }
 
 // HttpHealthChecks returns the interface for the ga HttpHealthChecks.
@@ -7280,381 +7280,6 @@ func (g *GCEHealthChecks) Update(ctx context.Context, key *meta.Key, arg0 *ga.He
 	return err
 }
 
-// BetaHealthChecks is an interface that allows for mocking of HealthChecks.
-type BetaHealthChecks interface {
-	Get(ctx context.Context, key *meta.Key) (*beta.HealthCheck, error)
-	List(ctx context.Context, fl *filter.F) ([]*beta.HealthCheck, error)
-	Insert(ctx context.Context, key *meta.Key, obj *beta.HealthCheck) error
-	Delete(ctx context.Context, key *meta.Key) error
-	Update(context.Context, *meta.Key, *beta.HealthCheck) error
-}
-
-// NewMockBetaHealthChecks returns a new mock for HealthChecks.
-func NewMockBetaHealthChecks(pr ProjectRouter, objs map[meta.Key]*MockHealthChecksObj) *MockBetaHealthChecks {
-	mock := &MockBetaHealthChecks{
-		ProjectRouter: pr,
-
-		Objects:     objs,
-		GetError:    map[meta.Key]error{},
-		InsertError: map[meta.Key]error{},
-		DeleteError: map[meta.Key]error{},
-	}
-	return mock
-}
-
-// MockBetaHealthChecks is the mock for HealthChecks.
-type MockBetaHealthChecks struct {
-	Lock sync.Mutex
-
-	ProjectRouter ProjectRouter
-
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockHealthChecksObj
-
-	// If an entry exists for the given key and operation, then the error
-	// will be returned instead of the operation.
-	GetError    map[meta.Key]error
-	ListError   *error
-	InsertError map[meta.Key]error
-	DeleteError map[meta.Key]error
-
-	// xxxHook allow you to intercept the standard processing of the mock in
-	// order to add your own logic. Return (true, _, _) to prevent the normal
-	// execution flow of the mock. Return (false, nil, nil) to continue with
-	// normal mock behavior/ after the hook function executes.
-	GetHook    func(ctx context.Context, key *meta.Key, m *MockBetaHealthChecks) (bool, *beta.HealthCheck, error)
-	ListHook   func(ctx context.Context, fl *filter.F, m *MockBetaHealthChecks) (bool, []*beta.HealthCheck, error)
-	InsertHook func(ctx context.Context, key *meta.Key, obj *beta.HealthCheck, m *MockBetaHealthChecks) (bool, error)
-	DeleteHook func(ctx context.Context, key *meta.Key, m *MockBetaHealthChecks) (bool, error)
-	UpdateHook func(context.Context, *meta.Key, *beta.HealthCheck, *MockBetaHealthChecks) error
-
-	// X is extra state that can be used as part of the mock. Generated code
-	// will not use this field.
-	X interface{}
-}
-
-// Get returns the object from the mock.
-func (m *MockBetaHealthChecks) Get(ctx context.Context, key *meta.Key) (*beta.HealthCheck, error) {
-	if m.GetHook != nil {
-		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
-			glog.V(5).Infof("MockBetaHealthChecks.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
-			return obj, err
-		}
-	}
-	if !key.Valid() {
-		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
-	}
-
-	m.Lock.Lock()
-	defer m.Lock.Unlock()
-
-	if err, ok := m.GetError[*key]; ok {
-		glog.V(5).Infof("MockBetaHealthChecks.Get(%v, %s) = nil, %v", ctx, key, err)
-		return nil, err
-	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		glog.V(5).Infof("MockBetaHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
-	}
-
-	err := &googleapi.Error{
-		Code:    http.StatusNotFound,
-		Message: fmt.Sprintf("MockBetaHealthChecks %v not found", key),
-	}
-	glog.V(5).Infof("MockBetaHealthChecks.Get(%v, %s) = nil, %v", ctx, key, err)
-	return nil, err
-}
-
-// List all of the objects in the mock.
-func (m *MockBetaHealthChecks) List(ctx context.Context, fl *filter.F) ([]*beta.HealthCheck, error) {
-	if m.ListHook != nil {
-		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
-			glog.V(5).Infof("MockBetaHealthChecks.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
-			return objs, err
-		}
-	}
-
-	m.Lock.Lock()
-	defer m.Lock.Unlock()
-
-	if m.ListError != nil {
-		err := *m.ListError
-		glog.V(5).Infof("MockBetaHealthChecks.List(%v, %v) = nil, %v", ctx, fl, err)
-
-		return nil, *m.ListError
-	}
-
-	var objs []*beta.HealthCheck
-	for _, obj := range m.Objects {
-		if !fl.Match(obj.ToBeta()) {
-			continue
-		}
-		objs = append(objs, obj.ToBeta())
-	}
-
-	glog.V(5).Infof("MockBetaHealthChecks.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
-	return objs, nil
-}
-
-// Insert is a mock for inserting/creating a new object.
-func (m *MockBetaHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *beta.HealthCheck) error {
-	if m.InsertHook != nil {
-		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
-			glog.V(5).Infof("MockBetaHealthChecks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
-			return err
-		}
-	}
-	if !key.Valid() {
-		return fmt.Errorf("invalid GCE key (%+v)", key)
-	}
-
-	m.Lock.Lock()
-	defer m.Lock.Unlock()
-
-	if err, ok := m.InsertError[*key]; ok {
-		glog.V(5).Infof("MockBetaHealthChecks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
-		return err
-	}
-	if _, ok := m.Objects[*key]; ok {
-		err := &googleapi.Error{
-			Code:    http.StatusConflict,
-			Message: fmt.Sprintf("MockBetaHealthChecks %v exists", key),
-		}
-		glog.V(5).Infof("MockBetaHealthChecks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
-		return err
-	}
-
-	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "healthChecks")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "healthChecks", key)
-
-	m.Objects[*key] = &MockHealthChecksObj{obj}
-	glog.V(5).Infof("MockBetaHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
-	return nil
-}
-
-// Delete is a mock for deleting the object.
-func (m *MockBetaHealthChecks) Delete(ctx context.Context, key *meta.Key) error {
-	if m.DeleteHook != nil {
-		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
-			glog.V(5).Infof("MockBetaHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
-			return err
-		}
-	}
-	if !key.Valid() {
-		return fmt.Errorf("invalid GCE key (%+v)", key)
-	}
-
-	m.Lock.Lock()
-	defer m.Lock.Unlock()
-
-	if err, ok := m.DeleteError[*key]; ok {
-		glog.V(5).Infof("MockBetaHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
-		return err
-	}
-	if _, ok := m.Objects[*key]; !ok {
-		err := &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("MockBetaHealthChecks %v not found", key),
-		}
-		glog.V(5).Infof("MockBetaHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
-		return err
-	}
-
-	delete(m.Objects, *key)
-	glog.V(5).Infof("MockBetaHealthChecks.Delete(%v, %v) = nil", ctx, key)
-	return nil
-}
-
-// Obj wraps the object for use in the mock.
-func (m *MockBetaHealthChecks) Obj(o *beta.HealthCheck) *MockHealthChecksObj {
-	return &MockHealthChecksObj{o}
-}
-
-// Update is a mock for the corresponding method.
-func (m *MockBetaHealthChecks) Update(ctx context.Context, key *meta.Key, arg0 *beta.HealthCheck) error {
-	if m.UpdateHook != nil {
-		return m.UpdateHook(ctx, key, arg0, m)
-	}
-	return nil
-}
-
-// GCEBetaHealthChecks is a simplifying adapter for the GCE HealthChecks.
-type GCEBetaHealthChecks struct {
-	s *Service
-}
-
-// Get the HealthCheck named by key.
-func (g *GCEBetaHealthChecks) Get(ctx context.Context, key *meta.Key) (*beta.HealthCheck, error) {
-	glog.V(5).Infof("GCEBetaHealthChecks.Get(%v, %v): called", ctx, key)
-
-	if !key.Valid() {
-		glog.V(2).Infof("GCEBetaHealthChecks.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
-		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
-	}
-	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "HealthChecks")
-	rk := &RateLimitKey{
-		ProjectID: projectID,
-		Operation: "Get",
-		Version:   meta.Version("beta"),
-		Service:   "HealthChecks",
-	}
-	glog.V(5).Infof("GCEBetaHealthChecks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
-		glog.V(4).Infof("GCEBetaHealthChecks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
-		return nil, err
-	}
-	call := g.s.Beta.HealthChecks.Get(projectID, key.Name)
-	call.Context(ctx)
-	v, err := call.Do()
-	glog.V(4).Infof("GCEBetaHealthChecks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	return v, err
-}
-
-// List all HealthCheck objects.
-func (g *GCEBetaHealthChecks) List(ctx context.Context, fl *filter.F) ([]*beta.HealthCheck, error) {
-	glog.V(5).Infof("GCEBetaHealthChecks.List(%v, %v) called", ctx, fl)
-	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "HealthChecks")
-	rk := &RateLimitKey{
-		ProjectID: projectID,
-		Operation: "List",
-		Version:   meta.Version("beta"),
-		Service:   "HealthChecks",
-	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
-		return nil, err
-	}
-	glog.V(5).Infof("GCEBetaHealthChecks.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
-	call := g.s.Beta.HealthChecks.List(projectID)
-	if fl != filter.None {
-		call.Filter(fl.String())
-	}
-	var all []*beta.HealthCheck
-	f := func(l *beta.HealthCheckList) error {
-		glog.V(5).Infof("GCEBetaHealthChecks.List(%v, ..., %v): page %+v", ctx, fl, l)
-		all = append(all, l.Items...)
-		return nil
-	}
-	if err := call.Pages(ctx, f); err != nil {
-		glog.V(4).Infof("GCEBetaHealthChecks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
-		return nil, err
-	}
-
-	if glog.V(4) {
-		glog.V(4).Infof("GCEBetaHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if glog.V(5) {
-		var asStr []string
-		for _, o := range all {
-			asStr = append(asStr, fmt.Sprintf("%+v", o))
-		}
-		glog.V(5).Infof("GCEBetaHealthChecks.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
-	}
-
-	return all, nil
-}
-
-// Insert HealthCheck with key of value obj.
-func (g *GCEBetaHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *beta.HealthCheck) error {
-	glog.V(5).Infof("GCEBetaHealthChecks.Insert(%v, %v, %+v): called", ctx, key, obj)
-	if !key.Valid() {
-		glog.V(2).Infof("GCEBetaHealthChecks.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
-		return fmt.Errorf("invalid GCE key (%+v)", key)
-	}
-	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "HealthChecks")
-	rk := &RateLimitKey{
-		ProjectID: projectID,
-		Operation: "Insert",
-		Version:   meta.Version("beta"),
-		Service:   "HealthChecks",
-	}
-	glog.V(5).Infof("GCEBetaHealthChecks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
-		glog.V(4).Infof("GCEBetaHealthChecks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
-		return err
-	}
-	obj.Name = key.Name
-	call := g.s.Beta.HealthChecks.Insert(projectID, obj)
-	call.Context(ctx)
-
-	op, err := call.Do()
-	if err != nil {
-		glog.V(4).Infof("GCEBetaHealthChecks.Insert(%v, %v, ...) = %+v", ctx, key, err)
-		return err
-	}
-
-	err = g.s.WaitForCompletion(ctx, op)
-	glog.V(4).Infof("GCEBetaHealthChecks.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
-	return err
-}
-
-// Delete the HealthCheck referenced by key.
-func (g *GCEBetaHealthChecks) Delete(ctx context.Context, key *meta.Key) error {
-	glog.V(5).Infof("GCEBetaHealthChecks.Delete(%v, %v): called", ctx, key)
-	if !key.Valid() {
-		glog.V(2).Infof("GCEBetaHealthChecks.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
-		return fmt.Errorf("invalid GCE key (%+v)", key)
-	}
-	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "HealthChecks")
-	rk := &RateLimitKey{
-		ProjectID: projectID,
-		Operation: "Delete",
-		Version:   meta.Version("beta"),
-		Service:   "HealthChecks",
-	}
-	glog.V(5).Infof("GCEBetaHealthChecks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
-		glog.V(4).Infof("GCEBetaHealthChecks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
-		return err
-	}
-	call := g.s.Beta.HealthChecks.Delete(projectID, key.Name)
-
-	call.Context(ctx)
-
-	op, err := call.Do()
-	if err != nil {
-		glog.V(4).Infof("GCEBetaHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
-		return err
-	}
-
-	err = g.s.WaitForCompletion(ctx, op)
-	glog.V(4).Infof("GCEBetaHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
-	return err
-}
-
-// Update is a method on GCEBetaHealthChecks.
-func (g *GCEBetaHealthChecks) Update(ctx context.Context, key *meta.Key, arg0 *beta.HealthCheck) error {
-	glog.V(5).Infof("GCEBetaHealthChecks.Update(%v, %v, ...): called", ctx, key)
-
-	if !key.Valid() {
-		glog.V(2).Infof("GCEBetaHealthChecks.Update(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
-		return fmt.Errorf("invalid GCE key (%+v)", key)
-	}
-	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "HealthChecks")
-	rk := &RateLimitKey{
-		ProjectID: projectID,
-		Operation: "Update",
-		Version:   meta.Version("beta"),
-		Service:   "HealthChecks",
-	}
-	glog.V(5).Infof("GCEBetaHealthChecks.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
-		glog.V(4).Infof("GCEBetaHealthChecks.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
-		return err
-	}
-	call := g.s.Beta.HealthChecks.Update(projectID, key.Name, arg0)
-	call.Context(ctx)
-	op, err := call.Do()
-	if err != nil {
-		glog.V(4).Infof("GCEBetaHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
-		return err
-	}
-	err = g.s.WaitForCompletion(ctx, op)
-	glog.V(4).Infof("GCEBetaHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
-	return err
-}
-
 // AlphaHealthChecks is an interface that allows for mocking of HealthChecks.
 type AlphaHealthChecks interface {
 	Get(ctx context.Context, key *meta.Key) (*alpha.HealthCheck, error)
@@ -8027,6 +7652,381 @@ func (g *GCEAlphaHealthChecks) Update(ctx context.Context, key *meta.Key, arg0 *
 	}
 	err = g.s.WaitForCompletion(ctx, op)
 	glog.V(4).Infof("GCEAlphaHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// BetaHealthChecks is an interface that allows for mocking of HealthChecks.
+type BetaHealthChecks interface {
+	Get(ctx context.Context, key *meta.Key) (*beta.HealthCheck, error)
+	List(ctx context.Context, fl *filter.F) ([]*beta.HealthCheck, error)
+	Insert(ctx context.Context, key *meta.Key, obj *beta.HealthCheck) error
+	Delete(ctx context.Context, key *meta.Key) error
+	Update(context.Context, *meta.Key, *beta.HealthCheck) error
+}
+
+// NewMockBetaHealthChecks returns a new mock for HealthChecks.
+func NewMockBetaHealthChecks(pr ProjectRouter, objs map[meta.Key]*MockHealthChecksObj) *MockBetaHealthChecks {
+	mock := &MockBetaHealthChecks{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockBetaHealthChecks is the mock for HealthChecks.
+type MockBetaHealthChecks struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockHealthChecksObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockBetaHealthChecks) (bool, *beta.HealthCheck, error)
+	ListHook   func(ctx context.Context, fl *filter.F, m *MockBetaHealthChecks) (bool, []*beta.HealthCheck, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *beta.HealthCheck, m *MockBetaHealthChecks) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockBetaHealthChecks) (bool, error)
+	UpdateHook func(context.Context, *meta.Key, *beta.HealthCheck, *MockBetaHealthChecks) error
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockBetaHealthChecks) Get(ctx context.Context, key *meta.Key) (*beta.HealthCheck, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			glog.V(5).Infof("MockBetaHealthChecks.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		glog.V(5).Infof("MockBetaHealthChecks.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToBeta()
+		glog.V(5).Infof("MockBetaHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockBetaHealthChecks %v not found", key),
+	}
+	glog.V(5).Infof("MockBetaHealthChecks.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockBetaHealthChecks) List(ctx context.Context, fl *filter.F) ([]*beta.HealthCheck, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			glog.V(5).Infof("MockBetaHealthChecks.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		glog.V(5).Infof("MockBetaHealthChecks.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*beta.HealthCheck
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToBeta()) {
+			continue
+		}
+		objs = append(objs, obj.ToBeta())
+	}
+
+	glog.V(5).Infof("MockBetaHealthChecks.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockBetaHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *beta.HealthCheck) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			glog.V(5).Infof("MockBetaHealthChecks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		glog.V(5).Infof("MockBetaHealthChecks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockBetaHealthChecks %v exists", key),
+		}
+		glog.V(5).Infof("MockBetaHealthChecks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "healthChecks")
+	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "healthChecks", key)
+
+	m.Objects[*key] = &MockHealthChecksObj{obj}
+	glog.V(5).Infof("MockBetaHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockBetaHealthChecks) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			glog.V(5).Infof("MockBetaHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		glog.V(5).Infof("MockBetaHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockBetaHealthChecks %v not found", key),
+		}
+		glog.V(5).Infof("MockBetaHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	glog.V(5).Infof("MockBetaHealthChecks.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockBetaHealthChecks) Obj(o *beta.HealthCheck) *MockHealthChecksObj {
+	return &MockHealthChecksObj{o}
+}
+
+// Update is a mock for the corresponding method.
+func (m *MockBetaHealthChecks) Update(ctx context.Context, key *meta.Key, arg0 *beta.HealthCheck) error {
+	if m.UpdateHook != nil {
+		return m.UpdateHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// GCEBetaHealthChecks is a simplifying adapter for the GCE HealthChecks.
+type GCEBetaHealthChecks struct {
+	s *Service
+}
+
+// Get the HealthCheck named by key.
+func (g *GCEBetaHealthChecks) Get(ctx context.Context, key *meta.Key) (*beta.HealthCheck, error) {
+	glog.V(5).Infof("GCEBetaHealthChecks.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		glog.V(2).Infof("GCEBetaHealthChecks.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "HealthChecks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("beta"),
+		Service:   "HealthChecks",
+	}
+	glog.V(5).Infof("GCEBetaHealthChecks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		glog.V(4).Infof("GCEBetaHealthChecks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.HealthChecks.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	glog.V(4).Infof("GCEBetaHealthChecks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all HealthCheck objects.
+func (g *GCEBetaHealthChecks) List(ctx context.Context, fl *filter.F) ([]*beta.HealthCheck, error) {
+	glog.V(5).Infof("GCEBetaHealthChecks.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "HealthChecks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("beta"),
+		Service:   "HealthChecks",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	glog.V(5).Infof("GCEBetaHealthChecks.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Beta.HealthChecks.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*beta.HealthCheck
+	f := func(l *beta.HealthCheckList) error {
+		glog.V(5).Infof("GCEBetaHealthChecks.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		glog.V(4).Infof("GCEBetaHealthChecks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if glog.V(4) {
+		glog.V(4).Infof("GCEBetaHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if glog.V(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		glog.V(5).Infof("GCEBetaHealthChecks.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert HealthCheck with key of value obj.
+func (g *GCEBetaHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *beta.HealthCheck) error {
+	glog.V(5).Infof("GCEBetaHealthChecks.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		glog.V(2).Infof("GCEBetaHealthChecks.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "HealthChecks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("beta"),
+		Service:   "HealthChecks",
+	}
+	glog.V(5).Infof("GCEBetaHealthChecks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		glog.V(4).Infof("GCEBetaHealthChecks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Beta.HealthChecks.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		glog.V(4).Infof("GCEBetaHealthChecks.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	glog.V(4).Infof("GCEBetaHealthChecks.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the HealthCheck referenced by key.
+func (g *GCEBetaHealthChecks) Delete(ctx context.Context, key *meta.Key) error {
+	glog.V(5).Infof("GCEBetaHealthChecks.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		glog.V(2).Infof("GCEBetaHealthChecks.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "HealthChecks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("beta"),
+		Service:   "HealthChecks",
+	}
+	glog.V(5).Infof("GCEBetaHealthChecks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		glog.V(4).Infof("GCEBetaHealthChecks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.HealthChecks.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		glog.V(4).Infof("GCEBetaHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	glog.V(4).Infof("GCEBetaHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// Update is a method on GCEBetaHealthChecks.
+func (g *GCEBetaHealthChecks) Update(ctx context.Context, key *meta.Key, arg0 *beta.HealthCheck) error {
+	glog.V(5).Infof("GCEBetaHealthChecks.Update(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		glog.V(2).Infof("GCEBetaHealthChecks.Update(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "HealthChecks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Update",
+		Version:   meta.Version("beta"),
+		Service:   "HealthChecks",
+	}
+	glog.V(5).Infof("GCEBetaHealthChecks.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		glog.V(4).Infof("GCEBetaHealthChecks.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.HealthChecks.Update(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		glog.V(4).Infof("GCEBetaHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	glog.V(4).Infof("GCEBetaHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
 

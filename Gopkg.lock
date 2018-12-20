@@ -3,18 +3,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d6b719875cf8091fbab38527d81d34e71f4521b9ee9ccfbd4a32cff2ac5af96e"
-  name = "golang.org/x/net"
-  packages = [
-    "context",
-    "context/ctxhttp",
-  ]
-  pruneopts = "UT"
-  revision = "e514e69ffb8bc3c76a71ae40de0118d794855992"
-
-[[projects]]
-  branch = "master"
-  digest = "1:b9eccb6a0998e454d7c6b295f59a95700effb063d74dd14ab7a16a57983073d7"
+  digest = "1:d3f4da757a2589770c6962aa3dc8edc8285889cdd12402dde001eafe9bb03c64"
   name = "google.golang.org/api"
   packages = [
     "compute/v0.alpha",
@@ -25,7 +14,7 @@
     "googleapi/internal/uritemplates",
   ]
   pruneopts = "UT"
-  revision = "082d671a2a341aa205b22b580fa69747dcc3cdc8"
+  revision = "583d854617af4d2080b5d2a24d72f7fc5a128ab2"
 
 [[projects]]
   digest = "1:e2999bf1bb6eddc2a6aa03fe5e6629120a53088926520ca3b4765f77d7ff7eab"

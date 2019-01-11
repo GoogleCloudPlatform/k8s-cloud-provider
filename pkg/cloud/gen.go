@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google LLC
+Copyright 2019 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@ type Cloud interface {
 	Addresses() Addresses
 	AlphaAddresses() AlphaAddresses
 	BetaAddresses() BetaAddresses
+	AlphaGlobalAddresses() AlphaGlobalAddresses
 	GlobalAddresses() GlobalAddresses
 	BackendServices() BackendServices
 	BetaBackendServices() BetaBackendServices
@@ -52,6 +53,7 @@ type Cloud interface {
 	Firewalls() Firewalls
 	ForwardingRules() ForwardingRules
 	AlphaForwardingRules() AlphaForwardingRules
+	AlphaGlobalForwardingRules() AlphaGlobalForwardingRules
 	GlobalForwardingRules() GlobalForwardingRules
 	HealthChecks() HealthChecks
 	AlphaHealthChecks() AlphaHealthChecks
@@ -62,6 +64,9 @@ type Cloud interface {
 	Instances() Instances
 	BetaInstances() BetaInstances
 	AlphaInstances() AlphaInstances
+	AlphaNetworks() AlphaNetworks
+	BetaNetworks() BetaNetworks
+	Networks() Networks
 	AlphaNetworkEndpointGroups() AlphaNetworkEndpointGroups
 	BetaNetworkEndpointGroups() BetaNetworkEndpointGroups
 	Projects() Projects
@@ -69,9 +74,14 @@ type Cloud interface {
 	Routes() Routes
 	BetaSecurityPolicies() BetaSecurityPolicies
 	SslCertificates() SslCertificates
+	AlphaSubnetworks() AlphaSubnetworks
+	BetaSubnetworks() BetaSubnetworks
+	Subnetworks() Subnetworks
+	AlphaTargetHttpProxies() AlphaTargetHttpProxies
 	TargetHttpProxies() TargetHttpProxies
 	TargetHttpsProxies() TargetHttpsProxies
 	TargetPools() TargetPools
+	AlphaUrlMaps() AlphaUrlMaps
 	UrlMaps() UrlMaps
 	Zones() Zones
 }
@@ -82,6 +92,7 @@ func NewGCE(s *Service) *GCE {
 		gceAddresses:                  &GCEAddresses{s},
 		gceAlphaAddresses:             &GCEAlphaAddresses{s},
 		gceBetaAddresses:              &GCEBetaAddresses{s},
+		gceAlphaGlobalAddresses:       &GCEAlphaGlobalAddresses{s},
 		gceGlobalAddresses:            &GCEGlobalAddresses{s},
 		gceBackendServices:            &GCEBackendServices{s},
 		gceBetaBackendServices:        &GCEBetaBackendServices{s},
@@ -93,6 +104,7 @@ func NewGCE(s *Service) *GCE {
 		gceFirewalls:                  &GCEFirewalls{s},
 		gceForwardingRules:            &GCEForwardingRules{s},
 		gceAlphaForwardingRules:       &GCEAlphaForwardingRules{s},
+		gceAlphaGlobalForwardingRules: &GCEAlphaGlobalForwardingRules{s},
 		gceGlobalForwardingRules:      &GCEGlobalForwardingRules{s},
 		gceHealthChecks:               &GCEHealthChecks{s},
 		gceAlphaHealthChecks:          &GCEAlphaHealthChecks{s},
@@ -103,6 +115,9 @@ func NewGCE(s *Service) *GCE {
 		gceInstances:                  &GCEInstances{s},
 		gceBetaInstances:              &GCEBetaInstances{s},
 		gceAlphaInstances:             &GCEAlphaInstances{s},
+		gceAlphaNetworks:              &GCEAlphaNetworks{s},
+		gceBetaNetworks:               &GCEBetaNetworks{s},
+		gceNetworks:                   &GCENetworks{s},
 		gceAlphaNetworkEndpointGroups: &GCEAlphaNetworkEndpointGroups{s},
 		gceBetaNetworkEndpointGroups:  &GCEBetaNetworkEndpointGroups{s},
 		gceProjects:                   &GCEProjects{s},
@@ -110,9 +125,14 @@ func NewGCE(s *Service) *GCE {
 		gceRoutes:                     &GCERoutes{s},
 		gceBetaSecurityPolicies:       &GCEBetaSecurityPolicies{s},
 		gceSslCertificates:            &GCESslCertificates{s},
+		gceAlphaSubnetworks:           &GCEAlphaSubnetworks{s},
+		gceBetaSubnetworks:            &GCEBetaSubnetworks{s},
+		gceSubnetworks:                &GCESubnetworks{s},
+		gceAlphaTargetHttpProxies:     &GCEAlphaTargetHttpProxies{s},
 		gceTargetHttpProxies:          &GCETargetHttpProxies{s},
 		gceTargetHttpsProxies:         &GCETargetHttpsProxies{s},
 		gceTargetPools:                &GCETargetPools{s},
+		gceAlphaUrlMaps:               &GCEAlphaUrlMaps{s},
 		gceUrlMaps:                    &GCEUrlMaps{s},
 		gceZones:                      &GCEZones{s},
 	}
@@ -127,6 +147,7 @@ type GCE struct {
 	gceAddresses                  *GCEAddresses
 	gceAlphaAddresses             *GCEAlphaAddresses
 	gceBetaAddresses              *GCEBetaAddresses
+	gceAlphaGlobalAddresses       *GCEAlphaGlobalAddresses
 	gceGlobalAddresses            *GCEGlobalAddresses
 	gceBackendServices            *GCEBackendServices
 	gceBetaBackendServices        *GCEBetaBackendServices
@@ -138,6 +159,7 @@ type GCE struct {
 	gceFirewalls                  *GCEFirewalls
 	gceForwardingRules            *GCEForwardingRules
 	gceAlphaForwardingRules       *GCEAlphaForwardingRules
+	gceAlphaGlobalForwardingRules *GCEAlphaGlobalForwardingRules
 	gceGlobalForwardingRules      *GCEGlobalForwardingRules
 	gceHealthChecks               *GCEHealthChecks
 	gceAlphaHealthChecks          *GCEAlphaHealthChecks
@@ -148,6 +170,9 @@ type GCE struct {
 	gceInstances                  *GCEInstances
 	gceBetaInstances              *GCEBetaInstances
 	gceAlphaInstances             *GCEAlphaInstances
+	gceAlphaNetworks              *GCEAlphaNetworks
+	gceBetaNetworks               *GCEBetaNetworks
+	gceNetworks                   *GCENetworks
 	gceAlphaNetworkEndpointGroups *GCEAlphaNetworkEndpointGroups
 	gceBetaNetworkEndpointGroups  *GCEBetaNetworkEndpointGroups
 	gceProjects                   *GCEProjects
@@ -155,9 +180,14 @@ type GCE struct {
 	gceRoutes                     *GCERoutes
 	gceBetaSecurityPolicies       *GCEBetaSecurityPolicies
 	gceSslCertificates            *GCESslCertificates
+	gceAlphaSubnetworks           *GCEAlphaSubnetworks
+	gceBetaSubnetworks            *GCEBetaSubnetworks
+	gceSubnetworks                *GCESubnetworks
+	gceAlphaTargetHttpProxies     *GCEAlphaTargetHttpProxies
 	gceTargetHttpProxies          *GCETargetHttpProxies
 	gceTargetHttpsProxies         *GCETargetHttpsProxies
 	gceTargetPools                *GCETargetPools
+	gceAlphaUrlMaps               *GCEAlphaUrlMaps
 	gceUrlMaps                    *GCEUrlMaps
 	gceZones                      *GCEZones
 }
@@ -175,6 +205,11 @@ func (gce *GCE) AlphaAddresses() AlphaAddresses {
 // BetaAddresses returns the interface for the beta Addresses.
 func (gce *GCE) BetaAddresses() BetaAddresses {
 	return gce.gceBetaAddresses
+}
+
+// AlphaGlobalAddresses returns the interface for the alpha GlobalAddresses.
+func (gce *GCE) AlphaGlobalAddresses() AlphaGlobalAddresses {
+	return gce.gceAlphaGlobalAddresses
 }
 
 // GlobalAddresses returns the interface for the ga GlobalAddresses.
@@ -232,6 +267,11 @@ func (gce *GCE) AlphaForwardingRules() AlphaForwardingRules {
 	return gce.gceAlphaForwardingRules
 }
 
+// AlphaGlobalForwardingRules returns the interface for the alpha GlobalForwardingRules.
+func (gce *GCE) AlphaGlobalForwardingRules() AlphaGlobalForwardingRules {
+	return gce.gceAlphaGlobalForwardingRules
+}
+
 // GlobalForwardingRules returns the interface for the ga GlobalForwardingRules.
 func (gce *GCE) GlobalForwardingRules() GlobalForwardingRules {
 	return gce.gceGlobalForwardingRules
@@ -282,6 +322,21 @@ func (gce *GCE) AlphaInstances() AlphaInstances {
 	return gce.gceAlphaInstances
 }
 
+// AlphaNetworks returns the interface for the alpha Networks.
+func (gce *GCE) AlphaNetworks() AlphaNetworks {
+	return gce.gceAlphaNetworks
+}
+
+// BetaNetworks returns the interface for the beta Networks.
+func (gce *GCE) BetaNetworks() BetaNetworks {
+	return gce.gceBetaNetworks
+}
+
+// Networks returns the interface for the ga Networks.
+func (gce *GCE) Networks() Networks {
+	return gce.gceNetworks
+}
+
 // AlphaNetworkEndpointGroups returns the interface for the alpha NetworkEndpointGroups.
 func (gce *GCE) AlphaNetworkEndpointGroups() AlphaNetworkEndpointGroups {
 	return gce.gceAlphaNetworkEndpointGroups
@@ -317,6 +372,26 @@ func (gce *GCE) SslCertificates() SslCertificates {
 	return gce.gceSslCertificates
 }
 
+// AlphaSubnetworks returns the interface for the alpha Subnetworks.
+func (gce *GCE) AlphaSubnetworks() AlphaSubnetworks {
+	return gce.gceAlphaSubnetworks
+}
+
+// BetaSubnetworks returns the interface for the beta Subnetworks.
+func (gce *GCE) BetaSubnetworks() BetaSubnetworks {
+	return gce.gceBetaSubnetworks
+}
+
+// Subnetworks returns the interface for the ga Subnetworks.
+func (gce *GCE) Subnetworks() Subnetworks {
+	return gce.gceSubnetworks
+}
+
+// AlphaTargetHttpProxies returns the interface for the alpha TargetHttpProxies.
+func (gce *GCE) AlphaTargetHttpProxies() AlphaTargetHttpProxies {
+	return gce.gceAlphaTargetHttpProxies
+}
+
 // TargetHttpProxies returns the interface for the ga TargetHttpProxies.
 func (gce *GCE) TargetHttpProxies() TargetHttpProxies {
 	return gce.gceTargetHttpProxies
@@ -330,6 +405,11 @@ func (gce *GCE) TargetHttpsProxies() TargetHttpsProxies {
 // TargetPools returns the interface for the ga TargetPools.
 func (gce *GCE) TargetPools() TargetPools {
 	return gce.gceTargetPools
+}
+
+// AlphaUrlMaps returns the interface for the alpha UrlMaps.
+func (gce *GCE) AlphaUrlMaps() AlphaUrlMaps {
+	return gce.gceAlphaUrlMaps
 }
 
 // UrlMaps returns the interface for the ga UrlMaps.
@@ -357,6 +437,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 	mockInstanceGroupsObjs := map[meta.Key]*MockInstanceGroupsObj{}
 	mockInstancesObjs := map[meta.Key]*MockInstancesObj{}
 	mockNetworkEndpointGroupsObjs := map[meta.Key]*MockNetworkEndpointGroupsObj{}
+	mockNetworksObjs := map[meta.Key]*MockNetworksObj{}
 	mockProjectsObjs := map[meta.Key]*MockProjectsObj{}
 	mockRegionBackendServicesObjs := map[meta.Key]*MockRegionBackendServicesObj{}
 	mockRegionDisksObjs := map[meta.Key]*MockRegionDisksObj{}
@@ -364,6 +445,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 	mockRoutesObjs := map[meta.Key]*MockRoutesObj{}
 	mockSecurityPoliciesObjs := map[meta.Key]*MockSecurityPoliciesObj{}
 	mockSslCertificatesObjs := map[meta.Key]*MockSslCertificatesObj{}
+	mockSubnetworksObjs := map[meta.Key]*MockSubnetworksObj{}
 	mockTargetHttpProxiesObjs := map[meta.Key]*MockTargetHttpProxiesObj{}
 	mockTargetHttpsProxiesObjs := map[meta.Key]*MockTargetHttpsProxiesObj{}
 	mockTargetPoolsObjs := map[meta.Key]*MockTargetPoolsObj{}
@@ -374,6 +456,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockAddresses:                  NewMockAddresses(projectRouter, mockAddressesObjs),
 		MockAlphaAddresses:             NewMockAlphaAddresses(projectRouter, mockAddressesObjs),
 		MockBetaAddresses:              NewMockBetaAddresses(projectRouter, mockAddressesObjs),
+		MockAlphaGlobalAddresses:       NewMockAlphaGlobalAddresses(projectRouter, mockGlobalAddressesObjs),
 		MockGlobalAddresses:            NewMockGlobalAddresses(projectRouter, mockGlobalAddressesObjs),
 		MockBackendServices:            NewMockBackendServices(projectRouter, mockBackendServicesObjs),
 		MockBetaBackendServices:        NewMockBetaBackendServices(projectRouter, mockBackendServicesObjs),
@@ -385,6 +468,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockFirewalls:                  NewMockFirewalls(projectRouter, mockFirewallsObjs),
 		MockForwardingRules:            NewMockForwardingRules(projectRouter, mockForwardingRulesObjs),
 		MockAlphaForwardingRules:       NewMockAlphaForwardingRules(projectRouter, mockForwardingRulesObjs),
+		MockAlphaGlobalForwardingRules: NewMockAlphaGlobalForwardingRules(projectRouter, mockGlobalForwardingRulesObjs),
 		MockGlobalForwardingRules:      NewMockGlobalForwardingRules(projectRouter, mockGlobalForwardingRulesObjs),
 		MockHealthChecks:               NewMockHealthChecks(projectRouter, mockHealthChecksObjs),
 		MockAlphaHealthChecks:          NewMockAlphaHealthChecks(projectRouter, mockHealthChecksObjs),
@@ -395,6 +479,9 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockInstances:                  NewMockInstances(projectRouter, mockInstancesObjs),
 		MockBetaInstances:              NewMockBetaInstances(projectRouter, mockInstancesObjs),
 		MockAlphaInstances:             NewMockAlphaInstances(projectRouter, mockInstancesObjs),
+		MockAlphaNetworks:              NewMockAlphaNetworks(projectRouter, mockNetworksObjs),
+		MockBetaNetworks:               NewMockBetaNetworks(projectRouter, mockNetworksObjs),
+		MockNetworks:                   NewMockNetworks(projectRouter, mockNetworksObjs),
 		MockAlphaNetworkEndpointGroups: NewMockAlphaNetworkEndpointGroups(projectRouter, mockNetworkEndpointGroupsObjs),
 		MockBetaNetworkEndpointGroups:  NewMockBetaNetworkEndpointGroups(projectRouter, mockNetworkEndpointGroupsObjs),
 		MockProjects:                   NewMockProjects(projectRouter, mockProjectsObjs),
@@ -402,9 +489,14 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockRoutes:                     NewMockRoutes(projectRouter, mockRoutesObjs),
 		MockBetaSecurityPolicies:       NewMockBetaSecurityPolicies(projectRouter, mockSecurityPoliciesObjs),
 		MockSslCertificates:            NewMockSslCertificates(projectRouter, mockSslCertificatesObjs),
+		MockAlphaSubnetworks:           NewMockAlphaSubnetworks(projectRouter, mockSubnetworksObjs),
+		MockBetaSubnetworks:            NewMockBetaSubnetworks(projectRouter, mockSubnetworksObjs),
+		MockSubnetworks:                NewMockSubnetworks(projectRouter, mockSubnetworksObjs),
+		MockAlphaTargetHttpProxies:     NewMockAlphaTargetHttpProxies(projectRouter, mockTargetHttpProxiesObjs),
 		MockTargetHttpProxies:          NewMockTargetHttpProxies(projectRouter, mockTargetHttpProxiesObjs),
 		MockTargetHttpsProxies:         NewMockTargetHttpsProxies(projectRouter, mockTargetHttpsProxiesObjs),
 		MockTargetPools:                NewMockTargetPools(projectRouter, mockTargetPoolsObjs),
+		MockAlphaUrlMaps:               NewMockAlphaUrlMaps(projectRouter, mockUrlMapsObjs),
 		MockUrlMaps:                    NewMockUrlMaps(projectRouter, mockUrlMapsObjs),
 		MockZones:                      NewMockZones(projectRouter, mockZonesObjs),
 	}
@@ -419,6 +511,7 @@ type MockGCE struct {
 	MockAddresses                  *MockAddresses
 	MockAlphaAddresses             *MockAlphaAddresses
 	MockBetaAddresses              *MockBetaAddresses
+	MockAlphaGlobalAddresses       *MockAlphaGlobalAddresses
 	MockGlobalAddresses            *MockGlobalAddresses
 	MockBackendServices            *MockBackendServices
 	MockBetaBackendServices        *MockBetaBackendServices
@@ -430,6 +523,7 @@ type MockGCE struct {
 	MockFirewalls                  *MockFirewalls
 	MockForwardingRules            *MockForwardingRules
 	MockAlphaForwardingRules       *MockAlphaForwardingRules
+	MockAlphaGlobalForwardingRules *MockAlphaGlobalForwardingRules
 	MockGlobalForwardingRules      *MockGlobalForwardingRules
 	MockHealthChecks               *MockHealthChecks
 	MockAlphaHealthChecks          *MockAlphaHealthChecks
@@ -440,6 +534,9 @@ type MockGCE struct {
 	MockInstances                  *MockInstances
 	MockBetaInstances              *MockBetaInstances
 	MockAlphaInstances             *MockAlphaInstances
+	MockAlphaNetworks              *MockAlphaNetworks
+	MockBetaNetworks               *MockBetaNetworks
+	MockNetworks                   *MockNetworks
 	MockAlphaNetworkEndpointGroups *MockAlphaNetworkEndpointGroups
 	MockBetaNetworkEndpointGroups  *MockBetaNetworkEndpointGroups
 	MockProjects                   *MockProjects
@@ -447,9 +544,14 @@ type MockGCE struct {
 	MockRoutes                     *MockRoutes
 	MockBetaSecurityPolicies       *MockBetaSecurityPolicies
 	MockSslCertificates            *MockSslCertificates
+	MockAlphaSubnetworks           *MockAlphaSubnetworks
+	MockBetaSubnetworks            *MockBetaSubnetworks
+	MockSubnetworks                *MockSubnetworks
+	MockAlphaTargetHttpProxies     *MockAlphaTargetHttpProxies
 	MockTargetHttpProxies          *MockTargetHttpProxies
 	MockTargetHttpsProxies         *MockTargetHttpsProxies
 	MockTargetPools                *MockTargetPools
+	MockAlphaUrlMaps               *MockAlphaUrlMaps
 	MockUrlMaps                    *MockUrlMaps
 	MockZones                      *MockZones
 }
@@ -467,6 +569,11 @@ func (mock *MockGCE) AlphaAddresses() AlphaAddresses {
 // BetaAddresses returns the interface for the beta Addresses.
 func (mock *MockGCE) BetaAddresses() BetaAddresses {
 	return mock.MockBetaAddresses
+}
+
+// AlphaGlobalAddresses returns the interface for the alpha GlobalAddresses.
+func (mock *MockGCE) AlphaGlobalAddresses() AlphaGlobalAddresses {
+	return mock.MockAlphaGlobalAddresses
 }
 
 // GlobalAddresses returns the interface for the ga GlobalAddresses.
@@ -524,6 +631,11 @@ func (mock *MockGCE) AlphaForwardingRules() AlphaForwardingRules {
 	return mock.MockAlphaForwardingRules
 }
 
+// AlphaGlobalForwardingRules returns the interface for the alpha GlobalForwardingRules.
+func (mock *MockGCE) AlphaGlobalForwardingRules() AlphaGlobalForwardingRules {
+	return mock.MockAlphaGlobalForwardingRules
+}
+
 // GlobalForwardingRules returns the interface for the ga GlobalForwardingRules.
 func (mock *MockGCE) GlobalForwardingRules() GlobalForwardingRules {
 	return mock.MockGlobalForwardingRules
@@ -574,6 +686,21 @@ func (mock *MockGCE) AlphaInstances() AlphaInstances {
 	return mock.MockAlphaInstances
 }
 
+// AlphaNetworks returns the interface for the alpha Networks.
+func (mock *MockGCE) AlphaNetworks() AlphaNetworks {
+	return mock.MockAlphaNetworks
+}
+
+// BetaNetworks returns the interface for the beta Networks.
+func (mock *MockGCE) BetaNetworks() BetaNetworks {
+	return mock.MockBetaNetworks
+}
+
+// Networks returns the interface for the ga Networks.
+func (mock *MockGCE) Networks() Networks {
+	return mock.MockNetworks
+}
+
 // AlphaNetworkEndpointGroups returns the interface for the alpha NetworkEndpointGroups.
 func (mock *MockGCE) AlphaNetworkEndpointGroups() AlphaNetworkEndpointGroups {
 	return mock.MockAlphaNetworkEndpointGroups
@@ -609,6 +736,26 @@ func (mock *MockGCE) SslCertificates() SslCertificates {
 	return mock.MockSslCertificates
 }
 
+// AlphaSubnetworks returns the interface for the alpha Subnetworks.
+func (mock *MockGCE) AlphaSubnetworks() AlphaSubnetworks {
+	return mock.MockAlphaSubnetworks
+}
+
+// BetaSubnetworks returns the interface for the beta Subnetworks.
+func (mock *MockGCE) BetaSubnetworks() BetaSubnetworks {
+	return mock.MockBetaSubnetworks
+}
+
+// Subnetworks returns the interface for the ga Subnetworks.
+func (mock *MockGCE) Subnetworks() Subnetworks {
+	return mock.MockSubnetworks
+}
+
+// AlphaTargetHttpProxies returns the interface for the alpha TargetHttpProxies.
+func (mock *MockGCE) AlphaTargetHttpProxies() AlphaTargetHttpProxies {
+	return mock.MockAlphaTargetHttpProxies
+}
+
 // TargetHttpProxies returns the interface for the ga TargetHttpProxies.
 func (mock *MockGCE) TargetHttpProxies() TargetHttpProxies {
 	return mock.MockTargetHttpProxies
@@ -622,6 +769,11 @@ func (mock *MockGCE) TargetHttpsProxies() TargetHttpsProxies {
 // TargetPools returns the interface for the ga TargetPools.
 func (mock *MockGCE) TargetPools() TargetPools {
 	return mock.MockTargetPools
+}
+
+// AlphaUrlMaps returns the interface for the alpha UrlMaps.
+func (mock *MockGCE) AlphaUrlMaps() AlphaUrlMaps {
+	return mock.MockAlphaUrlMaps
 }
 
 // UrlMaps returns the interface for the ga UrlMaps.
@@ -806,6 +958,19 @@ type MockGlobalAddressesObj struct {
 	Obj interface{}
 }
 
+// ToAlpha retrieves the given version of the object.
+func (m *MockGlobalAddressesObj) ToAlpha() *alpha.Address {
+	if ret, ok := m.Obj.(*alpha.Address); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &alpha.Address{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *alpha.Address via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
 // ToGA retrieves the given version of the object.
 func (m *MockGlobalAddressesObj) ToGA() *ga.Address {
 	if ret, ok := m.Obj.(*ga.Address); ok {
@@ -824,6 +989,19 @@ func (m *MockGlobalAddressesObj) ToGA() *ga.Address {
 // share the same "view" of the objects in the backend.
 type MockGlobalForwardingRulesObj struct {
 	Obj interface{}
+}
+
+// ToAlpha retrieves the given version of the object.
+func (m *MockGlobalForwardingRulesObj) ToAlpha() *alpha.ForwardingRule {
+	if ret, ok := m.Obj.(*alpha.ForwardingRule); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &alpha.ForwardingRule{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *alpha.ForwardingRule via JSON: %v", m.Obj, err)
+	}
+	return ret
 }
 
 // ToGA retrieves the given version of the object.
@@ -1024,6 +1202,52 @@ func (m *MockNetworkEndpointGroupsObj) ToBeta() *beta.NetworkEndpointGroup {
 	return ret
 }
 
+// MockNetworksObj is used to store the various object versions in the shared
+// map of mocked objects. This allows for multiple API versions to co-exist and
+// share the same "view" of the objects in the backend.
+type MockNetworksObj struct {
+	Obj interface{}
+}
+
+// ToAlpha retrieves the given version of the object.
+func (m *MockNetworksObj) ToAlpha() *alpha.Network {
+	if ret, ok := m.Obj.(*alpha.Network); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &alpha.Network{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *alpha.Network via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// ToBeta retrieves the given version of the object.
+func (m *MockNetworksObj) ToBeta() *beta.Network {
+	if ret, ok := m.Obj.(*beta.Network); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &beta.Network{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *beta.Network via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// ToGA retrieves the given version of the object.
+func (m *MockNetworksObj) ToGA() *ga.Network {
+	if ret, ok := m.Obj.(*ga.Network); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &ga.Network{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *ga.Network via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
 // MockProjectsObj is used to store the various object versions in the shared
 // map of mocked objects. This allows for multiple API versions to co-exist and
 // share the same "view" of the objects in the backend.
@@ -1177,11 +1401,70 @@ func (m *MockSslCertificatesObj) ToGA() *ga.SslCertificate {
 	return ret
 }
 
+// MockSubnetworksObj is used to store the various object versions in the shared
+// map of mocked objects. This allows for multiple API versions to co-exist and
+// share the same "view" of the objects in the backend.
+type MockSubnetworksObj struct {
+	Obj interface{}
+}
+
+// ToAlpha retrieves the given version of the object.
+func (m *MockSubnetworksObj) ToAlpha() *alpha.Subnetwork {
+	if ret, ok := m.Obj.(*alpha.Subnetwork); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &alpha.Subnetwork{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *alpha.Subnetwork via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// ToBeta retrieves the given version of the object.
+func (m *MockSubnetworksObj) ToBeta() *beta.Subnetwork {
+	if ret, ok := m.Obj.(*beta.Subnetwork); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &beta.Subnetwork{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *beta.Subnetwork via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// ToGA retrieves the given version of the object.
+func (m *MockSubnetworksObj) ToGA() *ga.Subnetwork {
+	if ret, ok := m.Obj.(*ga.Subnetwork); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &ga.Subnetwork{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *ga.Subnetwork via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
 // MockTargetHttpProxiesObj is used to store the various object versions in the shared
 // map of mocked objects. This allows for multiple API versions to co-exist and
 // share the same "view" of the objects in the backend.
 type MockTargetHttpProxiesObj struct {
 	Obj interface{}
+}
+
+// ToAlpha retrieves the given version of the object.
+func (m *MockTargetHttpProxiesObj) ToAlpha() *alpha.TargetHttpProxy {
+	if ret, ok := m.Obj.(*alpha.TargetHttpProxy); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &alpha.TargetHttpProxy{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *alpha.TargetHttpProxy via JSON: %v", m.Obj, err)
+	}
+	return ret
 }
 
 // ToGA retrieves the given version of the object.
@@ -1242,6 +1525,19 @@ func (m *MockTargetPoolsObj) ToGA() *ga.TargetPool {
 // share the same "view" of the objects in the backend.
 type MockUrlMapsObj struct {
 	Obj interface{}
+}
+
+// ToAlpha retrieves the given version of the object.
+func (m *MockUrlMapsObj) ToAlpha() *alpha.UrlMap {
+	if ret, ok := m.Obj.(*alpha.UrlMap); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &alpha.UrlMap{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *alpha.UrlMap via JSON: %v", m.Obj, err)
+	}
+	return ret
 }
 
 // ToGA retrieves the given version of the object.
@@ -2276,6 +2572,338 @@ func (g *GCEBetaAddresses) Delete(ctx context.Context, key *meta.Key) error {
 
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCEBetaAddresses.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// AlphaGlobalAddresses is an interface that allows for mocking of GlobalAddresses.
+type AlphaGlobalAddresses interface {
+	Get(ctx context.Context, key *meta.Key) (*alpha.Address, error)
+	List(ctx context.Context, fl *filter.F) ([]*alpha.Address, error)
+	Insert(ctx context.Context, key *meta.Key, obj *alpha.Address) error
+	Delete(ctx context.Context, key *meta.Key) error
+}
+
+// NewMockAlphaGlobalAddresses returns a new mock for GlobalAddresses.
+func NewMockAlphaGlobalAddresses(pr ProjectRouter, objs map[meta.Key]*MockGlobalAddressesObj) *MockAlphaGlobalAddresses {
+	mock := &MockAlphaGlobalAddresses{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockAlphaGlobalAddresses is the mock for GlobalAddresses.
+type MockAlphaGlobalAddresses struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockGlobalAddressesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockAlphaGlobalAddresses) (bool, *alpha.Address, error)
+	ListHook   func(ctx context.Context, fl *filter.F, m *MockAlphaGlobalAddresses) (bool, []*alpha.Address, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *alpha.Address, m *MockAlphaGlobalAddresses) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockAlphaGlobalAddresses) (bool, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockAlphaGlobalAddresses) Get(ctx context.Context, key *meta.Key) (*alpha.Address, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaGlobalAddresses.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockAlphaGlobalAddresses.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToAlpha()
+		klog.V(5).Infof("MockAlphaGlobalAddresses.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockAlphaGlobalAddresses %v not found", key),
+	}
+	klog.V(5).Infof("MockAlphaGlobalAddresses.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockAlphaGlobalAddresses) List(ctx context.Context, fl *filter.F) ([]*alpha.Address, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaGlobalAddresses.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockAlphaGlobalAddresses.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*alpha.Address
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		objs = append(objs, obj.ToAlpha())
+	}
+
+	klog.V(5).Infof("MockAlphaGlobalAddresses.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockAlphaGlobalAddresses) Insert(ctx context.Context, key *meta.Key, obj *alpha.Address) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockAlphaGlobalAddresses.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockAlphaGlobalAddresses.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockAlphaGlobalAddresses %v exists", key),
+		}
+		klog.V(5).Infof("MockAlphaGlobalAddresses.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "addresses")
+	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "addresses", key)
+
+	m.Objects[*key] = &MockGlobalAddressesObj{obj}
+	klog.V(5).Infof("MockAlphaGlobalAddresses.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockAlphaGlobalAddresses) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaGlobalAddresses.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockAlphaGlobalAddresses.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockAlphaGlobalAddresses %v not found", key),
+		}
+		klog.V(5).Infof("MockAlphaGlobalAddresses.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockAlphaGlobalAddresses.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockAlphaGlobalAddresses) Obj(o *alpha.Address) *MockGlobalAddressesObj {
+	return &MockGlobalAddressesObj{o}
+}
+
+// GCEAlphaGlobalAddresses is a simplifying adapter for the GCE GlobalAddresses.
+type GCEAlphaGlobalAddresses struct {
+	s *Service
+}
+
+// Get the Address named by key.
+func (g *GCEAlphaGlobalAddresses) Get(ctx context.Context, key *meta.Key) (*alpha.Address, error) {
+	klog.V(5).Infof("GCEAlphaGlobalAddresses.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaGlobalAddresses.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalAddresses")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalAddresses",
+	}
+	klog.V(5).Infof("GCEAlphaGlobalAddresses.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalAddresses.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.GlobalAddresses.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaGlobalAddresses.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all Address objects.
+func (g *GCEAlphaGlobalAddresses) List(ctx context.Context, fl *filter.F) ([]*alpha.Address, error) {
+	klog.V(5).Infof("GCEAlphaGlobalAddresses.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalAddresses")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalAddresses",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEAlphaGlobalAddresses.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Alpha.GlobalAddresses.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*alpha.Address
+	f := func(l *alpha.AddressList) error {
+		klog.V(5).Infof("GCEAlphaGlobalAddresses.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalAddresses.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4) {
+		klog.V(4).Infof("GCEAlphaGlobalAddresses.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaGlobalAddresses.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert Address with key of value obj.
+func (g *GCEAlphaGlobalAddresses) Insert(ctx context.Context, key *meta.Key, obj *alpha.Address) error {
+	klog.V(5).Infof("GCEAlphaGlobalAddresses.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaGlobalAddresses.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalAddresses")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalAddresses",
+	}
+	klog.V(5).Infof("GCEAlphaGlobalAddresses.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalAddresses.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Alpha.GlobalAddresses.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalAddresses.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaGlobalAddresses.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the Address referenced by key.
+func (g *GCEAlphaGlobalAddresses) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaGlobalAddresses.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaGlobalAddresses.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalAddresses")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalAddresses",
+	}
+	klog.V(5).Infof("GCEAlphaGlobalAddresses.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalAddresses.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.GlobalAddresses.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalAddresses.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaGlobalAddresses.Delete(%v, %v) = %v", ctx, key, err)
 	return err
 }
 
@@ -6530,6 +7158,381 @@ func (g *GCEAlphaForwardingRules) Delete(ctx context.Context, key *meta.Key) err
 	return err
 }
 
+// AlphaGlobalForwardingRules is an interface that allows for mocking of GlobalForwardingRules.
+type AlphaGlobalForwardingRules interface {
+	Get(ctx context.Context, key *meta.Key) (*alpha.ForwardingRule, error)
+	List(ctx context.Context, fl *filter.F) ([]*alpha.ForwardingRule, error)
+	Insert(ctx context.Context, key *meta.Key, obj *alpha.ForwardingRule) error
+	Delete(ctx context.Context, key *meta.Key) error
+	SetTarget(context.Context, *meta.Key, *alpha.TargetReference) error
+}
+
+// NewMockAlphaGlobalForwardingRules returns a new mock for GlobalForwardingRules.
+func NewMockAlphaGlobalForwardingRules(pr ProjectRouter, objs map[meta.Key]*MockGlobalForwardingRulesObj) *MockAlphaGlobalForwardingRules {
+	mock := &MockAlphaGlobalForwardingRules{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockAlphaGlobalForwardingRules is the mock for GlobalForwardingRules.
+type MockAlphaGlobalForwardingRules struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockGlobalForwardingRulesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook       func(ctx context.Context, key *meta.Key, m *MockAlphaGlobalForwardingRules) (bool, *alpha.ForwardingRule, error)
+	ListHook      func(ctx context.Context, fl *filter.F, m *MockAlphaGlobalForwardingRules) (bool, []*alpha.ForwardingRule, error)
+	InsertHook    func(ctx context.Context, key *meta.Key, obj *alpha.ForwardingRule, m *MockAlphaGlobalForwardingRules) (bool, error)
+	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockAlphaGlobalForwardingRules) (bool, error)
+	SetTargetHook func(context.Context, *meta.Key, *alpha.TargetReference, *MockAlphaGlobalForwardingRules) error
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockAlphaGlobalForwardingRules) Get(ctx context.Context, key *meta.Key) (*alpha.ForwardingRule, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaGlobalForwardingRules.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockAlphaGlobalForwardingRules.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToAlpha()
+		klog.V(5).Infof("MockAlphaGlobalForwardingRules.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockAlphaGlobalForwardingRules %v not found", key),
+	}
+	klog.V(5).Infof("MockAlphaGlobalForwardingRules.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockAlphaGlobalForwardingRules) List(ctx context.Context, fl *filter.F) ([]*alpha.ForwardingRule, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaGlobalForwardingRules.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockAlphaGlobalForwardingRules.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*alpha.ForwardingRule
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		objs = append(objs, obj.ToAlpha())
+	}
+
+	klog.V(5).Infof("MockAlphaGlobalForwardingRules.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockAlphaGlobalForwardingRules) Insert(ctx context.Context, key *meta.Key, obj *alpha.ForwardingRule) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockAlphaGlobalForwardingRules.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockAlphaGlobalForwardingRules.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockAlphaGlobalForwardingRules %v exists", key),
+		}
+		klog.V(5).Infof("MockAlphaGlobalForwardingRules.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "forwardingRules")
+	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "forwardingRules", key)
+
+	m.Objects[*key] = &MockGlobalForwardingRulesObj{obj}
+	klog.V(5).Infof("MockAlphaGlobalForwardingRules.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockAlphaGlobalForwardingRules) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaGlobalForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockAlphaGlobalForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockAlphaGlobalForwardingRules %v not found", key),
+		}
+		klog.V(5).Infof("MockAlphaGlobalForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockAlphaGlobalForwardingRules.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockAlphaGlobalForwardingRules) Obj(o *alpha.ForwardingRule) *MockGlobalForwardingRulesObj {
+	return &MockGlobalForwardingRulesObj{o}
+}
+
+// SetTarget is a mock for the corresponding method.
+func (m *MockAlphaGlobalForwardingRules) SetTarget(ctx context.Context, key *meta.Key, arg0 *alpha.TargetReference) error {
+	if m.SetTargetHook != nil {
+		return m.SetTargetHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// GCEAlphaGlobalForwardingRules is a simplifying adapter for the GCE GlobalForwardingRules.
+type GCEAlphaGlobalForwardingRules struct {
+	s *Service
+}
+
+// Get the ForwardingRule named by key.
+func (g *GCEAlphaGlobalForwardingRules) Get(ctx context.Context, key *meta.Key) (*alpha.ForwardingRule, error) {
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaGlobalForwardingRules.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalForwardingRules")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalForwardingRules",
+	}
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.GlobalForwardingRules.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaGlobalForwardingRules.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all ForwardingRule objects.
+func (g *GCEAlphaGlobalForwardingRules) List(ctx context.Context, fl *filter.F) ([]*alpha.ForwardingRule, error) {
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalForwardingRules")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalForwardingRules",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Alpha.GlobalForwardingRules.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*alpha.ForwardingRule
+	f := func(l *alpha.ForwardingRuleList) error {
+		klog.V(5).Infof("GCEAlphaGlobalForwardingRules.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4) {
+		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaGlobalForwardingRules.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert ForwardingRule with key of value obj.
+func (g *GCEAlphaGlobalForwardingRules) Insert(ctx context.Context, key *meta.Key, obj *alpha.ForwardingRule) error {
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaGlobalForwardingRules.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalForwardingRules")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalForwardingRules",
+	}
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Alpha.GlobalForwardingRules.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaGlobalForwardingRules.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the ForwardingRule referenced by key.
+func (g *GCEAlphaGlobalForwardingRules) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaGlobalForwardingRules.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalForwardingRules")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalForwardingRules",
+	}
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.GlobalForwardingRules.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaGlobalForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// SetTarget is a method on GCEAlphaGlobalForwardingRules.
+func (g *GCEAlphaGlobalForwardingRules) SetTarget(ctx context.Context, key *meta.Key, arg0 *alpha.TargetReference) error {
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.SetTarget(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaGlobalForwardingRules.SetTarget(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalForwardingRules")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetTarget",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalForwardingRules",
+	}
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.SetTarget(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.SetTarget(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.GlobalForwardingRules.SetTarget(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaGlobalForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // GlobalForwardingRules is an interface that allows for mocking of GlobalForwardingRules.
 type GlobalForwardingRules interface {
 	Get(ctx context.Context, key *meta.Key) (*ga.ForwardingRule, error)
@@ -10643,6 +11646,1002 @@ func (g *GCEAlphaInstances) UpdateNetworkInterface(ctx context.Context, key *met
 	return err
 }
 
+// AlphaNetworks is an interface that allows for mocking of Networks.
+type AlphaNetworks interface {
+	Get(ctx context.Context, key *meta.Key) (*alpha.Network, error)
+	List(ctx context.Context, fl *filter.F) ([]*alpha.Network, error)
+	Insert(ctx context.Context, key *meta.Key, obj *alpha.Network) error
+	Delete(ctx context.Context, key *meta.Key) error
+}
+
+// NewMockAlphaNetworks returns a new mock for Networks.
+func NewMockAlphaNetworks(pr ProjectRouter, objs map[meta.Key]*MockNetworksObj) *MockAlphaNetworks {
+	mock := &MockAlphaNetworks{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockAlphaNetworks is the mock for Networks.
+type MockAlphaNetworks struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockNetworksObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockAlphaNetworks) (bool, *alpha.Network, error)
+	ListHook   func(ctx context.Context, fl *filter.F, m *MockAlphaNetworks) (bool, []*alpha.Network, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *alpha.Network, m *MockAlphaNetworks) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockAlphaNetworks) (bool, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockAlphaNetworks) Get(ctx context.Context, key *meta.Key) (*alpha.Network, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaNetworks.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockAlphaNetworks.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToAlpha()
+		klog.V(5).Infof("MockAlphaNetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockAlphaNetworks %v not found", key),
+	}
+	klog.V(5).Infof("MockAlphaNetworks.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockAlphaNetworks) List(ctx context.Context, fl *filter.F) ([]*alpha.Network, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaNetworks.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockAlphaNetworks.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*alpha.Network
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		objs = append(objs, obj.ToAlpha())
+	}
+
+	klog.V(5).Infof("MockAlphaNetworks.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockAlphaNetworks) Insert(ctx context.Context, key *meta.Key, obj *alpha.Network) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockAlphaNetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockAlphaNetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockAlphaNetworks %v exists", key),
+		}
+		klog.V(5).Infof("MockAlphaNetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networks")
+	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "networks", key)
+
+	m.Objects[*key] = &MockNetworksObj{obj}
+	klog.V(5).Infof("MockAlphaNetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockAlphaNetworks) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaNetworks.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockAlphaNetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockAlphaNetworks %v not found", key),
+		}
+		klog.V(5).Infof("MockAlphaNetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockAlphaNetworks.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockAlphaNetworks) Obj(o *alpha.Network) *MockNetworksObj {
+	return &MockNetworksObj{o}
+}
+
+// GCEAlphaNetworks is a simplifying adapter for the GCE Networks.
+type GCEAlphaNetworks struct {
+	s *Service
+}
+
+// Get the Network named by key.
+func (g *GCEAlphaNetworks) Get(ctx context.Context, key *meta.Key) (*alpha.Network, error) {
+	klog.V(5).Infof("GCEAlphaNetworks.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworks.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Networks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("alpha"),
+		Service:   "Networks",
+	}
+	klog.V(5).Infof("GCEAlphaNetworks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.Networks.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaNetworks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all Network objects.
+func (g *GCEAlphaNetworks) List(ctx context.Context, fl *filter.F) ([]*alpha.Network, error) {
+	klog.V(5).Infof("GCEAlphaNetworks.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Networks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("alpha"),
+		Service:   "Networks",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEAlphaNetworks.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Alpha.Networks.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*alpha.Network
+	f := func(l *alpha.NetworkList) error {
+		klog.V(5).Infof("GCEAlphaNetworks.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4) {
+		klog.V(4).Infof("GCEAlphaNetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaNetworks.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert Network with key of value obj.
+func (g *GCEAlphaNetworks) Insert(ctx context.Context, key *meta.Key, obj *alpha.Network) error {
+	klog.V(5).Infof("GCEAlphaNetworks.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworks.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Networks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("alpha"),
+		Service:   "Networks",
+	}
+	klog.V(5).Infof("GCEAlphaNetworks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Alpha.Networks.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaNetworks.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaNetworks.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the Network referenced by key.
+func (g *GCEAlphaNetworks) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaNetworks.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworks.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Networks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("alpha"),
+		Service:   "Networks",
+	}
+	klog.V(5).Infof("GCEAlphaNetworks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.Networks.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaNetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaNetworks.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// BetaNetworks is an interface that allows for mocking of Networks.
+type BetaNetworks interface {
+	Get(ctx context.Context, key *meta.Key) (*beta.Network, error)
+	List(ctx context.Context, fl *filter.F) ([]*beta.Network, error)
+	Insert(ctx context.Context, key *meta.Key, obj *beta.Network) error
+	Delete(ctx context.Context, key *meta.Key) error
+}
+
+// NewMockBetaNetworks returns a new mock for Networks.
+func NewMockBetaNetworks(pr ProjectRouter, objs map[meta.Key]*MockNetworksObj) *MockBetaNetworks {
+	mock := &MockBetaNetworks{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockBetaNetworks is the mock for Networks.
+type MockBetaNetworks struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockNetworksObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockBetaNetworks) (bool, *beta.Network, error)
+	ListHook   func(ctx context.Context, fl *filter.F, m *MockBetaNetworks) (bool, []*beta.Network, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *beta.Network, m *MockBetaNetworks) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockBetaNetworks) (bool, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockBetaNetworks) Get(ctx context.Context, key *meta.Key) (*beta.Network, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockBetaNetworks.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockBetaNetworks.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToBeta()
+		klog.V(5).Infof("MockBetaNetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockBetaNetworks %v not found", key),
+	}
+	klog.V(5).Infof("MockBetaNetworks.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockBetaNetworks) List(ctx context.Context, fl *filter.F) ([]*beta.Network, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockBetaNetworks.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockBetaNetworks.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*beta.Network
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToBeta()) {
+			continue
+		}
+		objs = append(objs, obj.ToBeta())
+	}
+
+	klog.V(5).Infof("MockBetaNetworks.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockBetaNetworks) Insert(ctx context.Context, key *meta.Key, obj *beta.Network) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockBetaNetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockBetaNetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockBetaNetworks %v exists", key),
+		}
+		klog.V(5).Infof("MockBetaNetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "networks")
+	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "networks", key)
+
+	m.Objects[*key] = &MockNetworksObj{obj}
+	klog.V(5).Infof("MockBetaNetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockBetaNetworks) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockBetaNetworks.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockBetaNetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockBetaNetworks %v not found", key),
+		}
+		klog.V(5).Infof("MockBetaNetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockBetaNetworks.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockBetaNetworks) Obj(o *beta.Network) *MockNetworksObj {
+	return &MockNetworksObj{o}
+}
+
+// GCEBetaNetworks is a simplifying adapter for the GCE Networks.
+type GCEBetaNetworks struct {
+	s *Service
+}
+
+// Get the Network named by key.
+func (g *GCEBetaNetworks) Get(ctx context.Context, key *meta.Key) (*beta.Network, error) {
+	klog.V(5).Infof("GCEBetaNetworks.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaNetworks.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Networks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("beta"),
+		Service:   "Networks",
+	}
+	klog.V(5).Infof("GCEBetaNetworks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaNetworks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.Networks.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEBetaNetworks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all Network objects.
+func (g *GCEBetaNetworks) List(ctx context.Context, fl *filter.F) ([]*beta.Network, error) {
+	klog.V(5).Infof("GCEBetaNetworks.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Networks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("beta"),
+		Service:   "Networks",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEBetaNetworks.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Beta.Networks.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*beta.Network
+	f := func(l *beta.NetworkList) error {
+		klog.V(5).Infof("GCEBetaNetworks.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEBetaNetworks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4) {
+		klog.V(4).Infof("GCEBetaNetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEBetaNetworks.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert Network with key of value obj.
+func (g *GCEBetaNetworks) Insert(ctx context.Context, key *meta.Key, obj *beta.Network) error {
+	klog.V(5).Infof("GCEBetaNetworks.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaNetworks.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Networks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("beta"),
+		Service:   "Networks",
+	}
+	klog.V(5).Infof("GCEBetaNetworks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaNetworks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Beta.Networks.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaNetworks.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaNetworks.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the Network referenced by key.
+func (g *GCEBetaNetworks) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEBetaNetworks.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaNetworks.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Networks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("beta"),
+		Service:   "Networks",
+	}
+	klog.V(5).Infof("GCEBetaNetworks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaNetworks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.Networks.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaNetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaNetworks.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// Networks is an interface that allows for mocking of Networks.
+type Networks interface {
+	Get(ctx context.Context, key *meta.Key) (*ga.Network, error)
+	List(ctx context.Context, fl *filter.F) ([]*ga.Network, error)
+	Insert(ctx context.Context, key *meta.Key, obj *ga.Network) error
+	Delete(ctx context.Context, key *meta.Key) error
+}
+
+// NewMockNetworks returns a new mock for Networks.
+func NewMockNetworks(pr ProjectRouter, objs map[meta.Key]*MockNetworksObj) *MockNetworks {
+	mock := &MockNetworks{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockNetworks is the mock for Networks.
+type MockNetworks struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockNetworksObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockNetworks) (bool, *ga.Network, error)
+	ListHook   func(ctx context.Context, fl *filter.F, m *MockNetworks) (bool, []*ga.Network, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *ga.Network, m *MockNetworks) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockNetworks) (bool, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockNetworks) Get(ctx context.Context, key *meta.Key) (*ga.Network, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockNetworks.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockNetworks.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToGA()
+		klog.V(5).Infof("MockNetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockNetworks %v not found", key),
+	}
+	klog.V(5).Infof("MockNetworks.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockNetworks) List(ctx context.Context, fl *filter.F) ([]*ga.Network, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockNetworks.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockNetworks.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*ga.Network
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToGA()) {
+			continue
+		}
+		objs = append(objs, obj.ToGA())
+	}
+
+	klog.V(5).Infof("MockNetworks.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockNetworks) Insert(ctx context.Context, key *meta.Key, obj *ga.Network) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockNetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockNetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockNetworks %v exists", key),
+		}
+		klog.V(5).Infof("MockNetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "networks")
+	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "networks", key)
+
+	m.Objects[*key] = &MockNetworksObj{obj}
+	klog.V(5).Infof("MockNetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockNetworks) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockNetworks.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockNetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockNetworks %v not found", key),
+		}
+		klog.V(5).Infof("MockNetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockNetworks.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockNetworks) Obj(o *ga.Network) *MockNetworksObj {
+	return &MockNetworksObj{o}
+}
+
+// GCENetworks is a simplifying adapter for the GCE Networks.
+type GCENetworks struct {
+	s *Service
+}
+
+// Get the Network named by key.
+func (g *GCENetworks) Get(ctx context.Context, key *meta.Key) (*ga.Network, error) {
+	klog.V(5).Infof("GCENetworks.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCENetworks.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Networks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("ga"),
+		Service:   "Networks",
+	}
+	klog.V(5).Infof("GCENetworks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCENetworks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.GA.Networks.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCENetworks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all Network objects.
+func (g *GCENetworks) List(ctx context.Context, fl *filter.F) ([]*ga.Network, error) {
+	klog.V(5).Infof("GCENetworks.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Networks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("ga"),
+		Service:   "Networks",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCENetworks.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.GA.Networks.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*ga.Network
+	f := func(l *ga.NetworkList) error {
+		klog.V(5).Infof("GCENetworks.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCENetworks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4) {
+		klog.V(4).Infof("GCENetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCENetworks.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert Network with key of value obj.
+func (g *GCENetworks) Insert(ctx context.Context, key *meta.Key, obj *ga.Network) error {
+	klog.V(5).Infof("GCENetworks.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCENetworks.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Networks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("ga"),
+		Service:   "Networks",
+	}
+	klog.V(5).Infof("GCENetworks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCENetworks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.GA.Networks.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCENetworks.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCENetworks.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the Network referenced by key.
+func (g *GCENetworks) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCENetworks.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCENetworks.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Networks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("ga"),
+		Service:   "Networks",
+	}
+	klog.V(5).Infof("GCENetworks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCENetworks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.Networks.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCENetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCENetworks.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
 // AlphaNetworkEndpointGroups is an interface that allows for mocking of NetworkEndpointGroups.
 type AlphaNetworkEndpointGroups interface {
 	Get(ctx context.Context, key *meta.Key) (*alpha.NetworkEndpointGroup, error)
@@ -13204,6 +15203,1383 @@ func (g *GCESslCertificates) Delete(ctx context.Context, key *meta.Key) error {
 	return err
 }
 
+// AlphaSubnetworks is an interface that allows for mocking of Subnetworks.
+type AlphaSubnetworks interface {
+	Get(ctx context.Context, key *meta.Key) (*alpha.Subnetwork, error)
+	List(ctx context.Context, region string, fl *filter.F) ([]*alpha.Subnetwork, error)
+	Insert(ctx context.Context, key *meta.Key, obj *alpha.Subnetwork) error
+	Delete(ctx context.Context, key *meta.Key) error
+}
+
+// NewMockAlphaSubnetworks returns a new mock for Subnetworks.
+func NewMockAlphaSubnetworks(pr ProjectRouter, objs map[meta.Key]*MockSubnetworksObj) *MockAlphaSubnetworks {
+	mock := &MockAlphaSubnetworks{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockAlphaSubnetworks is the mock for Subnetworks.
+type MockAlphaSubnetworks struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockSubnetworksObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockAlphaSubnetworks) (bool, *alpha.Subnetwork, error)
+	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockAlphaSubnetworks) (bool, []*alpha.Subnetwork, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *alpha.Subnetwork, m *MockAlphaSubnetworks) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockAlphaSubnetworks) (bool, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockAlphaSubnetworks) Get(ctx context.Context, key *meta.Key) (*alpha.Subnetwork, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaSubnetworks.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockAlphaSubnetworks.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToAlpha()
+		klog.V(5).Infof("MockAlphaSubnetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockAlphaSubnetworks %v not found", key),
+	}
+	klog.V(5).Infof("MockAlphaSubnetworks.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock in the given region.
+func (m *MockAlphaSubnetworks) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.Subnetwork, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, region, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaSubnetworks.List(%v, %q, %v) = [%v items], %v", ctx, region, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockAlphaSubnetworks.List(%v, %q, %v) = nil, %v", ctx, region, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*alpha.Subnetwork
+	for key, obj := range m.Objects {
+		if key.Region != region {
+			continue
+		}
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		objs = append(objs, obj.ToAlpha())
+	}
+
+	klog.V(5).Infof("MockAlphaSubnetworks.List(%v, %q, %v) = [%v items], nil", ctx, region, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockAlphaSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *alpha.Subnetwork) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockAlphaSubnetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockAlphaSubnetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockAlphaSubnetworks %v exists", key),
+		}
+		klog.V(5).Infof("MockAlphaSubnetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "subnetworks")
+	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "subnetworks", key)
+
+	m.Objects[*key] = &MockSubnetworksObj{obj}
+	klog.V(5).Infof("MockAlphaSubnetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockAlphaSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockAlphaSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockAlphaSubnetworks %v not found", key),
+		}
+		klog.V(5).Infof("MockAlphaSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockAlphaSubnetworks.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockAlphaSubnetworks) Obj(o *alpha.Subnetwork) *MockSubnetworksObj {
+	return &MockSubnetworksObj{o}
+}
+
+// GCEAlphaSubnetworks is a simplifying adapter for the GCE Subnetworks.
+type GCEAlphaSubnetworks struct {
+	s *Service
+}
+
+// Get the Subnetwork named by key.
+func (g *GCEAlphaSubnetworks) Get(ctx context.Context, key *meta.Key) (*alpha.Subnetwork, error) {
+	klog.V(5).Infof("GCEAlphaSubnetworks.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaSubnetworks.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Subnetworks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("alpha"),
+		Service:   "Subnetworks",
+	}
+	klog.V(5).Infof("GCEAlphaSubnetworks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaSubnetworks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.Subnetworks.Get(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaSubnetworks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all Subnetwork objects.
+func (g *GCEAlphaSubnetworks) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.Subnetwork, error) {
+	klog.V(5).Infof("GCEAlphaSubnetworks.List(%v, %v, %v) called", ctx, region, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Subnetworks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("alpha"),
+		Service:   "Subnetworks",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEAlphaSubnetworks.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	call := g.s.Alpha.Subnetworks.List(projectID, region)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*alpha.Subnetwork
+	f := func(l *alpha.SubnetworkList) error {
+		klog.V(5).Infof("GCEAlphaSubnetworks.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAlphaSubnetworks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4) {
+		klog.V(4).Infof("GCEAlphaSubnetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaSubnetworks.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert Subnetwork with key of value obj.
+func (g *GCEAlphaSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *alpha.Subnetwork) error {
+	klog.V(5).Infof("GCEAlphaSubnetworks.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaSubnetworks.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Subnetworks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("alpha"),
+		Service:   "Subnetworks",
+	}
+	klog.V(5).Infof("GCEAlphaSubnetworks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaSubnetworks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Alpha.Subnetworks.Insert(projectID, key.Region, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaSubnetworks.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaSubnetworks.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the Subnetwork referenced by key.
+func (g *GCEAlphaSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaSubnetworks.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaSubnetworks.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Subnetworks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("alpha"),
+		Service:   "Subnetworks",
+	}
+	klog.V(5).Infof("GCEAlphaSubnetworks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaSubnetworks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.Subnetworks.Delete(projectID, key.Region, key.Name)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// BetaSubnetworks is an interface that allows for mocking of Subnetworks.
+type BetaSubnetworks interface {
+	Get(ctx context.Context, key *meta.Key) (*beta.Subnetwork, error)
+	List(ctx context.Context, region string, fl *filter.F) ([]*beta.Subnetwork, error)
+	Insert(ctx context.Context, key *meta.Key, obj *beta.Subnetwork) error
+	Delete(ctx context.Context, key *meta.Key) error
+}
+
+// NewMockBetaSubnetworks returns a new mock for Subnetworks.
+func NewMockBetaSubnetworks(pr ProjectRouter, objs map[meta.Key]*MockSubnetworksObj) *MockBetaSubnetworks {
+	mock := &MockBetaSubnetworks{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockBetaSubnetworks is the mock for Subnetworks.
+type MockBetaSubnetworks struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockSubnetworksObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockBetaSubnetworks) (bool, *beta.Subnetwork, error)
+	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockBetaSubnetworks) (bool, []*beta.Subnetwork, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *beta.Subnetwork, m *MockBetaSubnetworks) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockBetaSubnetworks) (bool, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockBetaSubnetworks) Get(ctx context.Context, key *meta.Key) (*beta.Subnetwork, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockBetaSubnetworks.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockBetaSubnetworks.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToBeta()
+		klog.V(5).Infof("MockBetaSubnetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockBetaSubnetworks %v not found", key),
+	}
+	klog.V(5).Infof("MockBetaSubnetworks.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock in the given region.
+func (m *MockBetaSubnetworks) List(ctx context.Context, region string, fl *filter.F) ([]*beta.Subnetwork, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, region, fl, m); intercept {
+			klog.V(5).Infof("MockBetaSubnetworks.List(%v, %q, %v) = [%v items], %v", ctx, region, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockBetaSubnetworks.List(%v, %q, %v) = nil, %v", ctx, region, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*beta.Subnetwork
+	for key, obj := range m.Objects {
+		if key.Region != region {
+			continue
+		}
+		if !fl.Match(obj.ToBeta()) {
+			continue
+		}
+		objs = append(objs, obj.ToBeta())
+	}
+
+	klog.V(5).Infof("MockBetaSubnetworks.List(%v, %q, %v) = [%v items], nil", ctx, region, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockBetaSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *beta.Subnetwork) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockBetaSubnetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockBetaSubnetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockBetaSubnetworks %v exists", key),
+		}
+		klog.V(5).Infof("MockBetaSubnetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "subnetworks")
+	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "subnetworks", key)
+
+	m.Objects[*key] = &MockSubnetworksObj{obj}
+	klog.V(5).Infof("MockBetaSubnetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockBetaSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockBetaSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockBetaSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockBetaSubnetworks %v not found", key),
+		}
+		klog.V(5).Infof("MockBetaSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockBetaSubnetworks.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockBetaSubnetworks) Obj(o *beta.Subnetwork) *MockSubnetworksObj {
+	return &MockSubnetworksObj{o}
+}
+
+// GCEBetaSubnetworks is a simplifying adapter for the GCE Subnetworks.
+type GCEBetaSubnetworks struct {
+	s *Service
+}
+
+// Get the Subnetwork named by key.
+func (g *GCEBetaSubnetworks) Get(ctx context.Context, key *meta.Key) (*beta.Subnetwork, error) {
+	klog.V(5).Infof("GCEBetaSubnetworks.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaSubnetworks.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Subnetworks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("beta"),
+		Service:   "Subnetworks",
+	}
+	klog.V(5).Infof("GCEBetaSubnetworks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaSubnetworks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.Subnetworks.Get(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEBetaSubnetworks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all Subnetwork objects.
+func (g *GCEBetaSubnetworks) List(ctx context.Context, region string, fl *filter.F) ([]*beta.Subnetwork, error) {
+	klog.V(5).Infof("GCEBetaSubnetworks.List(%v, %v, %v) called", ctx, region, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Subnetworks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("beta"),
+		Service:   "Subnetworks",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEBetaSubnetworks.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	call := g.s.Beta.Subnetworks.List(projectID, region)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*beta.Subnetwork
+	f := func(l *beta.SubnetworkList) error {
+		klog.V(5).Infof("GCEBetaSubnetworks.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEBetaSubnetworks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4) {
+		klog.V(4).Infof("GCEBetaSubnetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEBetaSubnetworks.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert Subnetwork with key of value obj.
+func (g *GCEBetaSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *beta.Subnetwork) error {
+	klog.V(5).Infof("GCEBetaSubnetworks.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaSubnetworks.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Subnetworks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("beta"),
+		Service:   "Subnetworks",
+	}
+	klog.V(5).Infof("GCEBetaSubnetworks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaSubnetworks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Beta.Subnetworks.Insert(projectID, key.Region, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaSubnetworks.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaSubnetworks.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the Subnetwork referenced by key.
+func (g *GCEBetaSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEBetaSubnetworks.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaSubnetworks.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Subnetworks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("beta"),
+		Service:   "Subnetworks",
+	}
+	klog.V(5).Infof("GCEBetaSubnetworks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaSubnetworks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.Subnetworks.Delete(projectID, key.Region, key.Name)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// Subnetworks is an interface that allows for mocking of Subnetworks.
+type Subnetworks interface {
+	Get(ctx context.Context, key *meta.Key) (*ga.Subnetwork, error)
+	List(ctx context.Context, region string, fl *filter.F) ([]*ga.Subnetwork, error)
+	Insert(ctx context.Context, key *meta.Key, obj *ga.Subnetwork) error
+	Delete(ctx context.Context, key *meta.Key) error
+}
+
+// NewMockSubnetworks returns a new mock for Subnetworks.
+func NewMockSubnetworks(pr ProjectRouter, objs map[meta.Key]*MockSubnetworksObj) *MockSubnetworks {
+	mock := &MockSubnetworks{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockSubnetworks is the mock for Subnetworks.
+type MockSubnetworks struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockSubnetworksObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockSubnetworks) (bool, *ga.Subnetwork, error)
+	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockSubnetworks) (bool, []*ga.Subnetwork, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *ga.Subnetwork, m *MockSubnetworks) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockSubnetworks) (bool, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockSubnetworks) Get(ctx context.Context, key *meta.Key) (*ga.Subnetwork, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockSubnetworks.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockSubnetworks.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToGA()
+		klog.V(5).Infof("MockSubnetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockSubnetworks %v not found", key),
+	}
+	klog.V(5).Infof("MockSubnetworks.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock in the given region.
+func (m *MockSubnetworks) List(ctx context.Context, region string, fl *filter.F) ([]*ga.Subnetwork, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, region, fl, m); intercept {
+			klog.V(5).Infof("MockSubnetworks.List(%v, %q, %v) = [%v items], %v", ctx, region, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockSubnetworks.List(%v, %q, %v) = nil, %v", ctx, region, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*ga.Subnetwork
+	for key, obj := range m.Objects {
+		if key.Region != region {
+			continue
+		}
+		if !fl.Match(obj.ToGA()) {
+			continue
+		}
+		objs = append(objs, obj.ToGA())
+	}
+
+	klog.V(5).Infof("MockSubnetworks.List(%v, %q, %v) = [%v items], nil", ctx, region, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *ga.Subnetwork) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockSubnetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockSubnetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockSubnetworks %v exists", key),
+		}
+		klog.V(5).Infof("MockSubnetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "subnetworks")
+	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "subnetworks", key)
+
+	m.Objects[*key] = &MockSubnetworksObj{obj}
+	klog.V(5).Infof("MockSubnetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockSubnetworks %v not found", key),
+		}
+		klog.V(5).Infof("MockSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockSubnetworks.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockSubnetworks) Obj(o *ga.Subnetwork) *MockSubnetworksObj {
+	return &MockSubnetworksObj{o}
+}
+
+// GCESubnetworks is a simplifying adapter for the GCE Subnetworks.
+type GCESubnetworks struct {
+	s *Service
+}
+
+// Get the Subnetwork named by key.
+func (g *GCESubnetworks) Get(ctx context.Context, key *meta.Key) (*ga.Subnetwork, error) {
+	klog.V(5).Infof("GCESubnetworks.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCESubnetworks.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Subnetworks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("ga"),
+		Service:   "Subnetworks",
+	}
+	klog.V(5).Infof("GCESubnetworks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCESubnetworks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.GA.Subnetworks.Get(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCESubnetworks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all Subnetwork objects.
+func (g *GCESubnetworks) List(ctx context.Context, region string, fl *filter.F) ([]*ga.Subnetwork, error) {
+	klog.V(5).Infof("GCESubnetworks.List(%v, %v, %v) called", ctx, region, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Subnetworks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("ga"),
+		Service:   "Subnetworks",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCESubnetworks.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	call := g.s.GA.Subnetworks.List(projectID, region)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*ga.Subnetwork
+	f := func(l *ga.SubnetworkList) error {
+		klog.V(5).Infof("GCESubnetworks.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCESubnetworks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4) {
+		klog.V(4).Infof("GCESubnetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCESubnetworks.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert Subnetwork with key of value obj.
+func (g *GCESubnetworks) Insert(ctx context.Context, key *meta.Key, obj *ga.Subnetwork) error {
+	klog.V(5).Infof("GCESubnetworks.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCESubnetworks.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Subnetworks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("ga"),
+		Service:   "Subnetworks",
+	}
+	klog.V(5).Infof("GCESubnetworks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCESubnetworks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.GA.Subnetworks.Insert(projectID, key.Region, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCESubnetworks.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCESubnetworks.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the Subnetwork referenced by key.
+func (g *GCESubnetworks) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCESubnetworks.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCESubnetworks.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Subnetworks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("ga"),
+		Service:   "Subnetworks",
+	}
+	klog.V(5).Infof("GCESubnetworks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCESubnetworks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.Subnetworks.Delete(projectID, key.Region, key.Name)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCESubnetworks.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCESubnetworks.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// AlphaTargetHttpProxies is an interface that allows for mocking of TargetHttpProxies.
+type AlphaTargetHttpProxies interface {
+	Get(ctx context.Context, key *meta.Key) (*alpha.TargetHttpProxy, error)
+	List(ctx context.Context, fl *filter.F) ([]*alpha.TargetHttpProxy, error)
+	Insert(ctx context.Context, key *meta.Key, obj *alpha.TargetHttpProxy) error
+	Delete(ctx context.Context, key *meta.Key) error
+	SetUrlMap(context.Context, *meta.Key, *alpha.UrlMapReference) error
+}
+
+// NewMockAlphaTargetHttpProxies returns a new mock for TargetHttpProxies.
+func NewMockAlphaTargetHttpProxies(pr ProjectRouter, objs map[meta.Key]*MockTargetHttpProxiesObj) *MockAlphaTargetHttpProxies {
+	mock := &MockAlphaTargetHttpProxies{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockAlphaTargetHttpProxies is the mock for TargetHttpProxies.
+type MockAlphaTargetHttpProxies struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockTargetHttpProxiesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook       func(ctx context.Context, key *meta.Key, m *MockAlphaTargetHttpProxies) (bool, *alpha.TargetHttpProxy, error)
+	ListHook      func(ctx context.Context, fl *filter.F, m *MockAlphaTargetHttpProxies) (bool, []*alpha.TargetHttpProxy, error)
+	InsertHook    func(ctx context.Context, key *meta.Key, obj *alpha.TargetHttpProxy, m *MockAlphaTargetHttpProxies) (bool, error)
+	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockAlphaTargetHttpProxies) (bool, error)
+	SetUrlMapHook func(context.Context, *meta.Key, *alpha.UrlMapReference, *MockAlphaTargetHttpProxies) error
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockAlphaTargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*alpha.TargetHttpProxy, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaTargetHttpProxies.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockAlphaTargetHttpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToAlpha()
+		klog.V(5).Infof("MockAlphaTargetHttpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockAlphaTargetHttpProxies %v not found", key),
+	}
+	klog.V(5).Infof("MockAlphaTargetHttpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockAlphaTargetHttpProxies) List(ctx context.Context, fl *filter.F) ([]*alpha.TargetHttpProxy, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaTargetHttpProxies.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockAlphaTargetHttpProxies.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*alpha.TargetHttpProxy
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		objs = append(objs, obj.ToAlpha())
+	}
+
+	klog.V(5).Infof("MockAlphaTargetHttpProxies.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockAlphaTargetHttpProxies) Insert(ctx context.Context, key *meta.Key, obj *alpha.TargetHttpProxy) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockAlphaTargetHttpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockAlphaTargetHttpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockAlphaTargetHttpProxies %v exists", key),
+		}
+		klog.V(5).Infof("MockAlphaTargetHttpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpProxies")
+	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "targetHttpProxies", key)
+
+	m.Objects[*key] = &MockTargetHttpProxiesObj{obj}
+	klog.V(5).Infof("MockAlphaTargetHttpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockAlphaTargetHttpProxies) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaTargetHttpProxies.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockAlphaTargetHttpProxies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockAlphaTargetHttpProxies %v not found", key),
+		}
+		klog.V(5).Infof("MockAlphaTargetHttpProxies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockAlphaTargetHttpProxies.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockAlphaTargetHttpProxies) Obj(o *alpha.TargetHttpProxy) *MockTargetHttpProxiesObj {
+	return &MockTargetHttpProxiesObj{o}
+}
+
+// SetUrlMap is a mock for the corresponding method.
+func (m *MockAlphaTargetHttpProxies) SetUrlMap(ctx context.Context, key *meta.Key, arg0 *alpha.UrlMapReference) error {
+	if m.SetUrlMapHook != nil {
+		return m.SetUrlMapHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// GCEAlphaTargetHttpProxies is a simplifying adapter for the GCE TargetHttpProxies.
+type GCEAlphaTargetHttpProxies struct {
+	s *Service
+}
+
+// Get the TargetHttpProxy named by key.
+func (g *GCEAlphaTargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*alpha.TargetHttpProxy, error) {
+	klog.V(5).Infof("GCEAlphaTargetHttpProxies.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaTargetHttpProxies.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpProxies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("alpha"),
+		Service:   "TargetHttpProxies",
+	}
+	klog.V(5).Infof("GCEAlphaTargetHttpProxies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaTargetHttpProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.TargetHttpProxies.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaTargetHttpProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all TargetHttpProxy objects.
+func (g *GCEAlphaTargetHttpProxies) List(ctx context.Context, fl *filter.F) ([]*alpha.TargetHttpProxy, error) {
+	klog.V(5).Infof("GCEAlphaTargetHttpProxies.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpProxies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("alpha"),
+		Service:   "TargetHttpProxies",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEAlphaTargetHttpProxies.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Alpha.TargetHttpProxies.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*alpha.TargetHttpProxy
+	f := func(l *alpha.TargetHttpProxyList) error {
+		klog.V(5).Infof("GCEAlphaTargetHttpProxies.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAlphaTargetHttpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4) {
+		klog.V(4).Infof("GCEAlphaTargetHttpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaTargetHttpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert TargetHttpProxy with key of value obj.
+func (g *GCEAlphaTargetHttpProxies) Insert(ctx context.Context, key *meta.Key, obj *alpha.TargetHttpProxy) error {
+	klog.V(5).Infof("GCEAlphaTargetHttpProxies.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaTargetHttpProxies.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpProxies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("alpha"),
+		Service:   "TargetHttpProxies",
+	}
+	klog.V(5).Infof("GCEAlphaTargetHttpProxies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaTargetHttpProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Alpha.TargetHttpProxies.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaTargetHttpProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaTargetHttpProxies.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the TargetHttpProxy referenced by key.
+func (g *GCEAlphaTargetHttpProxies) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaTargetHttpProxies.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaTargetHttpProxies.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpProxies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("alpha"),
+		Service:   "TargetHttpProxies",
+	}
+	klog.V(5).Infof("GCEAlphaTargetHttpProxies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaTargetHttpProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.TargetHttpProxies.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaTargetHttpProxies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaTargetHttpProxies.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// SetUrlMap is a method on GCEAlphaTargetHttpProxies.
+func (g *GCEAlphaTargetHttpProxies) SetUrlMap(ctx context.Context, key *meta.Key, arg0 *alpha.UrlMapReference) error {
+	klog.V(5).Infof("GCEAlphaTargetHttpProxies.SetUrlMap(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaTargetHttpProxies.SetUrlMap(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpProxies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetUrlMap",
+		Version:   meta.Version("alpha"),
+		Service:   "TargetHttpProxies",
+	}
+	klog.V(5).Infof("GCEAlphaTargetHttpProxies.SetUrlMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaTargetHttpProxies.SetUrlMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.TargetHttpProxies.SetUrlMap(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaTargetHttpProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaTargetHttpProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // TargetHttpProxies is an interface that allows for mocking of TargetHttpProxies.
 type TargetHttpProxies interface {
 	Get(ctx context.Context, key *meta.Key) (*ga.TargetHttpProxy, error)
@@ -14417,6 +17793,381 @@ func (g *GCETargetPools) RemoveInstance(ctx context.Context, key *meta.Key, arg0
 	return err
 }
 
+// AlphaUrlMaps is an interface that allows for mocking of UrlMaps.
+type AlphaUrlMaps interface {
+	Get(ctx context.Context, key *meta.Key) (*alpha.UrlMap, error)
+	List(ctx context.Context, fl *filter.F) ([]*alpha.UrlMap, error)
+	Insert(ctx context.Context, key *meta.Key, obj *alpha.UrlMap) error
+	Delete(ctx context.Context, key *meta.Key) error
+	Update(context.Context, *meta.Key, *alpha.UrlMap) error
+}
+
+// NewMockAlphaUrlMaps returns a new mock for UrlMaps.
+func NewMockAlphaUrlMaps(pr ProjectRouter, objs map[meta.Key]*MockUrlMapsObj) *MockAlphaUrlMaps {
+	mock := &MockAlphaUrlMaps{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockAlphaUrlMaps is the mock for UrlMaps.
+type MockAlphaUrlMaps struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockUrlMapsObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockAlphaUrlMaps) (bool, *alpha.UrlMap, error)
+	ListHook   func(ctx context.Context, fl *filter.F, m *MockAlphaUrlMaps) (bool, []*alpha.UrlMap, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *alpha.UrlMap, m *MockAlphaUrlMaps) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockAlphaUrlMaps) (bool, error)
+	UpdateHook func(context.Context, *meta.Key, *alpha.UrlMap, *MockAlphaUrlMaps) error
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockAlphaUrlMaps) Get(ctx context.Context, key *meta.Key) (*alpha.UrlMap, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaUrlMaps.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockAlphaUrlMaps.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToAlpha()
+		klog.V(5).Infof("MockAlphaUrlMaps.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockAlphaUrlMaps %v not found", key),
+	}
+	klog.V(5).Infof("MockAlphaUrlMaps.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockAlphaUrlMaps) List(ctx context.Context, fl *filter.F) ([]*alpha.UrlMap, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaUrlMaps.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockAlphaUrlMaps.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*alpha.UrlMap
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		objs = append(objs, obj.ToAlpha())
+	}
+
+	klog.V(5).Infof("MockAlphaUrlMaps.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockAlphaUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *alpha.UrlMap) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockAlphaUrlMaps.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockAlphaUrlMaps.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockAlphaUrlMaps %v exists", key),
+		}
+		klog.V(5).Infof("MockAlphaUrlMaps.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "urlMaps")
+	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "urlMaps", key)
+
+	m.Objects[*key] = &MockUrlMapsObj{obj}
+	klog.V(5).Infof("MockAlphaUrlMaps.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockAlphaUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaUrlMaps.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockAlphaUrlMaps.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockAlphaUrlMaps %v not found", key),
+		}
+		klog.V(5).Infof("MockAlphaUrlMaps.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockAlphaUrlMaps.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockAlphaUrlMaps) Obj(o *alpha.UrlMap) *MockUrlMapsObj {
+	return &MockUrlMapsObj{o}
+}
+
+// Update is a mock for the corresponding method.
+func (m *MockAlphaUrlMaps) Update(ctx context.Context, key *meta.Key, arg0 *alpha.UrlMap) error {
+	if m.UpdateHook != nil {
+		return m.UpdateHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// GCEAlphaUrlMaps is a simplifying adapter for the GCE UrlMaps.
+type GCEAlphaUrlMaps struct {
+	s *Service
+}
+
+// Get the UrlMap named by key.
+func (g *GCEAlphaUrlMaps) Get(ctx context.Context, key *meta.Key) (*alpha.UrlMap, error) {
+	klog.V(5).Infof("GCEAlphaUrlMaps.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaUrlMaps.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "UrlMaps")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("alpha"),
+		Service:   "UrlMaps",
+	}
+	klog.V(5).Infof("GCEAlphaUrlMaps.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaUrlMaps.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.UrlMaps.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaUrlMaps.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all UrlMap objects.
+func (g *GCEAlphaUrlMaps) List(ctx context.Context, fl *filter.F) ([]*alpha.UrlMap, error) {
+	klog.V(5).Infof("GCEAlphaUrlMaps.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "UrlMaps")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("alpha"),
+		Service:   "UrlMaps",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEAlphaUrlMaps.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Alpha.UrlMaps.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*alpha.UrlMap
+	f := func(l *alpha.UrlMapList) error {
+		klog.V(5).Infof("GCEAlphaUrlMaps.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAlphaUrlMaps.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4) {
+		klog.V(4).Infof("GCEAlphaUrlMaps.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaUrlMaps.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert UrlMap with key of value obj.
+func (g *GCEAlphaUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *alpha.UrlMap) error {
+	klog.V(5).Infof("GCEAlphaUrlMaps.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaUrlMaps.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "UrlMaps")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("alpha"),
+		Service:   "UrlMaps",
+	}
+	klog.V(5).Infof("GCEAlphaUrlMaps.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaUrlMaps.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Alpha.UrlMaps.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaUrlMaps.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaUrlMaps.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the UrlMap referenced by key.
+func (g *GCEAlphaUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaUrlMaps.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaUrlMaps.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "UrlMaps")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("alpha"),
+		Service:   "UrlMaps",
+	}
+	klog.V(5).Infof("GCEAlphaUrlMaps.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaUrlMaps.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.UrlMaps.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaUrlMaps.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaUrlMaps.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// Update is a method on GCEAlphaUrlMaps.
+func (g *GCEAlphaUrlMaps) Update(ctx context.Context, key *meta.Key, arg0 *alpha.UrlMap) error {
+	klog.V(5).Infof("GCEAlphaUrlMaps.Update(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaUrlMaps.Update(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "UrlMaps")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Update",
+		Version:   meta.Version("alpha"),
+		Service:   "UrlMaps",
+	}
+	klog.V(5).Infof("GCEAlphaUrlMaps.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaUrlMaps.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.UrlMaps.Update(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaUrlMaps.Update(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaUrlMaps.Update(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // UrlMaps is an interface that allows for mocking of UrlMaps.
 type UrlMaps interface {
 	Get(ctx context.Context, key *meta.Key) (*ga.UrlMap, error)
@@ -15056,6 +18807,12 @@ func NewNetworkEndpointGroupsResourceID(project, zone, name string) *ResourceID 
 	return &ResourceID{project, "networkEndpointGroups", key}
 }
 
+// NewNetworksResourceID creates a ResourceID for the Networks resource.
+func NewNetworksResourceID(project, name string) *ResourceID {
+	key := meta.GlobalKey(name)
+	return &ResourceID{project, "networks", key}
+}
+
 // NewProjectsResourceID creates a ResourceID for the Projects resource.
 func NewProjectsResourceID(project string) *ResourceID {
 	var key *meta.Key
@@ -15096,6 +18853,12 @@ func NewSecurityPoliciesResourceID(project, name string) *ResourceID {
 func NewSslCertificatesResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
 	return &ResourceID{project, "sslCertificates", key}
+}
+
+// NewSubnetworksResourceID creates a ResourceID for the Subnetworks resource.
+func NewSubnetworksResourceID(project, region, name string) *ResourceID {
+	key := meta.RegionalKey(name, region)
+	return &ResourceID{project, "subnetworks", key}
 }
 
 // NewTargetHttpProxiesResourceID creates a ResourceID for the TargetHttpProxies resource.

@@ -205,6 +205,17 @@ var AllServices = []*ServiceInfo{
 		Object:      "ForwardingRule",
 		Service:     "GlobalForwardingRules",
 		Resource:    "forwardingRules",
+		version: VersionAlpha,
+		keyType:     Global,
+		serviceType: reflect.TypeOf(&alpha.GlobalForwardingRulesService{}),
+		additionalMethods: []string{
+			"SetTarget",
+		},
+	},
+	{
+		Object:      "ForwardingRule",
+		Service:     "GlobalForwardingRules",
+		Resource:    "forwardingRules",
 		keyType:     Global,
 		serviceType: reflect.TypeOf(&ga.GlobalForwardingRulesService{}),
 		additionalMethods: []string{
@@ -314,6 +325,14 @@ var AllServices = []*ServiceInfo{
 		},
 	},
 	{
+		Object:      "Network",
+		Service:     "Networks",
+		Resource:    "networks",
+		version:     VersionAlpha,
+		keyType:     Global,
+		serviceType: reflect.TypeOf(&alpha.NetworksService{}),
+	},
+	{
 		Object:      "NetworkEndpointGroup",
 		Service:     "NetworkEndpointGroups",
 		Resource:    "networkEndpointGroups",
@@ -388,6 +407,25 @@ var AllServices = []*ServiceInfo{
 		serviceType: reflect.TypeOf(&ga.SslCertificatesService{}),
 	},
 	{
+		Object:      "Subnetwork",
+		Service:     "Subnetworks",
+		Resource:    "subnetworks",
+		version:     VersionAlpha,
+		keyType:     Regional,
+		serviceType: reflect.TypeOf(&alpha.SubnetworksService{}),
+	},
+	{
+		Object:      "TargetHttpProxy",
+		Service:     "TargetHttpProxies",
+		Resource:    "targetHttpProxies",
+		version:     VersionAlpha,
+		keyType:     Global,
+		serviceType: reflect.TypeOf(&alpha.TargetHttpProxiesService{}),
+		additionalMethods: []string{
+			"SetUrlMap",
+		},
+	},
+	{
 		Object:      "TargetHttpProxy",
 		Service:     "TargetHttpProxies",
 		Resource:    "targetHttpProxies",
@@ -417,6 +455,17 @@ var AllServices = []*ServiceInfo{
 		additionalMethods: []string{
 			"AddInstance",
 			"RemoveInstance",
+		},
+	},
+	{
+		Object:      "UrlMap",
+		Service:     "UrlMaps",
+		Resource:    "urlMaps",
+		version: VersionAlpha,
+		keyType:     Global,
+		serviceType: reflect.TypeOf(&alpha.UrlMapsService{}),
+		additionalMethods: []string{
+			"Update",
 		},
 	},
 	{

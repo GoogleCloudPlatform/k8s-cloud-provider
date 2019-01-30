@@ -28,15 +28,15 @@ func TestFilterToString(t *testing.T) {
 		f    *F
 		want string
 	}{
-		{Regexp("field1", "abc"), `field1 eq abc`},
-		{NotRegexp("field1", "abc"), `field1 ne abc`},
-		{EqualInt("field1", 13), "field1 eq 13"},
-		{NotEqualInt("field1", 13), "field1 ne 13"},
-		{EqualBool("field1", true), "field1 eq true"},
-		{NotEqualBool("field1", true), "field1 ne true"},
-		{Regexp("field1", "abc").AndRegexp("field2", "def"), `(field1 eq abc) (field2 eq def)`},
-		{Regexp("field1", "abc").AndNotEqualInt("field2", 17), `(field1 eq abc) (field2 ne 17)`},
-		{Regexp("field1", "abc").And(EqualInt("field2", 17)), `(field1 eq abc) (field2 eq 17)`},
+		{Regexp("field1", "abc"), `field1 ~ abc`},
+		{NotRegexp("field1", "abc"), `field1 !~ abc`},
+		{EqualInt("field1", 13), "field1 = 13"},
+		{NotEqualInt("field1", 13), "field1 != 13"},
+		{EqualBool("field1", true), "field1 = true"},
+		{NotEqualBool("field1", true), "field1 != true"},
+		{Regexp("field1", "abc").AndRegexp("field2", "def"), `(field1 ~ abc) (field2 ~ def)`},
+		{Regexp("field1", "abc").AndNotEqualInt("field2", 17), `(field1 ~ abc) (field2 != 17)`},
+		{Regexp("field1", "abc").And(EqualInt("field2", 17)), `(field1 ~ abc) (field2 = 17)`},
 	} {
 		if tc.f.String() != tc.want {
 			t.Errorf("filter %#v String() = %q, want %q", tc.f, tc.f.String(), tc.want)

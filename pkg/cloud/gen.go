@@ -1579,6 +1579,7 @@ type Addresses interface {
 	List(ctx context.Context, region string, fl *filter.F) ([]*ga.Address, error)
 	Insert(ctx context.Context, key *meta.Key, obj *ga.Address) error
 	Delete(ctx context.Context, key *meta.Key) error
+	AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*ga.Address, error)
 }
 
 // NewMockAddresses returns a new mock for Addresses.
@@ -1605,19 +1606,21 @@ type MockAddresses struct {
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
-	GetError    map[meta.Key]error
-	ListError   *error
-	InsertError map[meta.Key]error
-	DeleteError map[meta.Key]error
+	GetError            map[meta.Key]error
+	ListError           *error
+	InsertError         map[meta.Key]error
+	DeleteError         map[meta.Key]error
+	AggregatedListError *error
 
 	// xxxHook allow you to intercept the standard processing of the mock in
 	// order to add your own logic. Return (true, _, _) to prevent the normal
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
-	GetHook    func(ctx context.Context, key *meta.Key, m *MockAddresses) (bool, *ga.Address, error)
-	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockAddresses) (bool, []*ga.Address, error)
-	InsertHook func(ctx context.Context, key *meta.Key, obj *ga.Address, m *MockAddresses) (bool, error)
-	DeleteHook func(ctx context.Context, key *meta.Key, m *MockAddresses) (bool, error)
+	GetHook            func(ctx context.Context, key *meta.Key, m *MockAddresses) (bool, *ga.Address, error)
+	ListHook           func(ctx context.Context, region string, fl *filter.F, m *MockAddresses) (bool, []*ga.Address, error)
+	InsertHook         func(ctx context.Context, key *meta.Key, obj *ga.Address, m *MockAddresses) (bool, error)
+	DeleteHook         func(ctx context.Context, key *meta.Key, m *MockAddresses) (bool, error)
+	AggregatedListHook func(ctx context.Context, fl *filter.F, m *MockAddresses) (bool, map[string][]*ga.Address, error)
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -1759,6 +1762,41 @@ func (m *MockAddresses) Delete(ctx context.Context, key *meta.Key) error {
 	delete(m.Objects, *key)
 	klog.V(5).Infof("MockAddresses.Delete(%v, %v) = nil", ctx, key)
 	return nil
+}
+
+// AggregatedList is a mock for AggregatedList.
+func (m *MockAddresses) AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*ga.Address, error) {
+	if m.AggregatedListHook != nil {
+		if intercept, objs, err := m.AggregatedListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockAddresses.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.AggregatedListError != nil {
+		err := *m.AggregatedListError
+		klog.V(5).Infof("MockAddresses.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
+		return nil, err
+	}
+
+	objs := map[string][]*ga.Address{}
+	for _, obj := range m.Objects {
+		res, err := ParseResourceURL(obj.ToGA().SelfLink)
+		location := res.Key.Region
+		if err != nil {
+			klog.V(5).Infof("MockAddresses.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
+			return nil, err
+		}
+		if !fl.Match(obj.ToGA()) {
+			continue
+		}
+		objs[location] = append(objs[location], obj.ToGA())
+	}
+	klog.V(5).Infof("MockAddresses.AggregatedList(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
 }
 
 // Obj wraps the object for use in the mock.
@@ -1907,12 +1945,61 @@ func (g *GCEAddresses) Delete(ctx context.Context, key *meta.Key) error {
 	return err
 }
 
+// AggregatedList lists all resources of the given type across all locations.
+func (g *GCEAddresses) AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*ga.Address, error) {
+	klog.V(5).Infof("GCEAddresses.AggregatedList(%v, %v) called", ctx, fl)
+
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Addresses")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "AggregatedList",
+		Version:   meta.Version("ga"),
+		Service:   "Addresses",
+	}
+
+	klog.V(5).Infof("GCEAddresses.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(5).Infof("GCEAddresses.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
+		return nil, err
+	}
+
+	call := g.s.GA.Addresses.AggregatedList(projectID)
+	call.Context(ctx)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+
+	all := map[string][]*ga.Address{}
+	f := func(l *ga.AddressAggregatedList) error {
+		for k, v := range l.Items {
+			klog.V(5).Infof("GCEAddresses.AggregatedList(%v, %v): page[%v]%+v", ctx, fl, k, v)
+			all[k] = append(all[k], v.Addresses...)
+		}
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAddresses.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+	if klog.V(4) {
+		klog.V(4).Infof("GCEAddresses.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAddresses.AggregatedList(%v, %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+	return all, nil
+}
+
 // AlphaAddresses is an interface that allows for mocking of Addresses.
 type AlphaAddresses interface {
 	Get(ctx context.Context, key *meta.Key) (*alpha.Address, error)
 	List(ctx context.Context, region string, fl *filter.F) ([]*alpha.Address, error)
 	Insert(ctx context.Context, key *meta.Key, obj *alpha.Address) error
 	Delete(ctx context.Context, key *meta.Key) error
+	AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*alpha.Address, error)
 }
 
 // NewMockAlphaAddresses returns a new mock for Addresses.
@@ -1939,19 +2026,21 @@ type MockAlphaAddresses struct {
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
-	GetError    map[meta.Key]error
-	ListError   *error
-	InsertError map[meta.Key]error
-	DeleteError map[meta.Key]error
+	GetError            map[meta.Key]error
+	ListError           *error
+	InsertError         map[meta.Key]error
+	DeleteError         map[meta.Key]error
+	AggregatedListError *error
 
 	// xxxHook allow you to intercept the standard processing of the mock in
 	// order to add your own logic. Return (true, _, _) to prevent the normal
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
-	GetHook    func(ctx context.Context, key *meta.Key, m *MockAlphaAddresses) (bool, *alpha.Address, error)
-	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockAlphaAddresses) (bool, []*alpha.Address, error)
-	InsertHook func(ctx context.Context, key *meta.Key, obj *alpha.Address, m *MockAlphaAddresses) (bool, error)
-	DeleteHook func(ctx context.Context, key *meta.Key, m *MockAlphaAddresses) (bool, error)
+	GetHook            func(ctx context.Context, key *meta.Key, m *MockAlphaAddresses) (bool, *alpha.Address, error)
+	ListHook           func(ctx context.Context, region string, fl *filter.F, m *MockAlphaAddresses) (bool, []*alpha.Address, error)
+	InsertHook         func(ctx context.Context, key *meta.Key, obj *alpha.Address, m *MockAlphaAddresses) (bool, error)
+	DeleteHook         func(ctx context.Context, key *meta.Key, m *MockAlphaAddresses) (bool, error)
+	AggregatedListHook func(ctx context.Context, fl *filter.F, m *MockAlphaAddresses) (bool, map[string][]*alpha.Address, error)
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -2093,6 +2182,41 @@ func (m *MockAlphaAddresses) Delete(ctx context.Context, key *meta.Key) error {
 	delete(m.Objects, *key)
 	klog.V(5).Infof("MockAlphaAddresses.Delete(%v, %v) = nil", ctx, key)
 	return nil
+}
+
+// AggregatedList is a mock for AggregatedList.
+func (m *MockAlphaAddresses) AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*alpha.Address, error) {
+	if m.AggregatedListHook != nil {
+		if intercept, objs, err := m.AggregatedListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaAddresses.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.AggregatedListError != nil {
+		err := *m.AggregatedListError
+		klog.V(5).Infof("MockAlphaAddresses.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
+		return nil, err
+	}
+
+	objs := map[string][]*alpha.Address{}
+	for _, obj := range m.Objects {
+		res, err := ParseResourceURL(obj.ToAlpha().SelfLink)
+		location := res.Key.Region
+		if err != nil {
+			klog.V(5).Infof("MockAlphaAddresses.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
+			return nil, err
+		}
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		objs[location] = append(objs[location], obj.ToAlpha())
+	}
+	klog.V(5).Infof("MockAlphaAddresses.AggregatedList(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
 }
 
 // Obj wraps the object for use in the mock.
@@ -2241,12 +2365,61 @@ func (g *GCEAlphaAddresses) Delete(ctx context.Context, key *meta.Key) error {
 	return err
 }
 
+// AggregatedList lists all resources of the given type across all locations.
+func (g *GCEAlphaAddresses) AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*alpha.Address, error) {
+	klog.V(5).Infof("GCEAlphaAddresses.AggregatedList(%v, %v) called", ctx, fl)
+
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Addresses")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "AggregatedList",
+		Version:   meta.Version("alpha"),
+		Service:   "Addresses",
+	}
+
+	klog.V(5).Infof("GCEAlphaAddresses.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(5).Infof("GCEAlphaAddresses.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
+		return nil, err
+	}
+
+	call := g.s.Alpha.Addresses.AggregatedList(projectID)
+	call.Context(ctx)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+
+	all := map[string][]*alpha.Address{}
+	f := func(l *alpha.AddressAggregatedList) error {
+		for k, v := range l.Items {
+			klog.V(5).Infof("GCEAlphaAddresses.AggregatedList(%v, %v): page[%v]%+v", ctx, fl, k, v)
+			all[k] = append(all[k], v.Addresses...)
+		}
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAlphaAddresses.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+	if klog.V(4) {
+		klog.V(4).Infof("GCEAlphaAddresses.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaAddresses.AggregatedList(%v, %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+	return all, nil
+}
+
 // BetaAddresses is an interface that allows for mocking of Addresses.
 type BetaAddresses interface {
 	Get(ctx context.Context, key *meta.Key) (*beta.Address, error)
 	List(ctx context.Context, region string, fl *filter.F) ([]*beta.Address, error)
 	Insert(ctx context.Context, key *meta.Key, obj *beta.Address) error
 	Delete(ctx context.Context, key *meta.Key) error
+	AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*beta.Address, error)
 }
 
 // NewMockBetaAddresses returns a new mock for Addresses.
@@ -2273,19 +2446,21 @@ type MockBetaAddresses struct {
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
-	GetError    map[meta.Key]error
-	ListError   *error
-	InsertError map[meta.Key]error
-	DeleteError map[meta.Key]error
+	GetError            map[meta.Key]error
+	ListError           *error
+	InsertError         map[meta.Key]error
+	DeleteError         map[meta.Key]error
+	AggregatedListError *error
 
 	// xxxHook allow you to intercept the standard processing of the mock in
 	// order to add your own logic. Return (true, _, _) to prevent the normal
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
-	GetHook    func(ctx context.Context, key *meta.Key, m *MockBetaAddresses) (bool, *beta.Address, error)
-	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockBetaAddresses) (bool, []*beta.Address, error)
-	InsertHook func(ctx context.Context, key *meta.Key, obj *beta.Address, m *MockBetaAddresses) (bool, error)
-	DeleteHook func(ctx context.Context, key *meta.Key, m *MockBetaAddresses) (bool, error)
+	GetHook            func(ctx context.Context, key *meta.Key, m *MockBetaAddresses) (bool, *beta.Address, error)
+	ListHook           func(ctx context.Context, region string, fl *filter.F, m *MockBetaAddresses) (bool, []*beta.Address, error)
+	InsertHook         func(ctx context.Context, key *meta.Key, obj *beta.Address, m *MockBetaAddresses) (bool, error)
+	DeleteHook         func(ctx context.Context, key *meta.Key, m *MockBetaAddresses) (bool, error)
+	AggregatedListHook func(ctx context.Context, fl *filter.F, m *MockBetaAddresses) (bool, map[string][]*beta.Address, error)
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -2427,6 +2602,41 @@ func (m *MockBetaAddresses) Delete(ctx context.Context, key *meta.Key) error {
 	delete(m.Objects, *key)
 	klog.V(5).Infof("MockBetaAddresses.Delete(%v, %v) = nil", ctx, key)
 	return nil
+}
+
+// AggregatedList is a mock for AggregatedList.
+func (m *MockBetaAddresses) AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*beta.Address, error) {
+	if m.AggregatedListHook != nil {
+		if intercept, objs, err := m.AggregatedListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockBetaAddresses.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.AggregatedListError != nil {
+		err := *m.AggregatedListError
+		klog.V(5).Infof("MockBetaAddresses.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
+		return nil, err
+	}
+
+	objs := map[string][]*beta.Address{}
+	for _, obj := range m.Objects {
+		res, err := ParseResourceURL(obj.ToBeta().SelfLink)
+		location := res.Key.Region
+		if err != nil {
+			klog.V(5).Infof("MockBetaAddresses.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
+			return nil, err
+		}
+		if !fl.Match(obj.ToBeta()) {
+			continue
+		}
+		objs[location] = append(objs[location], obj.ToBeta())
+	}
+	klog.V(5).Infof("MockBetaAddresses.AggregatedList(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
 }
 
 // Obj wraps the object for use in the mock.
@@ -2573,6 +2783,54 @@ func (g *GCEBetaAddresses) Delete(ctx context.Context, key *meta.Key) error {
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCEBetaAddresses.Delete(%v, %v) = %v", ctx, key, err)
 	return err
+}
+
+// AggregatedList lists all resources of the given type across all locations.
+func (g *GCEBetaAddresses) AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*beta.Address, error) {
+	klog.V(5).Infof("GCEBetaAddresses.AggregatedList(%v, %v) called", ctx, fl)
+
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Addresses")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "AggregatedList",
+		Version:   meta.Version("beta"),
+		Service:   "Addresses",
+	}
+
+	klog.V(5).Infof("GCEBetaAddresses.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(5).Infof("GCEBetaAddresses.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
+		return nil, err
+	}
+
+	call := g.s.Beta.Addresses.AggregatedList(projectID)
+	call.Context(ctx)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+
+	all := map[string][]*beta.Address{}
+	f := func(l *beta.AddressAggregatedList) error {
+		for k, v := range l.Items {
+			klog.V(5).Infof("GCEBetaAddresses.AggregatedList(%v, %v): page[%v]%+v", ctx, fl, k, v)
+			all[k] = append(all[k], v.Addresses...)
+		}
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEBetaAddresses.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+	if klog.V(4) {
+		klog.V(4).Infof("GCEBetaAddresses.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEBetaAddresses.AggregatedList(%v, %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+	return all, nil
 }
 
 // AlphaGlobalAddresses is an interface that allows for mocking of GlobalAddresses.

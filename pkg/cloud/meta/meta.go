@@ -71,6 +71,7 @@ var AllServices = []*ServiceInfo{
 		Resource:    "addresses",
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&ga.AddressesService{}),
+		options: AggregatedList,
 	},
 	{
 		Object:      "Address",
@@ -79,6 +80,7 @@ var AllServices = []*ServiceInfo{
 		version:     VersionAlpha,
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&alpha.AddressesService{}),
+		options: AggregatedList,
 	},
 	{
 		Object:      "Address",
@@ -87,6 +89,7 @@ var AllServices = []*ServiceInfo{
 		version:     VersionBeta,
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&beta.AddressesService{}),
+		options: AggregatedList,
 	},
 	{
 		Object:      "Address",

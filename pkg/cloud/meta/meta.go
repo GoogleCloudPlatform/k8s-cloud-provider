@@ -214,11 +214,30 @@ var AllServices = []*ServiceInfo{
 	},
 	{
 		Object:      "ForwardingRule",
+		Service:     "ForwardingRules",
+		Resource:    "forwardingRules",
+		version:     VersionBeta,
+		keyType:     Regional,
+		serviceType: reflect.TypeOf(&beta.ForwardingRulesService{}),
+	},
+	{
+		Object:      "ForwardingRule",
 		Service:     "GlobalForwardingRules",
 		Resource:    "forwardingRules",
 		version:     VersionAlpha,
 		keyType:     Global,
 		serviceType: reflect.TypeOf(&alpha.GlobalForwardingRulesService{}),
+		additionalMethods: []string{
+			"SetTarget",
+		},
+	},
+	{
+		Object:      "ForwardingRule",
+		Service:     "GlobalForwardingRules",
+		Resource:    "forwardingRules",
+		version:     VersionBeta,
+		keyType:     Global,
+		serviceType: reflect.TypeOf(&beta.GlobalForwardingRulesService{}),
 		additionalMethods: []string{
 			"SetTarget",
 		},
@@ -261,6 +280,17 @@ var AllServices = []*ServiceInfo{
 		version:     VersionBeta,
 		keyType:     Global,
 		serviceType: reflect.TypeOf(&beta.HealthChecksService{}),
+		additionalMethods: []string{
+			"Update",
+		},
+	},
+	{
+		Object:      "HealthCheck",
+		Service:     "RegionHealthChecks",
+		Resource:    "healthChecks",
+		version:     VersionAlpha,
+		keyType:     Regional,
+		serviceType: reflect.TypeOf(&alpha.RegionHealthChecksService{}),
 		additionalMethods: []string{
 			"Update",
 		},
@@ -472,8 +502,30 @@ var AllServices = []*ServiceInfo{
 		Object:      "TargetHttpProxy",
 		Service:     "TargetHttpProxies",
 		Resource:    "targetHttpProxies",
+		version:     VersionBeta,
+		keyType:     Global,
+		serviceType: reflect.TypeOf(&beta.TargetHttpProxiesService{}),
+		additionalMethods: []string{
+			"SetUrlMap",
+		},
+	},
+	{
+		Object:      "TargetHttpProxy",
+		Service:     "TargetHttpProxies",
+		Resource:    "targetHttpProxies",
 		keyType:     Global,
 		serviceType: reflect.TypeOf(&ga.TargetHttpProxiesService{}),
+		additionalMethods: []string{
+			"SetUrlMap",
+		},
+	},
+	{
+		Object:      "TargetHttpProxy",
+		Service:     "RegionTargetHttpProxies",
+		Resource:    "targetHttpProxies",
+		version: 		 VersionAlpha,
+		keyType:     Regional,
+		serviceType: reflect.TypeOf(&alpha.RegionTargetHttpProxiesService{}),
 		additionalMethods: []string{
 			"SetUrlMap",
 		},
@@ -484,6 +536,42 @@ var AllServices = []*ServiceInfo{
 		Resource:    "targetHttpsProxies",
 		keyType:     Global,
 		serviceType: reflect.TypeOf(&ga.TargetHttpsProxiesService{}),
+		additionalMethods: []string{
+			"SetSslCertificates",
+			"SetUrlMap",
+		},
+	},
+	{
+		Object:      "TargetHttpsProxy",
+		Service:     "TargetHttpsProxies",
+		Resource:    "targetHttpsProxies",
+		version:     VersionAlpha,
+		keyType:     Global,
+		serviceType: reflect.TypeOf(&alpha.TargetHttpsProxiesService{}),
+		additionalMethods: []string{
+			"SetSslCertificates",
+			"SetUrlMap",
+		},
+	},
+	{
+		Object:      "TargetHttpsProxy",
+		Service:     "TargetHttpsProxies",
+		Resource:    "targetHttpsProxies",
+		version:     VersionBeta,
+		keyType:     Global,
+		serviceType: reflect.TypeOf(&beta.TargetHttpsProxiesService{}),
+		additionalMethods: []string{
+			"SetSslCertificates",
+			"SetUrlMap",
+		},
+	},
+	{
+		Object:      "TargetHttpsProxy",
+		Service:     "RegionTargetHttpsProxies",
+		Resource:    "targetHttpsProxies",
+		version:     VersionAlpha,
+		keyType:     Regional,
+		serviceType: reflect.TypeOf(&alpha.RegionTargetHttpsProxiesService{}),
 		additionalMethods: []string{
 			"SetSslCertificates",
 			"SetUrlMap",
@@ -515,8 +603,30 @@ var AllServices = []*ServiceInfo{
 		Object:      "UrlMap",
 		Service:     "UrlMaps",
 		Resource:    "urlMaps",
+		version:     VersionBeta,
+		keyType:     Global,
+		serviceType: reflect.TypeOf(&beta.UrlMapsService{}),
+		additionalMethods: []string{
+			"Update",
+		},
+	},
+	{
+		Object:      "UrlMap",
+		Service:     "UrlMaps",
+		Resource:    "urlMaps",
 		keyType:     Global,
 		serviceType: reflect.TypeOf(&ga.UrlMapsService{}),
+		additionalMethods: []string{
+			"Update",
+		},
+	},
+	{
+		Object:      "UrlMap",
+		Service:     "RegionUrlMaps",
+		Resource:    "urlMaps",
+		version:     VersionAlpha,
+		keyType:     Regional,
+		serviceType: reflect.TypeOf(&alpha.RegionUrlMapsService{}),
 		additionalMethods: []string{
 			"Update",
 		},

@@ -440,6 +440,8 @@ func TestForwardingRulesGroup(t *testing.T) {
 	var key *meta.Key
 	keyAlpha := meta.RegionalKey("key-alpha", "location")
 	key = keyAlpha
+	keyBeta := meta.RegionalKey("key-beta", "location")
+	key = keyBeta
 	keyGA := meta.RegionalKey("key-ga", "location")
 	key = keyGA
 	// Ignore unused variables.
@@ -448,6 +450,9 @@ func TestForwardingRulesGroup(t *testing.T) {
 	// Get not found.
 	if _, err := mock.AlphaForwardingRules().Get(ctx, key); err == nil {
 		t.Errorf("AlphaForwardingRules().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.BetaForwardingRules().Get(ctx, key); err == nil {
+		t.Errorf("BetaForwardingRules().Get(%v, %v) = _, nil; want error", ctx, key)
 	}
 	if _, err := mock.ForwardingRules().Get(ctx, key); err == nil {
 		t.Errorf("ForwardingRules().Get(%v, %v) = _, nil; want error", ctx, key)
@@ -461,6 +466,12 @@ func TestForwardingRulesGroup(t *testing.T) {
 		}
 	}
 	{
+		obj := &beta.ForwardingRule{}
+		if err := mock.BetaForwardingRules().Insert(ctx, keyBeta, obj); err != nil {
+			t.Errorf("BetaForwardingRules().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
+		}
+	}
+	{
 		obj := &ga.ForwardingRule{}
 		if err := mock.ForwardingRules().Insert(ctx, keyGA, obj); err != nil {
 			t.Errorf("ForwardingRules().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
@@ -471,15 +482,20 @@ func TestForwardingRulesGroup(t *testing.T) {
 	if obj, err := mock.AlphaForwardingRules().Get(ctx, key); err != nil {
 		t.Errorf("AlphaForwardingRules().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
+	if obj, err := mock.BetaForwardingRules().Get(ctx, key); err != nil {
+		t.Errorf("BetaForwardingRules().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
 	if obj, err := mock.ForwardingRules().Get(ctx, key); err != nil {
 		t.Errorf("ForwardingRules().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
 
 	// List.
 	mock.MockAlphaForwardingRules.Objects[*keyAlpha] = mock.MockAlphaForwardingRules.Obj(&alpha.ForwardingRule{Name: keyAlpha.Name})
+	mock.MockBetaForwardingRules.Objects[*keyBeta] = mock.MockBetaForwardingRules.Obj(&beta.ForwardingRule{Name: keyBeta.Name})
 	mock.MockForwardingRules.Objects[*keyGA] = mock.MockForwardingRules.Obj(&ga.ForwardingRule{Name: keyGA.Name})
 	want := map[string]bool{
 		"key-alpha": true,
+		"key-beta":  true,
 		"key-ga":    true,
 	}
 	_ = want // ignore unused variables.
@@ -494,6 +510,20 @@ func TestForwardingRulesGroup(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("AlphaForwardingRules().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.BetaForwardingRules().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("BetaForwardingRules().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("BetaForwardingRules().List(); got %+v, want %+v", got, want)
 			}
 		}
 	}
@@ -516,6 +546,9 @@ func TestForwardingRulesGroup(t *testing.T) {
 	if err := mock.AlphaForwardingRules().Delete(ctx, keyAlpha); err != nil {
 		t.Errorf("AlphaForwardingRules().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
 	}
+	if err := mock.BetaForwardingRules().Delete(ctx, keyBeta); err != nil {
+		t.Errorf("BetaForwardingRules().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
+	}
 	if err := mock.ForwardingRules().Delete(ctx, keyGA); err != nil {
 		t.Errorf("ForwardingRules().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
 	}
@@ -523,6 +556,9 @@ func TestForwardingRulesGroup(t *testing.T) {
 	// Delete not found.
 	if err := mock.AlphaForwardingRules().Delete(ctx, keyAlpha); err == nil {
 		t.Errorf("AlphaForwardingRules().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+	if err := mock.BetaForwardingRules().Delete(ctx, keyBeta); err == nil {
+		t.Errorf("BetaForwardingRules().Delete(%v, %v) = nil; want error", ctx, keyBeta)
 	}
 	if err := mock.ForwardingRules().Delete(ctx, keyGA); err == nil {
 		t.Errorf("ForwardingRules().Delete(%v, %v) = nil; want error", ctx, keyGA)
@@ -638,6 +674,8 @@ func TestGlobalForwardingRulesGroup(t *testing.T) {
 	var key *meta.Key
 	keyAlpha := meta.GlobalKey("key-alpha")
 	key = keyAlpha
+	keyBeta := meta.GlobalKey("key-beta")
+	key = keyBeta
 	keyGA := meta.GlobalKey("key-ga")
 	key = keyGA
 	// Ignore unused variables.
@@ -646,6 +684,9 @@ func TestGlobalForwardingRulesGroup(t *testing.T) {
 	// Get not found.
 	if _, err := mock.AlphaGlobalForwardingRules().Get(ctx, key); err == nil {
 		t.Errorf("AlphaGlobalForwardingRules().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.BetaGlobalForwardingRules().Get(ctx, key); err == nil {
+		t.Errorf("BetaGlobalForwardingRules().Get(%v, %v) = _, nil; want error", ctx, key)
 	}
 	if _, err := mock.GlobalForwardingRules().Get(ctx, key); err == nil {
 		t.Errorf("GlobalForwardingRules().Get(%v, %v) = _, nil; want error", ctx, key)
@@ -659,6 +700,12 @@ func TestGlobalForwardingRulesGroup(t *testing.T) {
 		}
 	}
 	{
+		obj := &beta.ForwardingRule{}
+		if err := mock.BetaGlobalForwardingRules().Insert(ctx, keyBeta, obj); err != nil {
+			t.Errorf("BetaGlobalForwardingRules().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
+		}
+	}
+	{
 		obj := &ga.ForwardingRule{}
 		if err := mock.GlobalForwardingRules().Insert(ctx, keyGA, obj); err != nil {
 			t.Errorf("GlobalForwardingRules().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
@@ -669,15 +716,20 @@ func TestGlobalForwardingRulesGroup(t *testing.T) {
 	if obj, err := mock.AlphaGlobalForwardingRules().Get(ctx, key); err != nil {
 		t.Errorf("AlphaGlobalForwardingRules().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
+	if obj, err := mock.BetaGlobalForwardingRules().Get(ctx, key); err != nil {
+		t.Errorf("BetaGlobalForwardingRules().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
 	if obj, err := mock.GlobalForwardingRules().Get(ctx, key); err != nil {
 		t.Errorf("GlobalForwardingRules().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
 
 	// List.
 	mock.MockAlphaGlobalForwardingRules.Objects[*keyAlpha] = mock.MockAlphaGlobalForwardingRules.Obj(&alpha.ForwardingRule{Name: keyAlpha.Name})
+	mock.MockBetaGlobalForwardingRules.Objects[*keyBeta] = mock.MockBetaGlobalForwardingRules.Obj(&beta.ForwardingRule{Name: keyBeta.Name})
 	mock.MockGlobalForwardingRules.Objects[*keyGA] = mock.MockGlobalForwardingRules.Obj(&ga.ForwardingRule{Name: keyGA.Name})
 	want := map[string]bool{
 		"key-alpha": true,
+		"key-beta":  true,
 		"key-ga":    true,
 	}
 	_ = want // ignore unused variables.
@@ -692,6 +744,20 @@ func TestGlobalForwardingRulesGroup(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("AlphaGlobalForwardingRules().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.BetaGlobalForwardingRules().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("BetaGlobalForwardingRules().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("BetaGlobalForwardingRules().List(); got %+v, want %+v", got, want)
 			}
 		}
 	}
@@ -714,6 +780,9 @@ func TestGlobalForwardingRulesGroup(t *testing.T) {
 	if err := mock.AlphaGlobalForwardingRules().Delete(ctx, keyAlpha); err != nil {
 		t.Errorf("AlphaGlobalForwardingRules().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
 	}
+	if err := mock.BetaGlobalForwardingRules().Delete(ctx, keyBeta); err != nil {
+		t.Errorf("BetaGlobalForwardingRules().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
+	}
 	if err := mock.GlobalForwardingRules().Delete(ctx, keyGA); err != nil {
 		t.Errorf("GlobalForwardingRules().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
 	}
@@ -721,6 +790,9 @@ func TestGlobalForwardingRulesGroup(t *testing.T) {
 	// Delete not found.
 	if err := mock.AlphaGlobalForwardingRules().Delete(ctx, keyAlpha); err == nil {
 		t.Errorf("AlphaGlobalForwardingRules().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+	if err := mock.BetaGlobalForwardingRules().Delete(ctx, keyBeta); err == nil {
+		t.Errorf("BetaGlobalForwardingRules().Delete(%v, %v) = nil; want error", ctx, keyBeta)
 	}
 	if err := mock.GlobalForwardingRules().Delete(ctx, keyGA); err == nil {
 		t.Errorf("GlobalForwardingRules().Delete(%v, %v) = nil; want error", ctx, keyGA)
@@ -1613,6 +1685,258 @@ func TestRegionDisksGroup(t *testing.T) {
 	}
 }
 
+func TestRegionHealthChecksGroup(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pr := &SingleProjectRouter{"mock-project"}
+	mock := NewMockGCE(pr)
+
+	var key *meta.Key
+	keyAlpha := meta.RegionalKey("key-alpha", "location")
+	key = keyAlpha
+	// Ignore unused variables.
+	_, _, _ = ctx, mock, key
+
+	// Get not found.
+	if _, err := mock.AlphaRegionHealthChecks().Get(ctx, key); err == nil {
+		t.Errorf("AlphaRegionHealthChecks().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+
+	// Insert.
+	{
+		obj := &alpha.HealthCheck{}
+		if err := mock.AlphaRegionHealthChecks().Insert(ctx, keyAlpha, obj); err != nil {
+			t.Errorf("AlphaRegionHealthChecks().Insert(%v, %v, %v) = %v; want nil", ctx, keyAlpha, obj, err)
+		}
+	}
+
+	// Get across versions.
+	if obj, err := mock.AlphaRegionHealthChecks().Get(ctx, key); err != nil {
+		t.Errorf("AlphaRegionHealthChecks().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+
+	// List.
+	mock.MockAlphaRegionHealthChecks.Objects[*keyAlpha] = mock.MockAlphaRegionHealthChecks.Obj(&alpha.HealthCheck{Name: keyAlpha.Name})
+	want := map[string]bool{
+		"key-alpha": true,
+	}
+	_ = want // ignore unused variables.
+	{
+		objs, err := mock.AlphaRegionHealthChecks().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("AlphaRegionHealthChecks().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("AlphaRegionHealthChecks().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+
+	// Delete across versions.
+	if err := mock.AlphaRegionHealthChecks().Delete(ctx, keyAlpha); err != nil {
+		t.Errorf("AlphaRegionHealthChecks().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
+	}
+
+	// Delete not found.
+	if err := mock.AlphaRegionHealthChecks().Delete(ctx, keyAlpha); err == nil {
+		t.Errorf("AlphaRegionHealthChecks().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+}
+
+func TestRegionTargetHttpProxiesGroup(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pr := &SingleProjectRouter{"mock-project"}
+	mock := NewMockGCE(pr)
+
+	var key *meta.Key
+	keyAlpha := meta.RegionalKey("key-alpha", "location")
+	key = keyAlpha
+	// Ignore unused variables.
+	_, _, _ = ctx, mock, key
+
+	// Get not found.
+	if _, err := mock.AlphaRegionTargetHttpProxies().Get(ctx, key); err == nil {
+		t.Errorf("AlphaRegionTargetHttpProxies().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+
+	// Insert.
+	{
+		obj := &alpha.TargetHttpProxy{}
+		if err := mock.AlphaRegionTargetHttpProxies().Insert(ctx, keyAlpha, obj); err != nil {
+			t.Errorf("AlphaRegionTargetHttpProxies().Insert(%v, %v, %v) = %v; want nil", ctx, keyAlpha, obj, err)
+		}
+	}
+
+	// Get across versions.
+	if obj, err := mock.AlphaRegionTargetHttpProxies().Get(ctx, key); err != nil {
+		t.Errorf("AlphaRegionTargetHttpProxies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+
+	// List.
+	mock.MockAlphaRegionTargetHttpProxies.Objects[*keyAlpha] = mock.MockAlphaRegionTargetHttpProxies.Obj(&alpha.TargetHttpProxy{Name: keyAlpha.Name})
+	want := map[string]bool{
+		"key-alpha": true,
+	}
+	_ = want // ignore unused variables.
+	{
+		objs, err := mock.AlphaRegionTargetHttpProxies().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("AlphaRegionTargetHttpProxies().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("AlphaRegionTargetHttpProxies().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+
+	// Delete across versions.
+	if err := mock.AlphaRegionTargetHttpProxies().Delete(ctx, keyAlpha); err != nil {
+		t.Errorf("AlphaRegionTargetHttpProxies().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
+	}
+
+	// Delete not found.
+	if err := mock.AlphaRegionTargetHttpProxies().Delete(ctx, keyAlpha); err == nil {
+		t.Errorf("AlphaRegionTargetHttpProxies().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+}
+
+func TestRegionTargetHttpsProxiesGroup(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pr := &SingleProjectRouter{"mock-project"}
+	mock := NewMockGCE(pr)
+
+	var key *meta.Key
+	keyAlpha := meta.RegionalKey("key-alpha", "location")
+	key = keyAlpha
+	// Ignore unused variables.
+	_, _, _ = ctx, mock, key
+
+	// Get not found.
+	if _, err := mock.AlphaRegionTargetHttpsProxies().Get(ctx, key); err == nil {
+		t.Errorf("AlphaRegionTargetHttpsProxies().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+
+	// Insert.
+	{
+		obj := &alpha.TargetHttpsProxy{}
+		if err := mock.AlphaRegionTargetHttpsProxies().Insert(ctx, keyAlpha, obj); err != nil {
+			t.Errorf("AlphaRegionTargetHttpsProxies().Insert(%v, %v, %v) = %v; want nil", ctx, keyAlpha, obj, err)
+		}
+	}
+
+	// Get across versions.
+	if obj, err := mock.AlphaRegionTargetHttpsProxies().Get(ctx, key); err != nil {
+		t.Errorf("AlphaRegionTargetHttpsProxies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+
+	// List.
+	mock.MockAlphaRegionTargetHttpsProxies.Objects[*keyAlpha] = mock.MockAlphaRegionTargetHttpsProxies.Obj(&alpha.TargetHttpsProxy{Name: keyAlpha.Name})
+	want := map[string]bool{
+		"key-alpha": true,
+	}
+	_ = want // ignore unused variables.
+	{
+		objs, err := mock.AlphaRegionTargetHttpsProxies().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("AlphaRegionTargetHttpsProxies().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("AlphaRegionTargetHttpsProxies().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+
+	// Delete across versions.
+	if err := mock.AlphaRegionTargetHttpsProxies().Delete(ctx, keyAlpha); err != nil {
+		t.Errorf("AlphaRegionTargetHttpsProxies().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
+	}
+
+	// Delete not found.
+	if err := mock.AlphaRegionTargetHttpsProxies().Delete(ctx, keyAlpha); err == nil {
+		t.Errorf("AlphaRegionTargetHttpsProxies().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+}
+
+func TestRegionUrlMapsGroup(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pr := &SingleProjectRouter{"mock-project"}
+	mock := NewMockGCE(pr)
+
+	var key *meta.Key
+	keyAlpha := meta.RegionalKey("key-alpha", "location")
+	key = keyAlpha
+	// Ignore unused variables.
+	_, _, _ = ctx, mock, key
+
+	// Get not found.
+	if _, err := mock.AlphaRegionUrlMaps().Get(ctx, key); err == nil {
+		t.Errorf("AlphaRegionUrlMaps().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+
+	// Insert.
+	{
+		obj := &alpha.UrlMap{}
+		if err := mock.AlphaRegionUrlMaps().Insert(ctx, keyAlpha, obj); err != nil {
+			t.Errorf("AlphaRegionUrlMaps().Insert(%v, %v, %v) = %v; want nil", ctx, keyAlpha, obj, err)
+		}
+	}
+
+	// Get across versions.
+	if obj, err := mock.AlphaRegionUrlMaps().Get(ctx, key); err != nil {
+		t.Errorf("AlphaRegionUrlMaps().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+
+	// List.
+	mock.MockAlphaRegionUrlMaps.Objects[*keyAlpha] = mock.MockAlphaRegionUrlMaps.Obj(&alpha.UrlMap{Name: keyAlpha.Name})
+	want := map[string]bool{
+		"key-alpha": true,
+	}
+	_ = want // ignore unused variables.
+	{
+		objs, err := mock.AlphaRegionUrlMaps().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("AlphaRegionUrlMaps().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("AlphaRegionUrlMaps().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+
+	// Delete across versions.
+	if err := mock.AlphaRegionUrlMaps().Delete(ctx, keyAlpha); err != nil {
+		t.Errorf("AlphaRegionUrlMaps().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
+	}
+
+	// Delete not found.
+	if err := mock.AlphaRegionUrlMaps().Delete(ctx, keyAlpha); err == nil {
+		t.Errorf("AlphaRegionUrlMaps().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+}
+
 func TestRegionsGroup(t *testing.T) {
 	t.Parallel()
 
@@ -1995,6 +2319,8 @@ func TestTargetHttpProxiesGroup(t *testing.T) {
 	var key *meta.Key
 	keyAlpha := meta.GlobalKey("key-alpha")
 	key = keyAlpha
+	keyBeta := meta.GlobalKey("key-beta")
+	key = keyBeta
 	keyGA := meta.GlobalKey("key-ga")
 	key = keyGA
 	// Ignore unused variables.
@@ -2003,6 +2329,9 @@ func TestTargetHttpProxiesGroup(t *testing.T) {
 	// Get not found.
 	if _, err := mock.AlphaTargetHttpProxies().Get(ctx, key); err == nil {
 		t.Errorf("AlphaTargetHttpProxies().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.BetaTargetHttpProxies().Get(ctx, key); err == nil {
+		t.Errorf("BetaTargetHttpProxies().Get(%v, %v) = _, nil; want error", ctx, key)
 	}
 	if _, err := mock.TargetHttpProxies().Get(ctx, key); err == nil {
 		t.Errorf("TargetHttpProxies().Get(%v, %v) = _, nil; want error", ctx, key)
@@ -2016,6 +2345,12 @@ func TestTargetHttpProxiesGroup(t *testing.T) {
 		}
 	}
 	{
+		obj := &beta.TargetHttpProxy{}
+		if err := mock.BetaTargetHttpProxies().Insert(ctx, keyBeta, obj); err != nil {
+			t.Errorf("BetaTargetHttpProxies().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
+		}
+	}
+	{
 		obj := &ga.TargetHttpProxy{}
 		if err := mock.TargetHttpProxies().Insert(ctx, keyGA, obj); err != nil {
 			t.Errorf("TargetHttpProxies().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
@@ -2026,15 +2361,20 @@ func TestTargetHttpProxiesGroup(t *testing.T) {
 	if obj, err := mock.AlphaTargetHttpProxies().Get(ctx, key); err != nil {
 		t.Errorf("AlphaTargetHttpProxies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
+	if obj, err := mock.BetaTargetHttpProxies().Get(ctx, key); err != nil {
+		t.Errorf("BetaTargetHttpProxies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
 	if obj, err := mock.TargetHttpProxies().Get(ctx, key); err != nil {
 		t.Errorf("TargetHttpProxies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
 
 	// List.
 	mock.MockAlphaTargetHttpProxies.Objects[*keyAlpha] = mock.MockAlphaTargetHttpProxies.Obj(&alpha.TargetHttpProxy{Name: keyAlpha.Name})
+	mock.MockBetaTargetHttpProxies.Objects[*keyBeta] = mock.MockBetaTargetHttpProxies.Obj(&beta.TargetHttpProxy{Name: keyBeta.Name})
 	mock.MockTargetHttpProxies.Objects[*keyGA] = mock.MockTargetHttpProxies.Obj(&ga.TargetHttpProxy{Name: keyGA.Name})
 	want := map[string]bool{
 		"key-alpha": true,
+		"key-beta":  true,
 		"key-ga":    true,
 	}
 	_ = want // ignore unused variables.
@@ -2049,6 +2389,20 @@ func TestTargetHttpProxiesGroup(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("AlphaTargetHttpProxies().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.BetaTargetHttpProxies().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("BetaTargetHttpProxies().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("BetaTargetHttpProxies().List(); got %+v, want %+v", got, want)
 			}
 		}
 	}
@@ -2071,6 +2425,9 @@ func TestTargetHttpProxiesGroup(t *testing.T) {
 	if err := mock.AlphaTargetHttpProxies().Delete(ctx, keyAlpha); err != nil {
 		t.Errorf("AlphaTargetHttpProxies().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
 	}
+	if err := mock.BetaTargetHttpProxies().Delete(ctx, keyBeta); err != nil {
+		t.Errorf("BetaTargetHttpProxies().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
+	}
 	if err := mock.TargetHttpProxies().Delete(ctx, keyGA); err != nil {
 		t.Errorf("TargetHttpProxies().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
 	}
@@ -2078,6 +2435,9 @@ func TestTargetHttpProxiesGroup(t *testing.T) {
 	// Delete not found.
 	if err := mock.AlphaTargetHttpProxies().Delete(ctx, keyAlpha); err == nil {
 		t.Errorf("AlphaTargetHttpProxies().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+	if err := mock.BetaTargetHttpProxies().Delete(ctx, keyBeta); err == nil {
+		t.Errorf("BetaTargetHttpProxies().Delete(%v, %v) = nil; want error", ctx, keyBeta)
 	}
 	if err := mock.TargetHttpProxies().Delete(ctx, keyGA); err == nil {
 		t.Errorf("TargetHttpProxies().Delete(%v, %v) = nil; want error", ctx, keyGA)
@@ -2092,17 +2452,39 @@ func TestTargetHttpsProxiesGroup(t *testing.T) {
 	mock := NewMockGCE(pr)
 
 	var key *meta.Key
+	keyAlpha := meta.GlobalKey("key-alpha")
+	key = keyAlpha
+	keyBeta := meta.GlobalKey("key-beta")
+	key = keyBeta
 	keyGA := meta.GlobalKey("key-ga")
 	key = keyGA
 	// Ignore unused variables.
 	_, _, _ = ctx, mock, key
 
 	// Get not found.
+	if _, err := mock.AlphaTargetHttpsProxies().Get(ctx, key); err == nil {
+		t.Errorf("AlphaTargetHttpsProxies().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.BetaTargetHttpsProxies().Get(ctx, key); err == nil {
+		t.Errorf("BetaTargetHttpsProxies().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
 	if _, err := mock.TargetHttpsProxies().Get(ctx, key); err == nil {
 		t.Errorf("TargetHttpsProxies().Get(%v, %v) = _, nil; want error", ctx, key)
 	}
 
 	// Insert.
+	{
+		obj := &alpha.TargetHttpsProxy{}
+		if err := mock.AlphaTargetHttpsProxies().Insert(ctx, keyAlpha, obj); err != nil {
+			t.Errorf("AlphaTargetHttpsProxies().Insert(%v, %v, %v) = %v; want nil", ctx, keyAlpha, obj, err)
+		}
+	}
+	{
+		obj := &beta.TargetHttpsProxy{}
+		if err := mock.BetaTargetHttpsProxies().Insert(ctx, keyBeta, obj); err != nil {
+			t.Errorf("BetaTargetHttpsProxies().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
+		}
+	}
 	{
 		obj := &ga.TargetHttpsProxy{}
 		if err := mock.TargetHttpsProxies().Insert(ctx, keyGA, obj); err != nil {
@@ -2111,16 +2493,54 @@ func TestTargetHttpsProxiesGroup(t *testing.T) {
 	}
 
 	// Get across versions.
+	if obj, err := mock.AlphaTargetHttpsProxies().Get(ctx, key); err != nil {
+		t.Errorf("AlphaTargetHttpsProxies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+	if obj, err := mock.BetaTargetHttpsProxies().Get(ctx, key); err != nil {
+		t.Errorf("BetaTargetHttpsProxies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
 	if obj, err := mock.TargetHttpsProxies().Get(ctx, key); err != nil {
 		t.Errorf("TargetHttpsProxies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
 
 	// List.
+	mock.MockAlphaTargetHttpsProxies.Objects[*keyAlpha] = mock.MockAlphaTargetHttpsProxies.Obj(&alpha.TargetHttpsProxy{Name: keyAlpha.Name})
+	mock.MockBetaTargetHttpsProxies.Objects[*keyBeta] = mock.MockBetaTargetHttpsProxies.Obj(&beta.TargetHttpsProxy{Name: keyBeta.Name})
 	mock.MockTargetHttpsProxies.Objects[*keyGA] = mock.MockTargetHttpsProxies.Obj(&ga.TargetHttpsProxy{Name: keyGA.Name})
 	want := map[string]bool{
-		"key-ga": true,
+		"key-alpha": true,
+		"key-beta":  true,
+		"key-ga":    true,
 	}
 	_ = want // ignore unused variables.
+	{
+		objs, err := mock.AlphaTargetHttpsProxies().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("AlphaTargetHttpsProxies().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("AlphaTargetHttpsProxies().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.BetaTargetHttpsProxies().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("BetaTargetHttpsProxies().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("BetaTargetHttpsProxies().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
 	{
 		objs, err := mock.TargetHttpsProxies().List(ctx, filter.None)
 		if err != nil {
@@ -2137,11 +2557,23 @@ func TestTargetHttpsProxiesGroup(t *testing.T) {
 	}
 
 	// Delete across versions.
+	if err := mock.AlphaTargetHttpsProxies().Delete(ctx, keyAlpha); err != nil {
+		t.Errorf("AlphaTargetHttpsProxies().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
+	}
+	if err := mock.BetaTargetHttpsProxies().Delete(ctx, keyBeta); err != nil {
+		t.Errorf("BetaTargetHttpsProxies().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
+	}
 	if err := mock.TargetHttpsProxies().Delete(ctx, keyGA); err != nil {
 		t.Errorf("TargetHttpsProxies().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
 	}
 
 	// Delete not found.
+	if err := mock.AlphaTargetHttpsProxies().Delete(ctx, keyAlpha); err == nil {
+		t.Errorf("AlphaTargetHttpsProxies().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+	if err := mock.BetaTargetHttpsProxies().Delete(ctx, keyBeta); err == nil {
+		t.Errorf("BetaTargetHttpsProxies().Delete(%v, %v) = nil; want error", ctx, keyBeta)
+	}
 	if err := mock.TargetHttpsProxies().Delete(ctx, keyGA); err == nil {
 		t.Errorf("TargetHttpsProxies().Delete(%v, %v) = nil; want error", ctx, keyGA)
 	}
@@ -2220,6 +2652,8 @@ func TestUrlMapsGroup(t *testing.T) {
 	var key *meta.Key
 	keyAlpha := meta.GlobalKey("key-alpha")
 	key = keyAlpha
+	keyBeta := meta.GlobalKey("key-beta")
+	key = keyBeta
 	keyGA := meta.GlobalKey("key-ga")
 	key = keyGA
 	// Ignore unused variables.
@@ -2228,6 +2662,9 @@ func TestUrlMapsGroup(t *testing.T) {
 	// Get not found.
 	if _, err := mock.AlphaUrlMaps().Get(ctx, key); err == nil {
 		t.Errorf("AlphaUrlMaps().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.BetaUrlMaps().Get(ctx, key); err == nil {
+		t.Errorf("BetaUrlMaps().Get(%v, %v) = _, nil; want error", ctx, key)
 	}
 	if _, err := mock.UrlMaps().Get(ctx, key); err == nil {
 		t.Errorf("UrlMaps().Get(%v, %v) = _, nil; want error", ctx, key)
@@ -2241,6 +2678,12 @@ func TestUrlMapsGroup(t *testing.T) {
 		}
 	}
 	{
+		obj := &beta.UrlMap{}
+		if err := mock.BetaUrlMaps().Insert(ctx, keyBeta, obj); err != nil {
+			t.Errorf("BetaUrlMaps().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
+		}
+	}
+	{
 		obj := &ga.UrlMap{}
 		if err := mock.UrlMaps().Insert(ctx, keyGA, obj); err != nil {
 			t.Errorf("UrlMaps().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
@@ -2251,15 +2694,20 @@ func TestUrlMapsGroup(t *testing.T) {
 	if obj, err := mock.AlphaUrlMaps().Get(ctx, key); err != nil {
 		t.Errorf("AlphaUrlMaps().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
+	if obj, err := mock.BetaUrlMaps().Get(ctx, key); err != nil {
+		t.Errorf("BetaUrlMaps().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
 	if obj, err := mock.UrlMaps().Get(ctx, key); err != nil {
 		t.Errorf("UrlMaps().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
 
 	// List.
 	mock.MockAlphaUrlMaps.Objects[*keyAlpha] = mock.MockAlphaUrlMaps.Obj(&alpha.UrlMap{Name: keyAlpha.Name})
+	mock.MockBetaUrlMaps.Objects[*keyBeta] = mock.MockBetaUrlMaps.Obj(&beta.UrlMap{Name: keyBeta.Name})
 	mock.MockUrlMaps.Objects[*keyGA] = mock.MockUrlMaps.Obj(&ga.UrlMap{Name: keyGA.Name})
 	want := map[string]bool{
 		"key-alpha": true,
+		"key-beta":  true,
 		"key-ga":    true,
 	}
 	_ = want // ignore unused variables.
@@ -2274,6 +2722,20 @@ func TestUrlMapsGroup(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("AlphaUrlMaps().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.BetaUrlMaps().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("BetaUrlMaps().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("BetaUrlMaps().List(); got %+v, want %+v", got, want)
 			}
 		}
 	}
@@ -2296,6 +2758,9 @@ func TestUrlMapsGroup(t *testing.T) {
 	if err := mock.AlphaUrlMaps().Delete(ctx, keyAlpha); err != nil {
 		t.Errorf("AlphaUrlMaps().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
 	}
+	if err := mock.BetaUrlMaps().Delete(ctx, keyBeta); err != nil {
+		t.Errorf("BetaUrlMaps().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
+	}
 	if err := mock.UrlMaps().Delete(ctx, keyGA); err != nil {
 		t.Errorf("UrlMaps().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
 	}
@@ -2303,6 +2768,9 @@ func TestUrlMapsGroup(t *testing.T) {
 	// Delete not found.
 	if err := mock.AlphaUrlMaps().Delete(ctx, keyAlpha); err == nil {
 		t.Errorf("AlphaUrlMaps().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+	if err := mock.BetaUrlMaps().Delete(ctx, keyBeta); err == nil {
+		t.Errorf("BetaUrlMaps().Delete(%v, %v) = nil; want error", ctx, keyBeta)
 	}
 	if err := mock.UrlMaps().Delete(ctx, keyGA); err == nil {
 		t.Errorf("UrlMaps().Delete(%v, %v) = nil; want error", ctx, keyGA)
@@ -2378,6 +2846,10 @@ func TestResourceIDConversion(t *testing.T) {
 		NewProjectsResourceID("my-projects-resource"),
 		NewRegionBackendServicesResourceID("some-project", "us-central1", "my-backendServices-resource"),
 		NewRegionDisksResourceID("some-project", "us-central1", "my-disks-resource"),
+		NewRegionHealthChecksResourceID("some-project", "us-central1", "my-healthChecks-resource"),
+		NewRegionTargetHttpProxiesResourceID("some-project", "us-central1", "my-targetHttpProxies-resource"),
+		NewRegionTargetHttpsProxiesResourceID("some-project", "us-central1", "my-targetHttpsProxies-resource"),
+		NewRegionUrlMapsResourceID("some-project", "us-central1", "my-urlMaps-resource"),
 		NewRegionsResourceID("some-project", "my-regions-resource"),
 		NewRoutesResourceID("some-project", "my-routes-resource"),
 		NewSecurityPoliciesResourceID("some-project", "my-securityPolicies-resource"),

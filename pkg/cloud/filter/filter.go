@@ -157,7 +157,7 @@ func (fl *F) String() string {
 	for _, p := range fl.predicates {
 		pl = append(pl, "("+p.String()+")")
 	}
-	return fmt.Sprintf("%q", strings.Join(pl, " "))
+	return strings.Join(pl, " ")
 }
 
 // Match returns true if the F as specifies matches the given object. This

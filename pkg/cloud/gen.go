@@ -77,6 +77,9 @@ type Cloud interface {
 	Routes() Routes
 	BetaSecurityPolicies() BetaSecurityPolicies
 	SslCertificates() SslCertificates
+	BetaSslCertificates() BetaSslCertificates
+	AlphaSslCertificates() AlphaSslCertificates
+	AlphaRegionSslCertificates() AlphaRegionSslCertificates
 	AlphaSubnetworks() AlphaSubnetworks
 	BetaSubnetworks() BetaSubnetworks
 	Subnetworks() Subnetworks
@@ -138,6 +141,9 @@ func NewGCE(s *Service) *GCE {
 		gceRoutes:                        &GCERoutes{s},
 		gceBetaSecurityPolicies:          &GCEBetaSecurityPolicies{s},
 		gceSslCertificates:               &GCESslCertificates{s},
+		gceBetaSslCertificates:           &GCEBetaSslCertificates{s},
+		gceAlphaSslCertificates:          &GCEAlphaSslCertificates{s},
+		gceAlphaRegionSslCertificates:    &GCEAlphaRegionSslCertificates{s},
 		gceAlphaSubnetworks:              &GCEAlphaSubnetworks{s},
 		gceBetaSubnetworks:               &GCEBetaSubnetworks{s},
 		gceSubnetworks:                   &GCESubnetworks{s},
@@ -203,6 +209,9 @@ type GCE struct {
 	gceRoutes                        *GCERoutes
 	gceBetaSecurityPolicies          *GCEBetaSecurityPolicies
 	gceSslCertificates               *GCESslCertificates
+	gceBetaSslCertificates           *GCEBetaSslCertificates
+	gceAlphaSslCertificates          *GCEAlphaSslCertificates
+	gceAlphaRegionSslCertificates    *GCEAlphaRegionSslCertificates
 	gceAlphaSubnetworks              *GCEAlphaSubnetworks
 	gceBetaSubnetworks               *GCEBetaSubnetworks
 	gceSubnetworks                   *GCESubnetworks
@@ -417,6 +426,21 @@ func (gce *GCE) SslCertificates() SslCertificates {
 	return gce.gceSslCertificates
 }
 
+// BetaSslCertificates returns the interface for the beta SslCertificates.
+func (gce *GCE) BetaSslCertificates() BetaSslCertificates {
+	return gce.gceBetaSslCertificates
+}
+
+// AlphaSslCertificates returns the interface for the alpha SslCertificates.
+func (gce *GCE) AlphaSslCertificates() AlphaSslCertificates {
+	return gce.gceAlphaSslCertificates
+}
+
+// AlphaRegionSslCertificates returns the interface for the alpha RegionSslCertificates.
+func (gce *GCE) AlphaRegionSslCertificates() AlphaRegionSslCertificates {
+	return gce.gceAlphaRegionSslCertificates
+}
+
 // AlphaSubnetworks returns the interface for the alpha Subnetworks.
 func (gce *GCE) AlphaSubnetworks() AlphaSubnetworks {
 	return gce.gceAlphaSubnetworks
@@ -522,6 +546,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 	mockRegionBackendServicesObjs := map[meta.Key]*MockRegionBackendServicesObj{}
 	mockRegionDisksObjs := map[meta.Key]*MockRegionDisksObj{}
 	mockRegionHealthChecksObjs := map[meta.Key]*MockRegionHealthChecksObj{}
+	mockRegionSslCertificatesObjs := map[meta.Key]*MockRegionSslCertificatesObj{}
 	mockRegionTargetHttpProxiesObjs := map[meta.Key]*MockRegionTargetHttpProxiesObj{}
 	mockRegionTargetHttpsProxiesObjs := map[meta.Key]*MockRegionTargetHttpsProxiesObj{}
 	mockRegionUrlMapsObjs := map[meta.Key]*MockRegionUrlMapsObj{}
@@ -576,6 +601,9 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockRoutes:                        NewMockRoutes(projectRouter, mockRoutesObjs),
 		MockBetaSecurityPolicies:          NewMockBetaSecurityPolicies(projectRouter, mockSecurityPoliciesObjs),
 		MockSslCertificates:               NewMockSslCertificates(projectRouter, mockSslCertificatesObjs),
+		MockBetaSslCertificates:           NewMockBetaSslCertificates(projectRouter, mockSslCertificatesObjs),
+		MockAlphaSslCertificates:          NewMockAlphaSslCertificates(projectRouter, mockSslCertificatesObjs),
+		MockAlphaRegionSslCertificates:    NewMockAlphaRegionSslCertificates(projectRouter, mockRegionSslCertificatesObjs),
 		MockAlphaSubnetworks:              NewMockAlphaSubnetworks(projectRouter, mockSubnetworksObjs),
 		MockBetaSubnetworks:               NewMockBetaSubnetworks(projectRouter, mockSubnetworksObjs),
 		MockSubnetworks:                   NewMockSubnetworks(projectRouter, mockSubnetworksObjs),
@@ -641,6 +669,9 @@ type MockGCE struct {
 	MockRoutes                        *MockRoutes
 	MockBetaSecurityPolicies          *MockBetaSecurityPolicies
 	MockSslCertificates               *MockSslCertificates
+	MockBetaSslCertificates           *MockBetaSslCertificates
+	MockAlphaSslCertificates          *MockAlphaSslCertificates
+	MockAlphaRegionSslCertificates    *MockAlphaRegionSslCertificates
 	MockAlphaSubnetworks              *MockAlphaSubnetworks
 	MockBetaSubnetworks               *MockBetaSubnetworks
 	MockSubnetworks                   *MockSubnetworks
@@ -853,6 +884,21 @@ func (mock *MockGCE) BetaSecurityPolicies() BetaSecurityPolicies {
 // SslCertificates returns the interface for the ga SslCertificates.
 func (mock *MockGCE) SslCertificates() SslCertificates {
 	return mock.MockSslCertificates
+}
+
+// BetaSslCertificates returns the interface for the beta SslCertificates.
+func (mock *MockGCE) BetaSslCertificates() BetaSslCertificates {
+	return mock.MockBetaSslCertificates
+}
+
+// AlphaSslCertificates returns the interface for the alpha SslCertificates.
+func (mock *MockGCE) AlphaSslCertificates() AlphaSslCertificates {
+	return mock.MockAlphaSslCertificates
+}
+
+// AlphaRegionSslCertificates returns the interface for the alpha RegionSslCertificates.
+func (mock *MockGCE) AlphaRegionSslCertificates() AlphaRegionSslCertificates {
+	return mock.MockAlphaRegionSslCertificates
 }
 
 // AlphaSubnetworks returns the interface for the alpha Subnetworks.
@@ -1521,6 +1567,26 @@ func (m *MockRegionHealthChecksObj) ToAlpha() *alpha.HealthCheck {
 	return ret
 }
 
+// MockRegionSslCertificatesObj is used to store the various object versions in the shared
+// map of mocked objects. This allows for multiple API versions to co-exist and
+// share the same "view" of the objects in the backend.
+type MockRegionSslCertificatesObj struct {
+	Obj interface{}
+}
+
+// ToAlpha retrieves the given version of the object.
+func (m *MockRegionSslCertificatesObj) ToAlpha() *alpha.SslCertificate {
+	if ret, ok := m.Obj.(*alpha.SslCertificate); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &alpha.SslCertificate{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *alpha.SslCertificate via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
 // MockRegionTargetHttpProxiesObj is used to store the various object versions in the shared
 // map of mocked objects. This allows for multiple API versions to co-exist and
 // share the same "view" of the objects in the backend.
@@ -1646,6 +1712,32 @@ func (m *MockSecurityPoliciesObj) ToBeta() *beta.SecurityPolicy {
 // share the same "view" of the objects in the backend.
 type MockSslCertificatesObj struct {
 	Obj interface{}
+}
+
+// ToAlpha retrieves the given version of the object.
+func (m *MockSslCertificatesObj) ToAlpha() *alpha.SslCertificate {
+	if ret, ok := m.Obj.(*alpha.SslCertificate); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &alpha.SslCertificate{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *alpha.SslCertificate via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// ToBeta retrieves the given version of the object.
+func (m *MockSslCertificatesObj) ToBeta() *beta.SslCertificate {
+	if ret, ok := m.Obj.(*beta.SslCertificate); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &beta.SslCertificate{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *beta.SslCertificate via JSON: %v", m.Obj, err)
+	}
+	return ret
 }
 
 // ToGA retrieves the given version of the object.
@@ -16859,6 +16951,1004 @@ func (g *GCESslCertificates) Delete(ctx context.Context, key *meta.Key) error {
 	return err
 }
 
+// BetaSslCertificates is an interface that allows for mocking of SslCertificates.
+type BetaSslCertificates interface {
+	Get(ctx context.Context, key *meta.Key) (*beta.SslCertificate, error)
+	List(ctx context.Context, fl *filter.F) ([]*beta.SslCertificate, error)
+	Insert(ctx context.Context, key *meta.Key, obj *beta.SslCertificate) error
+	Delete(ctx context.Context, key *meta.Key) error
+}
+
+// NewMockBetaSslCertificates returns a new mock for SslCertificates.
+func NewMockBetaSslCertificates(pr ProjectRouter, objs map[meta.Key]*MockSslCertificatesObj) *MockBetaSslCertificates {
+	mock := &MockBetaSslCertificates{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockBetaSslCertificates is the mock for SslCertificates.
+type MockBetaSslCertificates struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockSslCertificatesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockBetaSslCertificates) (bool, *beta.SslCertificate, error)
+	ListHook   func(ctx context.Context, fl *filter.F, m *MockBetaSslCertificates) (bool, []*beta.SslCertificate, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *beta.SslCertificate, m *MockBetaSslCertificates) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockBetaSslCertificates) (bool, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockBetaSslCertificates) Get(ctx context.Context, key *meta.Key) (*beta.SslCertificate, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockBetaSslCertificates.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockBetaSslCertificates.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToBeta()
+		klog.V(5).Infof("MockBetaSslCertificates.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockBetaSslCertificates %v not found", key),
+	}
+	klog.V(5).Infof("MockBetaSslCertificates.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockBetaSslCertificates) List(ctx context.Context, fl *filter.F) ([]*beta.SslCertificate, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockBetaSslCertificates.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockBetaSslCertificates.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*beta.SslCertificate
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToBeta()) {
+			continue
+		}
+		objs = append(objs, obj.ToBeta())
+	}
+
+	klog.V(5).Infof("MockBetaSslCertificates.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockBetaSslCertificates) Insert(ctx context.Context, key *meta.Key, obj *beta.SslCertificate) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockBetaSslCertificates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockBetaSslCertificates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockBetaSslCertificates %v exists", key),
+		}
+		klog.V(5).Infof("MockBetaSslCertificates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "sslCertificates")
+	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "sslCertificates", key)
+
+	m.Objects[*key] = &MockSslCertificatesObj{obj}
+	klog.V(5).Infof("MockBetaSslCertificates.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockBetaSslCertificates) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockBetaSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockBetaSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockBetaSslCertificates %v not found", key),
+		}
+		klog.V(5).Infof("MockBetaSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockBetaSslCertificates.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockBetaSslCertificates) Obj(o *beta.SslCertificate) *MockSslCertificatesObj {
+	return &MockSslCertificatesObj{o}
+}
+
+// GCEBetaSslCertificates is a simplifying adapter for the GCE SslCertificates.
+type GCEBetaSslCertificates struct {
+	s *Service
+}
+
+// Get the SslCertificate named by key.
+func (g *GCEBetaSslCertificates) Get(ctx context.Context, key *meta.Key) (*beta.SslCertificate, error) {
+	klog.V(5).Infof("GCEBetaSslCertificates.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaSslCertificates.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "SslCertificates")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("beta"),
+		Service:   "SslCertificates",
+	}
+	klog.V(5).Infof("GCEBetaSslCertificates.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaSslCertificates.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.SslCertificates.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEBetaSslCertificates.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all SslCertificate objects.
+func (g *GCEBetaSslCertificates) List(ctx context.Context, fl *filter.F) ([]*beta.SslCertificate, error) {
+	klog.V(5).Infof("GCEBetaSslCertificates.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "SslCertificates")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("beta"),
+		Service:   "SslCertificates",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEBetaSslCertificates.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Beta.SslCertificates.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*beta.SslCertificate
+	f := func(l *beta.SslCertificateList) error {
+		klog.V(5).Infof("GCEBetaSslCertificates.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEBetaSslCertificates.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4) {
+		klog.V(4).Infof("GCEBetaSslCertificates.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEBetaSslCertificates.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert SslCertificate with key of value obj.
+func (g *GCEBetaSslCertificates) Insert(ctx context.Context, key *meta.Key, obj *beta.SslCertificate) error {
+	klog.V(5).Infof("GCEBetaSslCertificates.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaSslCertificates.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "SslCertificates")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("beta"),
+		Service:   "SslCertificates",
+	}
+	klog.V(5).Infof("GCEBetaSslCertificates.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaSslCertificates.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Beta.SslCertificates.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaSslCertificates.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaSslCertificates.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the SslCertificate referenced by key.
+func (g *GCEBetaSslCertificates) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEBetaSslCertificates.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaSslCertificates.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "SslCertificates")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("beta"),
+		Service:   "SslCertificates",
+	}
+	klog.V(5).Infof("GCEBetaSslCertificates.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaSslCertificates.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.SslCertificates.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// AlphaSslCertificates is an interface that allows for mocking of SslCertificates.
+type AlphaSslCertificates interface {
+	Get(ctx context.Context, key *meta.Key) (*alpha.SslCertificate, error)
+	List(ctx context.Context, fl *filter.F) ([]*alpha.SslCertificate, error)
+	Insert(ctx context.Context, key *meta.Key, obj *alpha.SslCertificate) error
+	Delete(ctx context.Context, key *meta.Key) error
+}
+
+// NewMockAlphaSslCertificates returns a new mock for SslCertificates.
+func NewMockAlphaSslCertificates(pr ProjectRouter, objs map[meta.Key]*MockSslCertificatesObj) *MockAlphaSslCertificates {
+	mock := &MockAlphaSslCertificates{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockAlphaSslCertificates is the mock for SslCertificates.
+type MockAlphaSslCertificates struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockSslCertificatesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockAlphaSslCertificates) (bool, *alpha.SslCertificate, error)
+	ListHook   func(ctx context.Context, fl *filter.F, m *MockAlphaSslCertificates) (bool, []*alpha.SslCertificate, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *alpha.SslCertificate, m *MockAlphaSslCertificates) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockAlphaSslCertificates) (bool, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockAlphaSslCertificates) Get(ctx context.Context, key *meta.Key) (*alpha.SslCertificate, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaSslCertificates.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockAlphaSslCertificates.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToAlpha()
+		klog.V(5).Infof("MockAlphaSslCertificates.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockAlphaSslCertificates %v not found", key),
+	}
+	klog.V(5).Infof("MockAlphaSslCertificates.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockAlphaSslCertificates) List(ctx context.Context, fl *filter.F) ([]*alpha.SslCertificate, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaSslCertificates.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockAlphaSslCertificates.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*alpha.SslCertificate
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		objs = append(objs, obj.ToAlpha())
+	}
+
+	klog.V(5).Infof("MockAlphaSslCertificates.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockAlphaSslCertificates) Insert(ctx context.Context, key *meta.Key, obj *alpha.SslCertificate) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockAlphaSslCertificates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockAlphaSslCertificates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockAlphaSslCertificates %v exists", key),
+		}
+		klog.V(5).Infof("MockAlphaSslCertificates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "sslCertificates")
+	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "sslCertificates", key)
+
+	m.Objects[*key] = &MockSslCertificatesObj{obj}
+	klog.V(5).Infof("MockAlphaSslCertificates.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockAlphaSslCertificates) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockAlphaSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockAlphaSslCertificates %v not found", key),
+		}
+		klog.V(5).Infof("MockAlphaSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockAlphaSslCertificates.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockAlphaSslCertificates) Obj(o *alpha.SslCertificate) *MockSslCertificatesObj {
+	return &MockSslCertificatesObj{o}
+}
+
+// GCEAlphaSslCertificates is a simplifying adapter for the GCE SslCertificates.
+type GCEAlphaSslCertificates struct {
+	s *Service
+}
+
+// Get the SslCertificate named by key.
+func (g *GCEAlphaSslCertificates) Get(ctx context.Context, key *meta.Key) (*alpha.SslCertificate, error) {
+	klog.V(5).Infof("GCEAlphaSslCertificates.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaSslCertificates.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "SslCertificates")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("alpha"),
+		Service:   "SslCertificates",
+	}
+	klog.V(5).Infof("GCEAlphaSslCertificates.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaSslCertificates.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.SslCertificates.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaSslCertificates.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all SslCertificate objects.
+func (g *GCEAlphaSslCertificates) List(ctx context.Context, fl *filter.F) ([]*alpha.SslCertificate, error) {
+	klog.V(5).Infof("GCEAlphaSslCertificates.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "SslCertificates")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("alpha"),
+		Service:   "SslCertificates",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEAlphaSslCertificates.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Alpha.SslCertificates.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*alpha.SslCertificate
+	f := func(l *alpha.SslCertificateList) error {
+		klog.V(5).Infof("GCEAlphaSslCertificates.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAlphaSslCertificates.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4) {
+		klog.V(4).Infof("GCEAlphaSslCertificates.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaSslCertificates.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert SslCertificate with key of value obj.
+func (g *GCEAlphaSslCertificates) Insert(ctx context.Context, key *meta.Key, obj *alpha.SslCertificate) error {
+	klog.V(5).Infof("GCEAlphaSslCertificates.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaSslCertificates.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "SslCertificates")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("alpha"),
+		Service:   "SslCertificates",
+	}
+	klog.V(5).Infof("GCEAlphaSslCertificates.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaSslCertificates.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Alpha.SslCertificates.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaSslCertificates.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaSslCertificates.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the SslCertificate referenced by key.
+func (g *GCEAlphaSslCertificates) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaSslCertificates.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaSslCertificates.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "SslCertificates")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("alpha"),
+		Service:   "SslCertificates",
+	}
+	klog.V(5).Infof("GCEAlphaSslCertificates.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaSslCertificates.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.SslCertificates.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// AlphaRegionSslCertificates is an interface that allows for mocking of RegionSslCertificates.
+type AlphaRegionSslCertificates interface {
+	Get(ctx context.Context, key *meta.Key) (*alpha.SslCertificate, error)
+	List(ctx context.Context, region string, fl *filter.F) ([]*alpha.SslCertificate, error)
+	Insert(ctx context.Context, key *meta.Key, obj *alpha.SslCertificate) error
+	Delete(ctx context.Context, key *meta.Key) error
+}
+
+// NewMockAlphaRegionSslCertificates returns a new mock for RegionSslCertificates.
+func NewMockAlphaRegionSslCertificates(pr ProjectRouter, objs map[meta.Key]*MockRegionSslCertificatesObj) *MockAlphaRegionSslCertificates {
+	mock := &MockAlphaRegionSslCertificates{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockAlphaRegionSslCertificates is the mock for RegionSslCertificates.
+type MockAlphaRegionSslCertificates struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockRegionSslCertificatesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockAlphaRegionSslCertificates) (bool, *alpha.SslCertificate, error)
+	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockAlphaRegionSslCertificates) (bool, []*alpha.SslCertificate, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *alpha.SslCertificate, m *MockAlphaRegionSslCertificates) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockAlphaRegionSslCertificates) (bool, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockAlphaRegionSslCertificates) Get(ctx context.Context, key *meta.Key) (*alpha.SslCertificate, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaRegionSslCertificates.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockAlphaRegionSslCertificates.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToAlpha()
+		klog.V(5).Infof("MockAlphaRegionSslCertificates.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockAlphaRegionSslCertificates %v not found", key),
+	}
+	klog.V(5).Infof("MockAlphaRegionSslCertificates.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock in the given region.
+func (m *MockAlphaRegionSslCertificates) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.SslCertificate, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, region, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaRegionSslCertificates.List(%v, %q, %v) = [%v items], %v", ctx, region, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockAlphaRegionSslCertificates.List(%v, %q, %v) = nil, %v", ctx, region, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*alpha.SslCertificate
+	for key, obj := range m.Objects {
+		if key.Region != region {
+			continue
+		}
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		objs = append(objs, obj.ToAlpha())
+	}
+
+	klog.V(5).Infof("MockAlphaRegionSslCertificates.List(%v, %q, %v) = [%v items], nil", ctx, region, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockAlphaRegionSslCertificates) Insert(ctx context.Context, key *meta.Key, obj *alpha.SslCertificate) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockAlphaRegionSslCertificates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockAlphaRegionSslCertificates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockAlphaRegionSslCertificates %v exists", key),
+		}
+		klog.V(5).Infof("MockAlphaRegionSslCertificates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "sslCertificates")
+	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "sslCertificates", key)
+
+	m.Objects[*key] = &MockRegionSslCertificatesObj{obj}
+	klog.V(5).Infof("MockAlphaRegionSslCertificates.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockAlphaRegionSslCertificates) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaRegionSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockAlphaRegionSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockAlphaRegionSslCertificates %v not found", key),
+		}
+		klog.V(5).Infof("MockAlphaRegionSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockAlphaRegionSslCertificates.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockAlphaRegionSslCertificates) Obj(o *alpha.SslCertificate) *MockRegionSslCertificatesObj {
+	return &MockRegionSslCertificatesObj{o}
+}
+
+// GCEAlphaRegionSslCertificates is a simplifying adapter for the GCE RegionSslCertificates.
+type GCEAlphaRegionSslCertificates struct {
+	s *Service
+}
+
+// Get the SslCertificate named by key.
+func (g *GCEAlphaRegionSslCertificates) Get(ctx context.Context, key *meta.Key) (*alpha.SslCertificate, error) {
+	klog.V(5).Infof("GCEAlphaRegionSslCertificates.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionSslCertificates.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionSslCertificates")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionSslCertificates",
+	}
+	klog.V(5).Infof("GCEAlphaRegionSslCertificates.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionSslCertificates.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.RegionSslCertificates.Get(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaRegionSslCertificates.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all SslCertificate objects.
+func (g *GCEAlphaRegionSslCertificates) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.SslCertificate, error) {
+	klog.V(5).Infof("GCEAlphaRegionSslCertificates.List(%v, %v, %v) called", ctx, region, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionSslCertificates")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionSslCertificates",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEAlphaRegionSslCertificates.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	call := g.s.Alpha.RegionSslCertificates.List(projectID, region)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*alpha.SslCertificate
+	f := func(l *alpha.SslCertificateList) error {
+		klog.V(5).Infof("GCEAlphaRegionSslCertificates.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionSslCertificates.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4) {
+		klog.V(4).Infof("GCEAlphaRegionSslCertificates.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaRegionSslCertificates.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert SslCertificate with key of value obj.
+func (g *GCEAlphaRegionSslCertificates) Insert(ctx context.Context, key *meta.Key, obj *alpha.SslCertificate) error {
+	klog.V(5).Infof("GCEAlphaRegionSslCertificates.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionSslCertificates.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionSslCertificates")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionSslCertificates",
+	}
+	klog.V(5).Infof("GCEAlphaRegionSslCertificates.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionSslCertificates.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Alpha.RegionSslCertificates.Insert(projectID, key.Region, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaRegionSslCertificates.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaRegionSslCertificates.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the SslCertificate referenced by key.
+func (g *GCEAlphaRegionSslCertificates) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaRegionSslCertificates.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionSslCertificates.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionSslCertificates")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionSslCertificates",
+	}
+	klog.V(5).Infof("GCEAlphaRegionSslCertificates.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionSslCertificates.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.RegionSslCertificates.Delete(projectID, key.Region, key.Name)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaRegionSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaRegionSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
 // AlphaSubnetworks is an interface that allows for mocking of Subnetworks.
 type AlphaSubnetworks interface {
 	Get(ctx context.Context, key *meta.Key) (*alpha.Subnetwork, error)
@@ -23251,6 +24341,12 @@ func NewRegionDisksResourceID(project, region, name string) *ResourceID {
 func NewRegionHealthChecksResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
 	return &ResourceID{project, "healthChecks", key}
+}
+
+// NewRegionSslCertificatesResourceID creates a ResourceID for the RegionSslCertificates resource.
+func NewRegionSslCertificatesResourceID(project, region, name string) *ResourceID {
+	key := meta.RegionalKey(name, region)
+	return &ResourceID{project, "sslCertificates", key}
 }
 
 // NewRegionTargetHttpProxiesResourceID creates a ResourceID for the RegionTargetHttpProxies resource.

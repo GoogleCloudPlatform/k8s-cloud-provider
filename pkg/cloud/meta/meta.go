@@ -71,7 +71,7 @@ var AllServices = []*ServiceInfo{
 		Resource:    "addresses",
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&ga.AddressesService{}),
-		options: AggregatedList,
+		options:     AggregatedList,
 	},
 	{
 		Object:      "Address",
@@ -80,7 +80,7 @@ var AllServices = []*ServiceInfo{
 		version:     VersionAlpha,
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&alpha.AddressesService{}),
-		options: AggregatedList,
+		options:     AggregatedList,
 	},
 	{
 		Object:      "Address",
@@ -89,7 +89,7 @@ var AllServices = []*ServiceInfo{
 		version:     VersionBeta,
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&beta.AddressesService{}),
-		options: AggregatedList,
+		options:     AggregatedList,
 	},
 	{
 		Object:      "Address",
@@ -464,6 +464,30 @@ var AllServices = []*ServiceInfo{
 		serviceType: reflect.TypeOf(&ga.SslCertificatesService{}),
 	},
 	{
+		Object:      "SslCertificate",
+		Service:     "SslCertificates",
+		Resource:    "sslCertificates",
+		version:     VersionBeta,
+		keyType:     Global,
+		serviceType: reflect.TypeOf(&beta.SslCertificatesService{}),
+	},
+	{
+		Object:      "SslCertificate",
+		Service:     "SslCertificates",
+		Resource:    "sslCertificates",
+		version:     VersionAlpha,
+		keyType:     Global,
+		serviceType: reflect.TypeOf(&alpha.SslCertificatesService{}),
+	},
+	{
+		Object:      "SslCertificate",
+		Service:     "RegionSslCertificates",
+		Resource:    "sslCertificates",
+		version:     VersionAlpha,
+		keyType:     Regional,
+		serviceType: reflect.TypeOf(&alpha.RegionSslCertificatesService{}),
+	},
+	{
 		Object:      "Subnetwork",
 		Service:     "Subnetworks",
 		Resource:    "subnetworks",
@@ -523,7 +547,7 @@ var AllServices = []*ServiceInfo{
 		Object:      "TargetHttpProxy",
 		Service:     "RegionTargetHttpProxies",
 		Resource:    "targetHttpProxies",
-		version: 		 VersionAlpha,
+		version:     VersionAlpha,
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&alpha.RegionTargetHttpProxiesService{}),
 		additionalMethods: []string{

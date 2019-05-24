@@ -1748,6 +1748,69 @@ func TestRegionHealthChecksGroup(t *testing.T) {
 	}
 }
 
+func TestRegionSslCertificatesGroup(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pr := &SingleProjectRouter{"mock-project"}
+	mock := NewMockGCE(pr)
+
+	var key *meta.Key
+	keyAlpha := meta.RegionalKey("key-alpha", "location")
+	key = keyAlpha
+	// Ignore unused variables.
+	_, _, _ = ctx, mock, key
+
+	// Get not found.
+	if _, err := mock.AlphaRegionSslCertificates().Get(ctx, key); err == nil {
+		t.Errorf("AlphaRegionSslCertificates().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+
+	// Insert.
+	{
+		obj := &alpha.SslCertificate{}
+		if err := mock.AlphaRegionSslCertificates().Insert(ctx, keyAlpha, obj); err != nil {
+			t.Errorf("AlphaRegionSslCertificates().Insert(%v, %v, %v) = %v; want nil", ctx, keyAlpha, obj, err)
+		}
+	}
+
+	// Get across versions.
+	if obj, err := mock.AlphaRegionSslCertificates().Get(ctx, key); err != nil {
+		t.Errorf("AlphaRegionSslCertificates().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+
+	// List.
+	mock.MockAlphaRegionSslCertificates.Objects[*keyAlpha] = mock.MockAlphaRegionSslCertificates.Obj(&alpha.SslCertificate{Name: keyAlpha.Name})
+	want := map[string]bool{
+		"key-alpha": true,
+	}
+	_ = want // ignore unused variables.
+	{
+		objs, err := mock.AlphaRegionSslCertificates().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("AlphaRegionSslCertificates().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("AlphaRegionSslCertificates().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+
+	// Delete across versions.
+	if err := mock.AlphaRegionSslCertificates().Delete(ctx, keyAlpha); err != nil {
+		t.Errorf("AlphaRegionSslCertificates().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
+	}
+
+	// Delete not found.
+	if err := mock.AlphaRegionSslCertificates().Delete(ctx, keyAlpha); err == nil {
+		t.Errorf("AlphaRegionSslCertificates().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+}
+
 func TestRegionTargetHttpProxiesGroup(t *testing.T) {
 	t.Parallel()
 
@@ -2119,17 +2182,39 @@ func TestSslCertificatesGroup(t *testing.T) {
 	mock := NewMockGCE(pr)
 
 	var key *meta.Key
+	keyAlpha := meta.GlobalKey("key-alpha")
+	key = keyAlpha
+	keyBeta := meta.GlobalKey("key-beta")
+	key = keyBeta
 	keyGA := meta.GlobalKey("key-ga")
 	key = keyGA
 	// Ignore unused variables.
 	_, _, _ = ctx, mock, key
 
 	// Get not found.
+	if _, err := mock.AlphaSslCertificates().Get(ctx, key); err == nil {
+		t.Errorf("AlphaSslCertificates().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.BetaSslCertificates().Get(ctx, key); err == nil {
+		t.Errorf("BetaSslCertificates().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
 	if _, err := mock.SslCertificates().Get(ctx, key); err == nil {
 		t.Errorf("SslCertificates().Get(%v, %v) = _, nil; want error", ctx, key)
 	}
 
 	// Insert.
+	{
+		obj := &alpha.SslCertificate{}
+		if err := mock.AlphaSslCertificates().Insert(ctx, keyAlpha, obj); err != nil {
+			t.Errorf("AlphaSslCertificates().Insert(%v, %v, %v) = %v; want nil", ctx, keyAlpha, obj, err)
+		}
+	}
+	{
+		obj := &beta.SslCertificate{}
+		if err := mock.BetaSslCertificates().Insert(ctx, keyBeta, obj); err != nil {
+			t.Errorf("BetaSslCertificates().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
+		}
+	}
 	{
 		obj := &ga.SslCertificate{}
 		if err := mock.SslCertificates().Insert(ctx, keyGA, obj); err != nil {
@@ -2138,16 +2223,54 @@ func TestSslCertificatesGroup(t *testing.T) {
 	}
 
 	// Get across versions.
+	if obj, err := mock.AlphaSslCertificates().Get(ctx, key); err != nil {
+		t.Errorf("AlphaSslCertificates().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+	if obj, err := mock.BetaSslCertificates().Get(ctx, key); err != nil {
+		t.Errorf("BetaSslCertificates().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
 	if obj, err := mock.SslCertificates().Get(ctx, key); err != nil {
 		t.Errorf("SslCertificates().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
 
 	// List.
+	mock.MockAlphaSslCertificates.Objects[*keyAlpha] = mock.MockAlphaSslCertificates.Obj(&alpha.SslCertificate{Name: keyAlpha.Name})
+	mock.MockBetaSslCertificates.Objects[*keyBeta] = mock.MockBetaSslCertificates.Obj(&beta.SslCertificate{Name: keyBeta.Name})
 	mock.MockSslCertificates.Objects[*keyGA] = mock.MockSslCertificates.Obj(&ga.SslCertificate{Name: keyGA.Name})
 	want := map[string]bool{
-		"key-ga": true,
+		"key-alpha": true,
+		"key-beta":  true,
+		"key-ga":    true,
 	}
 	_ = want // ignore unused variables.
+	{
+		objs, err := mock.AlphaSslCertificates().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("AlphaSslCertificates().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("AlphaSslCertificates().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.BetaSslCertificates().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("BetaSslCertificates().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("BetaSslCertificates().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
 	{
 		objs, err := mock.SslCertificates().List(ctx, filter.None)
 		if err != nil {
@@ -2164,11 +2287,23 @@ func TestSslCertificatesGroup(t *testing.T) {
 	}
 
 	// Delete across versions.
+	if err := mock.AlphaSslCertificates().Delete(ctx, keyAlpha); err != nil {
+		t.Errorf("AlphaSslCertificates().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
+	}
+	if err := mock.BetaSslCertificates().Delete(ctx, keyBeta); err != nil {
+		t.Errorf("BetaSslCertificates().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
+	}
 	if err := mock.SslCertificates().Delete(ctx, keyGA); err != nil {
 		t.Errorf("SslCertificates().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
 	}
 
 	// Delete not found.
+	if err := mock.AlphaSslCertificates().Delete(ctx, keyAlpha); err == nil {
+		t.Errorf("AlphaSslCertificates().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+	if err := mock.BetaSslCertificates().Delete(ctx, keyBeta); err == nil {
+		t.Errorf("BetaSslCertificates().Delete(%v, %v) = nil; want error", ctx, keyBeta)
+	}
 	if err := mock.SslCertificates().Delete(ctx, keyGA); err == nil {
 		t.Errorf("SslCertificates().Delete(%v, %v) = nil; want error", ctx, keyGA)
 	}
@@ -2847,6 +2982,7 @@ func TestResourceIDConversion(t *testing.T) {
 		NewRegionBackendServicesResourceID("some-project", "us-central1", "my-backendServices-resource"),
 		NewRegionDisksResourceID("some-project", "us-central1", "my-disks-resource"),
 		NewRegionHealthChecksResourceID("some-project", "us-central1", "my-healthChecks-resource"),
+		NewRegionSslCertificatesResourceID("some-project", "us-central1", "my-sslCertificates-resource"),
 		NewRegionTargetHttpProxiesResourceID("some-project", "us-central1", "my-targetHttpProxies-resource"),
 		NewRegionTargetHttpsProxiesResourceID("some-project", "us-central1", "my-targetHttpsProxies-resource"),
 		NewRegionUrlMapsResourceID("some-project", "us-central1", "my-urlMaps-resource"),

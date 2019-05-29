@@ -203,6 +203,9 @@ var AllServices = []*ServiceInfo{
 		Resource:    "forwardingRules",
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&ga.ForwardingRulesService{}),
+		additionalMethods: []string{
+			"SetTarget",
+		},
 	},
 	{
 		Object:      "ForwardingRule",
@@ -211,6 +214,9 @@ var AllServices = []*ServiceInfo{
 		version:     VersionAlpha,
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&alpha.ForwardingRulesService{}),
+		additionalMethods: []string{
+			"SetTarget",
+		},
 	},
 	{
 		Object:      "ForwardingRule",
@@ -219,6 +225,9 @@ var AllServices = []*ServiceInfo{
 		version:     VersionBeta,
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&beta.ForwardingRulesService{}),
+		additionalMethods: []string{
+			"SetTarget",
+		},
 	},
 	{
 		Object:      "ForwardingRule",

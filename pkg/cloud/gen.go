@@ -7158,6 +7158,7 @@ type ForwardingRules interface {
 	List(ctx context.Context, region string, fl *filter.F) ([]*ga.ForwardingRule, error)
 	Insert(ctx context.Context, key *meta.Key, obj *ga.ForwardingRule) error
 	Delete(ctx context.Context, key *meta.Key) error
+	SetTarget(context.Context, *meta.Key, *ga.TargetReference) error
 }
 
 // NewMockForwardingRules returns a new mock for ForwardingRules.
@@ -7193,10 +7194,11 @@ type MockForwardingRules struct {
 	// order to add your own logic. Return (true, _, _) to prevent the normal
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
-	GetHook    func(ctx context.Context, key *meta.Key, m *MockForwardingRules) (bool, *ga.ForwardingRule, error)
-	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockForwardingRules) (bool, []*ga.ForwardingRule, error)
-	InsertHook func(ctx context.Context, key *meta.Key, obj *ga.ForwardingRule, m *MockForwardingRules) (bool, error)
-	DeleteHook func(ctx context.Context, key *meta.Key, m *MockForwardingRules) (bool, error)
+	GetHook       func(ctx context.Context, key *meta.Key, m *MockForwardingRules) (bool, *ga.ForwardingRule, error)
+	ListHook      func(ctx context.Context, region string, fl *filter.F, m *MockForwardingRules) (bool, []*ga.ForwardingRule, error)
+	InsertHook    func(ctx context.Context, key *meta.Key, obj *ga.ForwardingRule, m *MockForwardingRules) (bool, error)
+	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockForwardingRules) (bool, error)
+	SetTargetHook func(context.Context, *meta.Key, *ga.TargetReference, *MockForwardingRules) error
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -7345,6 +7347,14 @@ func (m *MockForwardingRules) Obj(o *ga.ForwardingRule) *MockForwardingRulesObj 
 	return &MockForwardingRulesObj{o}
 }
 
+// SetTarget is a mock for the corresponding method.
+func (m *MockForwardingRules) SetTarget(ctx context.Context, key *meta.Key, arg0 *ga.TargetReference) error {
+	if m.SetTargetHook != nil {
+		return m.SetTargetHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
 // GCEForwardingRules is a simplifying adapter for the GCE ForwardingRules.
 type GCEForwardingRules struct {
 	s *Service
@@ -7486,12 +7496,46 @@ func (g *GCEForwardingRules) Delete(ctx context.Context, key *meta.Key) error {
 	return err
 }
 
+// SetTarget is a method on GCEForwardingRules.
+func (g *GCEForwardingRules) SetTarget(ctx context.Context, key *meta.Key, arg0 *ga.TargetReference) error {
+	klog.V(5).Infof("GCEForwardingRules.SetTarget(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEForwardingRules.SetTarget(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "ForwardingRules")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetTarget",
+		Version:   meta.Version("ga"),
+		Service:   "ForwardingRules",
+	}
+	klog.V(5).Infof("GCEForwardingRules.SetTarget(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEForwardingRules.SetTarget(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.ForwardingRules.SetTarget(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // AlphaForwardingRules is an interface that allows for mocking of ForwardingRules.
 type AlphaForwardingRules interface {
 	Get(ctx context.Context, key *meta.Key) (*alpha.ForwardingRule, error)
 	List(ctx context.Context, region string, fl *filter.F) ([]*alpha.ForwardingRule, error)
 	Insert(ctx context.Context, key *meta.Key, obj *alpha.ForwardingRule) error
 	Delete(ctx context.Context, key *meta.Key) error
+	SetTarget(context.Context, *meta.Key, *alpha.TargetReference) error
 }
 
 // NewMockAlphaForwardingRules returns a new mock for ForwardingRules.
@@ -7527,10 +7571,11 @@ type MockAlphaForwardingRules struct {
 	// order to add your own logic. Return (true, _, _) to prevent the normal
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
-	GetHook    func(ctx context.Context, key *meta.Key, m *MockAlphaForwardingRules) (bool, *alpha.ForwardingRule, error)
-	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockAlphaForwardingRules) (bool, []*alpha.ForwardingRule, error)
-	InsertHook func(ctx context.Context, key *meta.Key, obj *alpha.ForwardingRule, m *MockAlphaForwardingRules) (bool, error)
-	DeleteHook func(ctx context.Context, key *meta.Key, m *MockAlphaForwardingRules) (bool, error)
+	GetHook       func(ctx context.Context, key *meta.Key, m *MockAlphaForwardingRules) (bool, *alpha.ForwardingRule, error)
+	ListHook      func(ctx context.Context, region string, fl *filter.F, m *MockAlphaForwardingRules) (bool, []*alpha.ForwardingRule, error)
+	InsertHook    func(ctx context.Context, key *meta.Key, obj *alpha.ForwardingRule, m *MockAlphaForwardingRules) (bool, error)
+	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockAlphaForwardingRules) (bool, error)
+	SetTargetHook func(context.Context, *meta.Key, *alpha.TargetReference, *MockAlphaForwardingRules) error
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -7679,6 +7724,14 @@ func (m *MockAlphaForwardingRules) Obj(o *alpha.ForwardingRule) *MockForwardingR
 	return &MockForwardingRulesObj{o}
 }
 
+// SetTarget is a mock for the corresponding method.
+func (m *MockAlphaForwardingRules) SetTarget(ctx context.Context, key *meta.Key, arg0 *alpha.TargetReference) error {
+	if m.SetTargetHook != nil {
+		return m.SetTargetHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
 // GCEAlphaForwardingRules is a simplifying adapter for the GCE ForwardingRules.
 type GCEAlphaForwardingRules struct {
 	s *Service
@@ -7820,12 +7873,46 @@ func (g *GCEAlphaForwardingRules) Delete(ctx context.Context, key *meta.Key) err
 	return err
 }
 
+// SetTarget is a method on GCEAlphaForwardingRules.
+func (g *GCEAlphaForwardingRules) SetTarget(ctx context.Context, key *meta.Key, arg0 *alpha.TargetReference) error {
+	klog.V(5).Infof("GCEAlphaForwardingRules.SetTarget(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaForwardingRules.SetTarget(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ForwardingRules")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetTarget",
+		Version:   meta.Version("alpha"),
+		Service:   "ForwardingRules",
+	}
+	klog.V(5).Infof("GCEAlphaForwardingRules.SetTarget(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaForwardingRules.SetTarget(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.ForwardingRules.SetTarget(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // BetaForwardingRules is an interface that allows for mocking of ForwardingRules.
 type BetaForwardingRules interface {
 	Get(ctx context.Context, key *meta.Key) (*beta.ForwardingRule, error)
 	List(ctx context.Context, region string, fl *filter.F) ([]*beta.ForwardingRule, error)
 	Insert(ctx context.Context, key *meta.Key, obj *beta.ForwardingRule) error
 	Delete(ctx context.Context, key *meta.Key) error
+	SetTarget(context.Context, *meta.Key, *beta.TargetReference) error
 }
 
 // NewMockBetaForwardingRules returns a new mock for ForwardingRules.
@@ -7861,10 +7948,11 @@ type MockBetaForwardingRules struct {
 	// order to add your own logic. Return (true, _, _) to prevent the normal
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
-	GetHook    func(ctx context.Context, key *meta.Key, m *MockBetaForwardingRules) (bool, *beta.ForwardingRule, error)
-	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockBetaForwardingRules) (bool, []*beta.ForwardingRule, error)
-	InsertHook func(ctx context.Context, key *meta.Key, obj *beta.ForwardingRule, m *MockBetaForwardingRules) (bool, error)
-	DeleteHook func(ctx context.Context, key *meta.Key, m *MockBetaForwardingRules) (bool, error)
+	GetHook       func(ctx context.Context, key *meta.Key, m *MockBetaForwardingRules) (bool, *beta.ForwardingRule, error)
+	ListHook      func(ctx context.Context, region string, fl *filter.F, m *MockBetaForwardingRules) (bool, []*beta.ForwardingRule, error)
+	InsertHook    func(ctx context.Context, key *meta.Key, obj *beta.ForwardingRule, m *MockBetaForwardingRules) (bool, error)
+	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockBetaForwardingRules) (bool, error)
+	SetTargetHook func(context.Context, *meta.Key, *beta.TargetReference, *MockBetaForwardingRules) error
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -8013,6 +8101,14 @@ func (m *MockBetaForwardingRules) Obj(o *beta.ForwardingRule) *MockForwardingRul
 	return &MockForwardingRulesObj{o}
 }
 
+// SetTarget is a mock for the corresponding method.
+func (m *MockBetaForwardingRules) SetTarget(ctx context.Context, key *meta.Key, arg0 *beta.TargetReference) error {
+	if m.SetTargetHook != nil {
+		return m.SetTargetHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
 // GCEBetaForwardingRules is a simplifying adapter for the GCE ForwardingRules.
 type GCEBetaForwardingRules struct {
 	s *Service
@@ -8151,6 +8247,39 @@ func (g *GCEBetaForwardingRules) Delete(ctx context.Context, key *meta.Key) erro
 
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCEBetaForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// SetTarget is a method on GCEBetaForwardingRules.
+func (g *GCEBetaForwardingRules) SetTarget(ctx context.Context, key *meta.Key, arg0 *beta.TargetReference) error {
+	klog.V(5).Infof("GCEBetaForwardingRules.SetTarget(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaForwardingRules.SetTarget(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "ForwardingRules")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetTarget",
+		Version:   meta.Version("beta"),
+		Service:   "ForwardingRules",
+	}
+	klog.V(5).Infof("GCEBetaForwardingRules.SetTarget(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaForwardingRules.SetTarget(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.ForwardingRules.SetTarget(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
 

@@ -457,6 +457,26 @@ func UpdateRegionBackendServiceHook(ctx context.Context, key *meta.Key, obj *ga.
 	return nil
 }
 
+// UpdateRegionBackendServiceHook defines the hook for updating a Region
+// BackendsService. It replaces the object with the same key in the mock with
+// the updated object.
+func UpdateAlphaRegionBackendServiceHook(ctx context.Context, key *meta.Key, obj *ga.BackendService, m *cloud.MockAlphaRegionBackendServices) error {
+	_, err := m.Get(ctx, key)
+	if err != nil {
+		return &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("Key: %s was not found in RegionBackendServices", key.String()),
+		}
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "backendServices")
+	obj.SelfLink = cloud.SelfLink(meta.VersionAlpha, projectID, "backendServices", key)
+
+	m.Objects[*key] = &cloud.MockRegionBackendServicesObj{Obj: obj}
+	return nil
+}
+
 // UpdateBackendServiceHook defines the hook for updating a BackendService.
 // It replaces the object with the same key in the mock with the updated object.
 func UpdateBackendServiceHook(ctx context.Context, key *meta.Key, obj *ga.BackendService, m *cloud.MockBackendServices) error {
@@ -519,10 +539,7 @@ func UpdateBetaBackendServiceHook(ctx context.Context, key *meta.Key, obj *beta.
 func UpdateURLMapHook(ctx context.Context, key *meta.Key, obj *ga.UrlMap, m *cloud.MockUrlMaps) error {
 	_, err := m.Get(ctx, key)
 	if err != nil {
-		return &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key: %s was not found in UrlMaps", key.String()),
-		}
+		return err
 	}
 
 	obj.Name = key.Name
@@ -538,10 +555,7 @@ func UpdateURLMapHook(ctx context.Context, key *meta.Key, obj *ga.UrlMap, m *clo
 func UpdateAlphaURLMapHook(ctx context.Context, key *meta.Key, obj *alpha.UrlMap, m *cloud.MockAlphaUrlMaps) error {
 	_, err := m.Get(ctx, key)
 	if err != nil {
-		return &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key: %s was not found in UrlMaps", key.String()),
-		}
+		return err
 	}
 
 	obj.Name = key.Name
@@ -552,14 +566,49 @@ func UpdateAlphaURLMapHook(ctx context.Context, key *meta.Key, obj *alpha.UrlMap
 	return nil
 }
 
+// UpdateAlphaURLMapHook defines the hook for updating an alpha UrlMap.
+// It replaces the object with the same key in the mock with the updated object.
+func UpdateAlphaRegionURLMapHook(ctx context.Context, key *meta.Key, obj *alpha.UrlMap, m *cloud.MockAlphaRegionUrlMaps) error {
+	_, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "urlMaps")
+	obj.SelfLink = cloud.SelfLink(meta.VersionAlpha, projectID, "urlMaps", key)
+
+	m.Objects[*key] = &cloud.MockRegionUrlMapsObj{Obj: obj}
+	return nil
+}
+
 // SetTargetGlobalForwardingRuleHook defines the hook for setting the target proxy for a GlobalForwardingRule.
 func SetTargetGlobalForwardingRuleHook(ctx context.Context, key *meta.Key, obj *ga.TargetReference, m *cloud.MockGlobalForwardingRules) error {
 	fw, err := m.Get(ctx, key)
 	if err != nil {
-		return &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key: %s was not found in UrlMaps", key.String()),
-		}
+		return err
+	}
+
+	fw.Target = obj.Target
+	return nil
+}
+
+// SetTargetForwardingRuleHook defines the hook for setting the target proxy for a ForwardingRule.
+func SetTargetForwardingRuleHook(ctx context.Context, key *meta.Key, obj *ga.TargetReference, m *cloud.MockForwardingRules) error {
+	fw, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	fw.Target = obj.Target
+	return nil
+}
+
+// SetTargetAlphaForwardingRuleHook defines the hook for setting the target proxy for an Alpha ForwardingRule.
+func SetTargetAlphaForwardingRuleHook(ctx context.Context, key *meta.Key, obj *alpha.TargetReference, m *cloud.MockAlphaForwardingRules) error {
+	fw, err := m.Get(ctx, key)
+	if err != nil {
+		return err
 	}
 
 	fw.Target = obj.Target
@@ -570,10 +619,7 @@ func SetTargetGlobalForwardingRuleHook(ctx context.Context, key *meta.Key, obj *
 func SetTargetAlphaGlobalForwardingRuleHook(ctx context.Context, key *meta.Key, ref *alpha.TargetReference, m *cloud.MockAlphaGlobalForwardingRules) error {
 	fw, err := m.Get(ctx, key)
 	if err != nil {
-		return &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key: %s was not found in UrlMaps", key.String()),
-		}
+		return err
 	}
 
 	fw.Target = ref.Target
@@ -584,10 +630,29 @@ func SetTargetAlphaGlobalForwardingRuleHook(ctx context.Context, key *meta.Key, 
 func SetURLMapTargetHTTPProxyHook(ctx context.Context, key *meta.Key, ref *ga.UrlMapReference, m *cloud.MockTargetHttpProxies) error {
 	tp, err := m.Get(ctx, key)
 	if err != nil {
-		return &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key: %s was not found in TargetHttpProxies", key.String()),
-		}
+		return err
+	}
+
+	tp.UrlMap = ref.UrlMap
+	return nil
+}
+
+// SetURLMapTargetHTTPProxyHook defines the hook for setting the url map for a TargetHttpProxy.
+func SetURLMapTargetHTTPSProxyHook(ctx context.Context, key *meta.Key, ref *ga.UrlMapReference, m *cloud.MockTargetHttpsProxies) error {
+	tp, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	tp.UrlMap = ref.UrlMap
+	return nil
+}
+
+// SetURLMapTargetHTTPProxyHook defines the hook for setting the url map for a TargetHttpProxy.
+func SetURLMapAlphaRegionTargetHTTPSProxyHook(ctx context.Context, key *meta.Key, ref *alpha.UrlMapReference, m *cloud.MockAlphaRegionTargetHttpsProxies) error {
+	tp, err := m.Get(ctx, key)
+	if err != nil {
+		return err
 	}
 
 	tp.UrlMap = ref.UrlMap
@@ -598,13 +663,53 @@ func SetURLMapTargetHTTPProxyHook(ctx context.Context, key *meta.Key, ref *ga.Ur
 func SetURLMapAlphaTargetHTTPProxyHook(ctx context.Context, key *meta.Key, ref *alpha.UrlMapReference, m *cloud.MockAlphaTargetHttpProxies) error {
 	tp, err := m.Get(ctx, key)
 	if err != nil {
-		return &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key: %s was not found in TargetHttpProxies", key.String()),
-		}
+		return err
 	}
 
 	tp.UrlMap = ref.UrlMap
+	return nil
+}
+
+// SetURLMapAlphaTargetHTTPProxyHook defines the hook for setting the url map for a TargetHttpProxy.
+func SetURLMapAlphaRegionTargetHTTPProxyHook(ctx context.Context, key *meta.Key, ref *alpha.UrlMapReference, m *cloud.MockAlphaRegionTargetHttpProxies) error {
+	tp, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	tp.UrlMap = ref.UrlMap
+	return nil
+}
+
+// TargetHttpsProxySetSslCertificatesHook defines the hook for setting ssl certificates on a TargetHttpsProxy.
+func SetSslCertificateTargetHTTPSProxyHook(ctx context.Context, key *meta.Key, req *ga.TargetHttpsProxiesSetSslCertificatesRequest, m *cloud.MockTargetHttpsProxies) error {
+	tp, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	tp.SslCertificates = req.SslCertificates
+	return nil
+}
+
+// TargetHttpsProxySetSslCertificatesHook defines the hook for setting ssl certificates on a TargetHttpsProxy.
+func SetSslCertificateAlphaTargetHTTPSProxyHook(ctx context.Context, key *meta.Key, req *alpha.TargetHttpsProxiesSetSslCertificatesRequest, m *cloud.MockAlphaTargetHttpsProxies) error {
+	tp, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+	tp.SslCertificates = req.SslCertificates
+	return nil
+}
+
+// TargetHttpsProxySetSslCertificatesHook defines the hook for setting ssl certificates on a TargetHttpsProxy.
+func SetSslCertificateAlphaRegionTargetHTTPSProxyHook(ctx context.Context, key *meta.Key, req *alpha.TargetHttpsProxiesSetSslCertificatesRequest, m *cloud.MockAlphaRegionTargetHttpsProxies) error {
+	tp, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	tp.SslCertificates = req.SslCertificates
 	return nil
 }
 

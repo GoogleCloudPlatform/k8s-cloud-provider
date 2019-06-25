@@ -333,10 +333,7 @@ func (igAttrs *InstanceGroupAttributes) List(key *meta.Key) []*ga.InstanceWithNa
 func AddInstancesHook(ctx context.Context, key *meta.Key, req *ga.InstanceGroupsAddInstancesRequest, m *cloud.MockInstanceGroups) error {
 	_, err := m.Get(ctx, key)
 	if err != nil {
-		return &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key: %s was not found in InstanceGroups", key.String()),
-		}
+		return err
 	}
 
 	var attrs InstanceGroupAttributes
@@ -350,10 +347,7 @@ func AddInstancesHook(ctx context.Context, key *meta.Key, req *ga.InstanceGroups
 func ListInstancesHook(ctx context.Context, key *meta.Key, req *ga.InstanceGroupsListInstancesRequest, filter *filter.F, m *cloud.MockInstanceGroups) ([]*ga.InstanceWithNamedPorts, error) {
 	_, err := m.Get(ctx, key)
 	if err != nil {
-		return nil, &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key: %s was not found in InstanceGroups", key.String()),
-		}
+		return nil, err
 	}
 
 	var attrs InstanceGroupAttributes
@@ -367,10 +361,7 @@ func ListInstancesHook(ctx context.Context, key *meta.Key, req *ga.InstanceGroup
 func RemoveInstancesHook(ctx context.Context, key *meta.Key, req *ga.InstanceGroupsRemoveInstancesRequest, m *cloud.MockInstanceGroups) error {
 	_, err := m.Get(ctx, key)
 	if err != nil {
-		return &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key: %s was not found in InstanceGroups", key.String()),
-		}
+		return err
 	}
 
 	var attrs InstanceGroupAttributes
@@ -385,10 +376,7 @@ func RemoveInstancesHook(ctx context.Context, key *meta.Key, req *ga.InstanceGro
 func UpdateFirewallHook(ctx context.Context, key *meta.Key, obj *ga.Firewall, m *cloud.MockFirewalls) error {
 	_, err := m.Get(ctx, key)
 	if err != nil {
-		return &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key: %s was not found in Firewalls", key.String()),
-		}
+		return err
 	}
 
 	obj.Name = key.Name
@@ -404,10 +392,7 @@ func UpdateFirewallHook(ctx context.Context, key *meta.Key, obj *ga.Firewall, m 
 func UpdateHealthCheckHook(ctx context.Context, key *meta.Key, obj *ga.HealthCheck, m *cloud.MockHealthChecks) error {
 	_, err := m.Get(ctx, key)
 	if err != nil {
-		return &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key: %s was not found in HealthChecks", key.String()),
-		}
+		return err
 	}
 
 	obj.Name = key.Name
@@ -423,10 +408,7 @@ func UpdateHealthCheckHook(ctx context.Context, key *meta.Key, obj *ga.HealthChe
 func UpdateAlphaHealthCheckHook(ctx context.Context, key *meta.Key, obj *alpha.HealthCheck, m *cloud.MockAlphaHealthChecks) error {
 	_, err := m.Get(ctx, key)
 	if err != nil {
-		return &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key: %s was not found in HealthChecks", key.String()),
-		}
+		return err
 	}
 
 	obj.Name = key.Name
@@ -443,10 +425,7 @@ func UpdateAlphaHealthCheckHook(ctx context.Context, key *meta.Key, obj *alpha.H
 func UpdateRegionBackendServiceHook(ctx context.Context, key *meta.Key, obj *ga.BackendService, m *cloud.MockRegionBackendServices) error {
 	_, err := m.Get(ctx, key)
 	if err != nil {
-		return &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key: %s was not found in RegionBackendServices", key.String()),
-		}
+		return err
 	}
 
 	obj.Name = key.Name
@@ -463,10 +442,7 @@ func UpdateRegionBackendServiceHook(ctx context.Context, key *meta.Key, obj *ga.
 func UpdateAlphaRegionBackendServiceHook(ctx context.Context, key *meta.Key, obj *ga.BackendService, m *cloud.MockAlphaRegionBackendServices) error {
 	_, err := m.Get(ctx, key)
 	if err != nil {
-		return &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key: %s was not found in RegionBackendServices", key.String()),
-		}
+		return err
 	}
 
 	obj.Name = key.Name
@@ -482,10 +458,7 @@ func UpdateAlphaRegionBackendServiceHook(ctx context.Context, key *meta.Key, obj
 func UpdateBackendServiceHook(ctx context.Context, key *meta.Key, obj *ga.BackendService, m *cloud.MockBackendServices) error {
 	_, err := m.Get(ctx, key)
 	if err != nil {
-		return &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key: %s was not found in BackendServices", key.String()),
-		}
+		return err
 	}
 
 	obj.Name = key.Name
@@ -501,10 +474,7 @@ func UpdateBackendServiceHook(ctx context.Context, key *meta.Key, obj *ga.Backen
 func UpdateAlphaBackendServiceHook(ctx context.Context, key *meta.Key, obj *alpha.BackendService, m *cloud.MockAlphaBackendServices) error {
 	_, err := m.Get(ctx, key)
 	if err != nil {
-		return &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key: %s was not found in BackendServices", key.String()),
-		}
+		return err
 	}
 
 	obj.Name = key.Name
@@ -520,10 +490,7 @@ func UpdateAlphaBackendServiceHook(ctx context.Context, key *meta.Key, obj *alph
 func UpdateBetaBackendServiceHook(ctx context.Context, key *meta.Key, obj *beta.BackendService, m *cloud.MockBetaBackendServices) error {
 	_, err := m.Get(ctx, key)
 	if err != nil {
-		return &googleapi.Error{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("Key: %s was not found in BackendServices", key.String()),
-		}
+		return err
 	}
 
 	obj.Name = key.Name

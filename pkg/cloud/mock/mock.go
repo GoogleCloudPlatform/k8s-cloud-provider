@@ -53,6 +53,34 @@ type gceObject interface {
 	MarshalJSON() ([]byte, error)
 }
 
+// AttachDiskHook mocks attaching a disk to an instance
+func AttachDiskHook(ctx context.Context, key *meta.Key, req *ga.AttachedDisk, m *cloud.MockInstances) error {
+	instance, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+	instance.Disks = append(instance.Disks, req)
+	return nil
+}
+
+// DetachDiskHook mocks detaching a disk from an instance
+func DetachDiskHook(ctx context.Context, key *meta.Key, diskName string, m *cloud.MockInstances) error {
+	instance, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+	for i, disk := range instance.Disks {
+		if disk.DeviceName == diskName {
+			instance.Disks = append(instance.Disks[:i], instance.Disks[i+1:]...)
+			return nil
+		}
+	}
+	return &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("Disk: %s was not found in Instance %s", diskName, key.String()),
+	}
+}
+
 // AddInstanceHook mocks adding a Instance to MockTargetPools
 func AddInstanceHook(ctx context.Context, key *meta.Key, req *ga.TargetPoolsAddInstanceRequest, m *cloud.MockTargetPools) error {
 	pool, err := m.Get(ctx, key)

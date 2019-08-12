@@ -603,12 +603,6 @@ func (m *{{.MockWrapType}}) AggregatedList(ctx context.Context, fl *filter.F) (m
 	objs := map[string][]*{{.FQObjectType}}{}
 	for _, obj := range m.Objects {
 		res, err := ParseResourceURL(obj.To{{.VersionTitle}}().SelfLink)
-		{{- if .KeyIsRegional}}
-		location := res.Key.Region
-		{{- end -}}
-		{{- if .KeyIsZonal}}
-		location := res.Key.Zone
-		{{- end}}
 		if err != nil {
 			klog.V(5).Infof("{{.MockWrapType}}.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
 			return nil, err
@@ -616,6 +610,7 @@ func (m *{{.MockWrapType}}) AggregatedList(ctx context.Context, fl *filter.F) (m
 		if !fl.Match(obj.To{{.VersionTitle}}()) {
 			continue
 		}
+        location := aggregatedListKey(res.Key)
 		objs[location] = append(objs[location], obj.To{{.VersionTitle}}())
 	}
 	klog.V(5).Infof("{{.MockWrapType}}.AggregatedList(%v, %v) = [%v items], nil", ctx, fl, len(objs))

@@ -2385,7 +2385,6 @@ func (m *MockAddresses) AggregatedList(ctx context.Context, fl *filter.F) (map[s
 	objs := map[string][]*ga.Address{}
 	for _, obj := range m.Objects {
 		res, err := ParseResourceURL(obj.ToGA().SelfLink)
-		location := res.Key.Region
 		if err != nil {
 			klog.V(5).Infof("MockAddresses.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
 			return nil, err
@@ -2393,6 +2392,7 @@ func (m *MockAddresses) AggregatedList(ctx context.Context, fl *filter.F) (map[s
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
+		location := aggregatedListKey(res.Key)
 		objs[location] = append(objs[location], obj.ToGA())
 	}
 	klog.V(5).Infof("MockAddresses.AggregatedList(%v, %v) = [%v items], nil", ctx, fl, len(objs))
@@ -2805,7 +2805,6 @@ func (m *MockAlphaAddresses) AggregatedList(ctx context.Context, fl *filter.F) (
 	objs := map[string][]*alpha.Address{}
 	for _, obj := range m.Objects {
 		res, err := ParseResourceURL(obj.ToAlpha().SelfLink)
-		location := res.Key.Region
 		if err != nil {
 			klog.V(5).Infof("MockAlphaAddresses.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
 			return nil, err
@@ -2813,6 +2812,7 @@ func (m *MockAlphaAddresses) AggregatedList(ctx context.Context, fl *filter.F) (
 		if !fl.Match(obj.ToAlpha()) {
 			continue
 		}
+		location := aggregatedListKey(res.Key)
 		objs[location] = append(objs[location], obj.ToAlpha())
 	}
 	klog.V(5).Infof("MockAlphaAddresses.AggregatedList(%v, %v) = [%v items], nil", ctx, fl, len(objs))
@@ -3225,7 +3225,6 @@ func (m *MockBetaAddresses) AggregatedList(ctx context.Context, fl *filter.F) (m
 	objs := map[string][]*beta.Address{}
 	for _, obj := range m.Objects {
 		res, err := ParseResourceURL(obj.ToBeta().SelfLink)
-		location := res.Key.Region
 		if err != nil {
 			klog.V(5).Infof("MockBetaAddresses.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
 			return nil, err
@@ -3233,6 +3232,7 @@ func (m *MockBetaAddresses) AggregatedList(ctx context.Context, fl *filter.F) (m
 		if !fl.Match(obj.ToBeta()) {
 			continue
 		}
+		location := aggregatedListKey(res.Key)
 		objs[location] = append(objs[location], obj.ToBeta())
 	}
 	klog.V(5).Infof("MockBetaAddresses.AggregatedList(%v, %v) = [%v items], nil", ctx, fl, len(objs))
@@ -15725,7 +15725,6 @@ func (m *MockAlphaNetworkEndpointGroups) AggregatedList(ctx context.Context, fl 
 	objs := map[string][]*alpha.NetworkEndpointGroup{}
 	for _, obj := range m.Objects {
 		res, err := ParseResourceURL(obj.ToAlpha().SelfLink)
-		location := res.Key.Zone
 		if err != nil {
 			klog.V(5).Infof("MockAlphaNetworkEndpointGroups.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
 			return nil, err
@@ -15733,6 +15732,7 @@ func (m *MockAlphaNetworkEndpointGroups) AggregatedList(ctx context.Context, fl 
 		if !fl.Match(obj.ToAlpha()) {
 			continue
 		}
+		location := aggregatedListKey(res.Key)
 		objs[location] = append(objs[location], obj.ToAlpha())
 	}
 	klog.V(5).Infof("MockAlphaNetworkEndpointGroups.AggregatedList(%v, %v) = [%v items], nil", ctx, fl, len(objs))
@@ -16285,7 +16285,6 @@ func (m *MockBetaNetworkEndpointGroups) AggregatedList(ctx context.Context, fl *
 	objs := map[string][]*beta.NetworkEndpointGroup{}
 	for _, obj := range m.Objects {
 		res, err := ParseResourceURL(obj.ToBeta().SelfLink)
-		location := res.Key.Zone
 		if err != nil {
 			klog.V(5).Infof("MockBetaNetworkEndpointGroups.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
 			return nil, err
@@ -16293,6 +16292,7 @@ func (m *MockBetaNetworkEndpointGroups) AggregatedList(ctx context.Context, fl *
 		if !fl.Match(obj.ToBeta()) {
 			continue
 		}
+		location := aggregatedListKey(res.Key)
 		objs[location] = append(objs[location], obj.ToBeta())
 	}
 	klog.V(5).Infof("MockBetaNetworkEndpointGroups.AggregatedList(%v, %v) = [%v items], nil", ctx, fl, len(objs))
@@ -16845,7 +16845,6 @@ func (m *MockNetworkEndpointGroups) AggregatedList(ctx context.Context, fl *filt
 	objs := map[string][]*ga.NetworkEndpointGroup{}
 	for _, obj := range m.Objects {
 		res, err := ParseResourceURL(obj.ToGA().SelfLink)
-		location := res.Key.Zone
 		if err != nil {
 			klog.V(5).Infof("MockNetworkEndpointGroups.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
 			return nil, err
@@ -16853,6 +16852,7 @@ func (m *MockNetworkEndpointGroups) AggregatedList(ctx context.Context, fl *filt
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
+		location := aggregatedListKey(res.Key)
 		objs[location] = append(objs[location], obj.ToGA())
 	}
 	klog.V(5).Infof("MockNetworkEndpointGroups.AggregatedList(%v, %v) = [%v items], nil", ctx, fl, len(objs))

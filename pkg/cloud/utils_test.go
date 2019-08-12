@@ -289,3 +289,27 @@ func TestSelfLink(t *testing.T) {
 		}
 	}
 }
+
+func TestAggregatedListKey(t *testing.T) {
+	for _, tc := range []struct {
+		key          *meta.Key
+		expectOutput string
+	}{
+		{
+			key:          meta.ZonalKey("a", "zone1"),
+			expectOutput: "zones/zone1",
+		},
+		{
+			key:          meta.RegionalKey("a", "region1"),
+			expectOutput: "regions/region1",
+		},
+		{
+			key:          meta.GlobalKey("a"),
+			expectOutput: "global",
+		},
+	} {
+		if tc.expectOutput != aggregatedListKey(tc.key) {
+			t.Errorf("expect output %q, but got %q", tc.expectOutput, aggregatedListKey(tc.key))
+		}
+	}
+}

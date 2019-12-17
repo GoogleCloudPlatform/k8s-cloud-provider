@@ -22,57 +22,98 @@ import (
 	"testing"
 )
 
+/*
+Copyright 2018 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package cloud
+
+import (
+	"context"
+	"errors"
+	"testing"
+	"time"
+)
+
 func TestPollOperation(t *testing.T) {
-	const totalAttempts = 10
-	var attempts int
-	fo := &fakeOperation{isDoneFunc: func(ctx context.Context) (bool, error) {
-		attempts++
-		if attempts < totalAttempts {
-			return false, nil
-		}
-		return true, nil
-	}}
-	s := Service{RateLimiter: &NopRateLimiter{}}
-	// Check that pollOperation will retry the operation multiple times.
-	err := s.pollOperation(context.Background(), fo)
-	if err != nil {
-		t.Errorf("pollOperation() = %v, want nil", err)
+	testErr := errors.New("test error")
+	tests := []struct {
+		name                  string
+		op                    *fakeOperation
+		cancel                bool
+		wantErr               error
+		wantRemainingAttempts int
+	}{
+		{
+			name: "Retry",
+			op:   &fakeOperation{attemptsRemaining: 10},
+		},
+		{
+			name: "OperationFailed",
+			op: &fakeOperation{
+				attemptsRemaining: 2,
+				err:               testErr,
+			},
+			wantErr: testErr,
+		},
+		{
+			name: "DoneFailed",
+			op: &fakeOperation{
+				attemptsRemaining: 2,
+				doneErr:           testErr,
+			},
+			wantErr: testErr,
+		},
+		{
+			name:                  "Cancel",
+			op:                    &fakeOperation{attemptsRemaining: 1},
+			cancel:                true,
+			wantErr:               context.Canceled,
+			wantRemainingAttempts: 1,
+		},
 	}
-	if attempts != totalAttempts {
-		t.Errorf("`attempts` = %d, want %d", attempts, totalAttempts)
-	}
-
-	// Check that the operation's error is returned.
-	fo.err = fmt.Errorf("test operation failed")
-	err = s.pollOperation(context.Background(), fo)
-	if err != fo.err {
-		t.Errorf("pollOperation() = %v, want %v", err, fo.err)
-	}
-	fo.err = nil
-
-	fo.isDoneFunc = func(ctx context.Context) (bool, error) {
-		return false, nil
-	}
-	// Use context that has been cancelled and expect a context error returned.
-	ctxCancelled, cancelled := context.WithCancel(context.Background())
-	cancelled()
-	// Verify context is cancelled by now.
-	<-ctxCancelled.Done()
-	// Check that pollOperation returns because the context is cancelled.
-	err = s.pollOperation(ctxCancelled, fo)
-	if err == nil {
-		t.Errorf("pollOperation() = nil, want: %v", ctxCancelled.Err())
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s := Service{RateLimiter: &NopRateLimiter{}}
+			ctx, cfn := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cfn()
+			if test.cancel {
+				cfn()
+			}
+			if gotErr := s.pollOperation(ctx, test.op); gotErr != test.wantErr {
+				t.Errorf("pollOperation: got %v, want %v", gotErr, test.wantErr)
+			}
+			if test.op.attemptsRemaining != test.wantRemainingAttempts {
+        t.Errorf("%d attempts remaining, want %d", test.op.attemptsRemaining, test.wantRemainingAttempts)
+			}
+		})
 	}
 }
 
 type fakeOperation struct {
-	isDoneFunc func(ctx context.Context) (bool, error)
-	err        error
-	rateKey    *RateLimitKey
+	attemptsRemaining int
+	doneErr           error
+	err               error
 }
 
 func (f *fakeOperation) isDone(ctx context.Context) (bool, error) {
-	return f.isDoneFunc(ctx)
+	f.attemptsRemaining--
+	if f.attemptsRemaining <= 0 {
+		return f.doneErr == nil, f.doneErr
+	}
+	return false, nil
 }
 
 func (f *fakeOperation) error() error {
@@ -80,5 +121,5 @@ func (f *fakeOperation) error() error {
 }
 
 func (f *fakeOperation) rateLimitKey() *RateLimitKey {
-	return f.rateKey
+	return nil
 }

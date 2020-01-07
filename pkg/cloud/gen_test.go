@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Kubernetes Authors.
+Copyright 2020 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -1769,6 +1769,8 @@ func TestRegionHealthChecksGroup(t *testing.T) {
 	key = keyAlpha
 	keyBeta := meta.RegionalKey("key-beta", "location")
 	key = keyBeta
+	keyGA := meta.RegionalKey("key-ga", "location")
+	key = keyGA
 	// Ignore unused variables.
 	_, _, _ = ctx, mock, key
 
@@ -1778,6 +1780,9 @@ func TestRegionHealthChecksGroup(t *testing.T) {
 	}
 	if _, err := mock.BetaRegionHealthChecks().Get(ctx, key); err == nil {
 		t.Errorf("BetaRegionHealthChecks().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.RegionHealthChecks().Get(ctx, key); err == nil {
+		t.Errorf("RegionHealthChecks().Get(%v, %v) = _, nil; want error", ctx, key)
 	}
 
 	// Insert.
@@ -1793,6 +1798,12 @@ func TestRegionHealthChecksGroup(t *testing.T) {
 			t.Errorf("BetaRegionHealthChecks().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
 		}
 	}
+	{
+		obj := &ga.HealthCheck{}
+		if err := mock.RegionHealthChecks().Insert(ctx, keyGA, obj); err != nil {
+			t.Errorf("RegionHealthChecks().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
+		}
+	}
 
 	// Get across versions.
 	if obj, err := mock.AlphaRegionHealthChecks().Get(ctx, key); err != nil {
@@ -1801,13 +1812,18 @@ func TestRegionHealthChecksGroup(t *testing.T) {
 	if obj, err := mock.BetaRegionHealthChecks().Get(ctx, key); err != nil {
 		t.Errorf("BetaRegionHealthChecks().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
+	if obj, err := mock.RegionHealthChecks().Get(ctx, key); err != nil {
+		t.Errorf("RegionHealthChecks().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
 
 	// List.
 	mock.MockAlphaRegionHealthChecks.Objects[*keyAlpha] = mock.MockAlphaRegionHealthChecks.Obj(&alpha.HealthCheck{Name: keyAlpha.Name})
 	mock.MockBetaRegionHealthChecks.Objects[*keyBeta] = mock.MockBetaRegionHealthChecks.Obj(&beta.HealthCheck{Name: keyBeta.Name})
+	mock.MockRegionHealthChecks.Objects[*keyGA] = mock.MockRegionHealthChecks.Obj(&ga.HealthCheck{Name: keyGA.Name})
 	want := map[string]bool{
 		"key-alpha": true,
 		"key-beta":  true,
+		"key-ga":    true,
 	}
 	_ = want // ignore unused variables.
 	{
@@ -1838,6 +1854,20 @@ func TestRegionHealthChecksGroup(t *testing.T) {
 			}
 		}
 	}
+	{
+		objs, err := mock.RegionHealthChecks().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("RegionHealthChecks().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("RegionHealthChecks().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
 
 	// Delete across versions.
 	if err := mock.AlphaRegionHealthChecks().Delete(ctx, keyAlpha); err != nil {
@@ -1846,6 +1876,9 @@ func TestRegionHealthChecksGroup(t *testing.T) {
 	if err := mock.BetaRegionHealthChecks().Delete(ctx, keyBeta); err != nil {
 		t.Errorf("BetaRegionHealthChecks().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
 	}
+	if err := mock.RegionHealthChecks().Delete(ctx, keyGA); err != nil {
+		t.Errorf("RegionHealthChecks().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
+	}
 
 	// Delete not found.
 	if err := mock.AlphaRegionHealthChecks().Delete(ctx, keyAlpha); err == nil {
@@ -1853,6 +1886,9 @@ func TestRegionHealthChecksGroup(t *testing.T) {
 	}
 	if err := mock.BetaRegionHealthChecks().Delete(ctx, keyBeta); err == nil {
 		t.Errorf("BetaRegionHealthChecks().Delete(%v, %v) = nil; want error", ctx, keyBeta)
+	}
+	if err := mock.RegionHealthChecks().Delete(ctx, keyGA); err == nil {
+		t.Errorf("RegionHealthChecks().Delete(%v, %v) = nil; want error", ctx, keyGA)
 	}
 }
 
@@ -1868,6 +1904,8 @@ func TestRegionSslCertificatesGroup(t *testing.T) {
 	key = keyAlpha
 	keyBeta := meta.RegionalKey("key-beta", "location")
 	key = keyBeta
+	keyGA := meta.RegionalKey("key-ga", "location")
+	key = keyGA
 	// Ignore unused variables.
 	_, _, _ = ctx, mock, key
 
@@ -1877,6 +1915,9 @@ func TestRegionSslCertificatesGroup(t *testing.T) {
 	}
 	if _, err := mock.BetaRegionSslCertificates().Get(ctx, key); err == nil {
 		t.Errorf("BetaRegionSslCertificates().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.RegionSslCertificates().Get(ctx, key); err == nil {
+		t.Errorf("RegionSslCertificates().Get(%v, %v) = _, nil; want error", ctx, key)
 	}
 
 	// Insert.
@@ -1892,6 +1933,12 @@ func TestRegionSslCertificatesGroup(t *testing.T) {
 			t.Errorf("BetaRegionSslCertificates().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
 		}
 	}
+	{
+		obj := &ga.SslCertificate{}
+		if err := mock.RegionSslCertificates().Insert(ctx, keyGA, obj); err != nil {
+			t.Errorf("RegionSslCertificates().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
+		}
+	}
 
 	// Get across versions.
 	if obj, err := mock.AlphaRegionSslCertificates().Get(ctx, key); err != nil {
@@ -1900,13 +1947,18 @@ func TestRegionSslCertificatesGroup(t *testing.T) {
 	if obj, err := mock.BetaRegionSslCertificates().Get(ctx, key); err != nil {
 		t.Errorf("BetaRegionSslCertificates().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
+	if obj, err := mock.RegionSslCertificates().Get(ctx, key); err != nil {
+		t.Errorf("RegionSslCertificates().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
 
 	// List.
 	mock.MockAlphaRegionSslCertificates.Objects[*keyAlpha] = mock.MockAlphaRegionSslCertificates.Obj(&alpha.SslCertificate{Name: keyAlpha.Name})
 	mock.MockBetaRegionSslCertificates.Objects[*keyBeta] = mock.MockBetaRegionSslCertificates.Obj(&beta.SslCertificate{Name: keyBeta.Name})
+	mock.MockRegionSslCertificates.Objects[*keyGA] = mock.MockRegionSslCertificates.Obj(&ga.SslCertificate{Name: keyGA.Name})
 	want := map[string]bool{
 		"key-alpha": true,
 		"key-beta":  true,
+		"key-ga":    true,
 	}
 	_ = want // ignore unused variables.
 	{
@@ -1937,6 +1989,20 @@ func TestRegionSslCertificatesGroup(t *testing.T) {
 			}
 		}
 	}
+	{
+		objs, err := mock.RegionSslCertificates().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("RegionSslCertificates().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("RegionSslCertificates().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
 
 	// Delete across versions.
 	if err := mock.AlphaRegionSslCertificates().Delete(ctx, keyAlpha); err != nil {
@@ -1945,6 +2011,9 @@ func TestRegionSslCertificatesGroup(t *testing.T) {
 	if err := mock.BetaRegionSslCertificates().Delete(ctx, keyBeta); err != nil {
 		t.Errorf("BetaRegionSslCertificates().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
 	}
+	if err := mock.RegionSslCertificates().Delete(ctx, keyGA); err != nil {
+		t.Errorf("RegionSslCertificates().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
+	}
 
 	// Delete not found.
 	if err := mock.AlphaRegionSslCertificates().Delete(ctx, keyAlpha); err == nil {
@@ -1952,6 +2021,9 @@ func TestRegionSslCertificatesGroup(t *testing.T) {
 	}
 	if err := mock.BetaRegionSslCertificates().Delete(ctx, keyBeta); err == nil {
 		t.Errorf("BetaRegionSslCertificates().Delete(%v, %v) = nil; want error", ctx, keyBeta)
+	}
+	if err := mock.RegionSslCertificates().Delete(ctx, keyGA); err == nil {
+		t.Errorf("RegionSslCertificates().Delete(%v, %v) = nil; want error", ctx, keyGA)
 	}
 }
 
@@ -1967,6 +2039,8 @@ func TestRegionTargetHttpProxiesGroup(t *testing.T) {
 	key = keyAlpha
 	keyBeta := meta.RegionalKey("key-beta", "location")
 	key = keyBeta
+	keyGA := meta.RegionalKey("key-ga", "location")
+	key = keyGA
 	// Ignore unused variables.
 	_, _, _ = ctx, mock, key
 
@@ -1976,6 +2050,9 @@ func TestRegionTargetHttpProxiesGroup(t *testing.T) {
 	}
 	if _, err := mock.BetaRegionTargetHttpProxies().Get(ctx, key); err == nil {
 		t.Errorf("BetaRegionTargetHttpProxies().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.RegionTargetHttpProxies().Get(ctx, key); err == nil {
+		t.Errorf("RegionTargetHttpProxies().Get(%v, %v) = _, nil; want error", ctx, key)
 	}
 
 	// Insert.
@@ -1991,6 +2068,12 @@ func TestRegionTargetHttpProxiesGroup(t *testing.T) {
 			t.Errorf("BetaRegionTargetHttpProxies().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
 		}
 	}
+	{
+		obj := &ga.TargetHttpProxy{}
+		if err := mock.RegionTargetHttpProxies().Insert(ctx, keyGA, obj); err != nil {
+			t.Errorf("RegionTargetHttpProxies().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
+		}
+	}
 
 	// Get across versions.
 	if obj, err := mock.AlphaRegionTargetHttpProxies().Get(ctx, key); err != nil {
@@ -1999,13 +2082,18 @@ func TestRegionTargetHttpProxiesGroup(t *testing.T) {
 	if obj, err := mock.BetaRegionTargetHttpProxies().Get(ctx, key); err != nil {
 		t.Errorf("BetaRegionTargetHttpProxies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
+	if obj, err := mock.RegionTargetHttpProxies().Get(ctx, key); err != nil {
+		t.Errorf("RegionTargetHttpProxies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
 
 	// List.
 	mock.MockAlphaRegionTargetHttpProxies.Objects[*keyAlpha] = mock.MockAlphaRegionTargetHttpProxies.Obj(&alpha.TargetHttpProxy{Name: keyAlpha.Name})
 	mock.MockBetaRegionTargetHttpProxies.Objects[*keyBeta] = mock.MockBetaRegionTargetHttpProxies.Obj(&beta.TargetHttpProxy{Name: keyBeta.Name})
+	mock.MockRegionTargetHttpProxies.Objects[*keyGA] = mock.MockRegionTargetHttpProxies.Obj(&ga.TargetHttpProxy{Name: keyGA.Name})
 	want := map[string]bool{
 		"key-alpha": true,
 		"key-beta":  true,
+		"key-ga":    true,
 	}
 	_ = want // ignore unused variables.
 	{
@@ -2036,6 +2124,20 @@ func TestRegionTargetHttpProxiesGroup(t *testing.T) {
 			}
 		}
 	}
+	{
+		objs, err := mock.RegionTargetHttpProxies().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("RegionTargetHttpProxies().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("RegionTargetHttpProxies().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
 
 	// Delete across versions.
 	if err := mock.AlphaRegionTargetHttpProxies().Delete(ctx, keyAlpha); err != nil {
@@ -2044,6 +2146,9 @@ func TestRegionTargetHttpProxiesGroup(t *testing.T) {
 	if err := mock.BetaRegionTargetHttpProxies().Delete(ctx, keyBeta); err != nil {
 		t.Errorf("BetaRegionTargetHttpProxies().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
 	}
+	if err := mock.RegionTargetHttpProxies().Delete(ctx, keyGA); err != nil {
+		t.Errorf("RegionTargetHttpProxies().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
+	}
 
 	// Delete not found.
 	if err := mock.AlphaRegionTargetHttpProxies().Delete(ctx, keyAlpha); err == nil {
@@ -2051,6 +2156,9 @@ func TestRegionTargetHttpProxiesGroup(t *testing.T) {
 	}
 	if err := mock.BetaRegionTargetHttpProxies().Delete(ctx, keyBeta); err == nil {
 		t.Errorf("BetaRegionTargetHttpProxies().Delete(%v, %v) = nil; want error", ctx, keyBeta)
+	}
+	if err := mock.RegionTargetHttpProxies().Delete(ctx, keyGA); err == nil {
+		t.Errorf("RegionTargetHttpProxies().Delete(%v, %v) = nil; want error", ctx, keyGA)
 	}
 }
 
@@ -2066,6 +2174,8 @@ func TestRegionTargetHttpsProxiesGroup(t *testing.T) {
 	key = keyAlpha
 	keyBeta := meta.RegionalKey("key-beta", "location")
 	key = keyBeta
+	keyGA := meta.RegionalKey("key-ga", "location")
+	key = keyGA
 	// Ignore unused variables.
 	_, _, _ = ctx, mock, key
 
@@ -2075,6 +2185,9 @@ func TestRegionTargetHttpsProxiesGroup(t *testing.T) {
 	}
 	if _, err := mock.BetaRegionTargetHttpsProxies().Get(ctx, key); err == nil {
 		t.Errorf("BetaRegionTargetHttpsProxies().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.RegionTargetHttpsProxies().Get(ctx, key); err == nil {
+		t.Errorf("RegionTargetHttpsProxies().Get(%v, %v) = _, nil; want error", ctx, key)
 	}
 
 	// Insert.
@@ -2090,6 +2203,12 @@ func TestRegionTargetHttpsProxiesGroup(t *testing.T) {
 			t.Errorf("BetaRegionTargetHttpsProxies().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
 		}
 	}
+	{
+		obj := &ga.TargetHttpsProxy{}
+		if err := mock.RegionTargetHttpsProxies().Insert(ctx, keyGA, obj); err != nil {
+			t.Errorf("RegionTargetHttpsProxies().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
+		}
+	}
 
 	// Get across versions.
 	if obj, err := mock.AlphaRegionTargetHttpsProxies().Get(ctx, key); err != nil {
@@ -2098,13 +2217,18 @@ func TestRegionTargetHttpsProxiesGroup(t *testing.T) {
 	if obj, err := mock.BetaRegionTargetHttpsProxies().Get(ctx, key); err != nil {
 		t.Errorf("BetaRegionTargetHttpsProxies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
+	if obj, err := mock.RegionTargetHttpsProxies().Get(ctx, key); err != nil {
+		t.Errorf("RegionTargetHttpsProxies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
 
 	// List.
 	mock.MockAlphaRegionTargetHttpsProxies.Objects[*keyAlpha] = mock.MockAlphaRegionTargetHttpsProxies.Obj(&alpha.TargetHttpsProxy{Name: keyAlpha.Name})
 	mock.MockBetaRegionTargetHttpsProxies.Objects[*keyBeta] = mock.MockBetaRegionTargetHttpsProxies.Obj(&beta.TargetHttpsProxy{Name: keyBeta.Name})
+	mock.MockRegionTargetHttpsProxies.Objects[*keyGA] = mock.MockRegionTargetHttpsProxies.Obj(&ga.TargetHttpsProxy{Name: keyGA.Name})
 	want := map[string]bool{
 		"key-alpha": true,
 		"key-beta":  true,
+		"key-ga":    true,
 	}
 	_ = want // ignore unused variables.
 	{
@@ -2135,6 +2259,20 @@ func TestRegionTargetHttpsProxiesGroup(t *testing.T) {
 			}
 		}
 	}
+	{
+		objs, err := mock.RegionTargetHttpsProxies().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("RegionTargetHttpsProxies().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("RegionTargetHttpsProxies().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
 
 	// Delete across versions.
 	if err := mock.AlphaRegionTargetHttpsProxies().Delete(ctx, keyAlpha); err != nil {
@@ -2143,6 +2281,9 @@ func TestRegionTargetHttpsProxiesGroup(t *testing.T) {
 	if err := mock.BetaRegionTargetHttpsProxies().Delete(ctx, keyBeta); err != nil {
 		t.Errorf("BetaRegionTargetHttpsProxies().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
 	}
+	if err := mock.RegionTargetHttpsProxies().Delete(ctx, keyGA); err != nil {
+		t.Errorf("RegionTargetHttpsProxies().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
+	}
 
 	// Delete not found.
 	if err := mock.AlphaRegionTargetHttpsProxies().Delete(ctx, keyAlpha); err == nil {
@@ -2150,6 +2291,9 @@ func TestRegionTargetHttpsProxiesGroup(t *testing.T) {
 	}
 	if err := mock.BetaRegionTargetHttpsProxies().Delete(ctx, keyBeta); err == nil {
 		t.Errorf("BetaRegionTargetHttpsProxies().Delete(%v, %v) = nil; want error", ctx, keyBeta)
+	}
+	if err := mock.RegionTargetHttpsProxies().Delete(ctx, keyGA); err == nil {
+		t.Errorf("RegionTargetHttpsProxies().Delete(%v, %v) = nil; want error", ctx, keyGA)
 	}
 }
 
@@ -2165,6 +2309,8 @@ func TestRegionUrlMapsGroup(t *testing.T) {
 	key = keyAlpha
 	keyBeta := meta.RegionalKey("key-beta", "location")
 	key = keyBeta
+	keyGA := meta.RegionalKey("key-ga", "location")
+	key = keyGA
 	// Ignore unused variables.
 	_, _, _ = ctx, mock, key
 
@@ -2174,6 +2320,9 @@ func TestRegionUrlMapsGroup(t *testing.T) {
 	}
 	if _, err := mock.BetaRegionUrlMaps().Get(ctx, key); err == nil {
 		t.Errorf("BetaRegionUrlMaps().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.RegionUrlMaps().Get(ctx, key); err == nil {
+		t.Errorf("RegionUrlMaps().Get(%v, %v) = _, nil; want error", ctx, key)
 	}
 
 	// Insert.
@@ -2189,6 +2338,12 @@ func TestRegionUrlMapsGroup(t *testing.T) {
 			t.Errorf("BetaRegionUrlMaps().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
 		}
 	}
+	{
+		obj := &ga.UrlMap{}
+		if err := mock.RegionUrlMaps().Insert(ctx, keyGA, obj); err != nil {
+			t.Errorf("RegionUrlMaps().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
+		}
+	}
 
 	// Get across versions.
 	if obj, err := mock.AlphaRegionUrlMaps().Get(ctx, key); err != nil {
@@ -2197,13 +2352,18 @@ func TestRegionUrlMapsGroup(t *testing.T) {
 	if obj, err := mock.BetaRegionUrlMaps().Get(ctx, key); err != nil {
 		t.Errorf("BetaRegionUrlMaps().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
+	if obj, err := mock.RegionUrlMaps().Get(ctx, key); err != nil {
+		t.Errorf("RegionUrlMaps().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
 
 	// List.
 	mock.MockAlphaRegionUrlMaps.Objects[*keyAlpha] = mock.MockAlphaRegionUrlMaps.Obj(&alpha.UrlMap{Name: keyAlpha.Name})
 	mock.MockBetaRegionUrlMaps.Objects[*keyBeta] = mock.MockBetaRegionUrlMaps.Obj(&beta.UrlMap{Name: keyBeta.Name})
+	mock.MockRegionUrlMaps.Objects[*keyGA] = mock.MockRegionUrlMaps.Obj(&ga.UrlMap{Name: keyGA.Name})
 	want := map[string]bool{
 		"key-alpha": true,
 		"key-beta":  true,
+		"key-ga":    true,
 	}
 	_ = want // ignore unused variables.
 	{
@@ -2234,6 +2394,20 @@ func TestRegionUrlMapsGroup(t *testing.T) {
 			}
 		}
 	}
+	{
+		objs, err := mock.RegionUrlMaps().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("RegionUrlMaps().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("RegionUrlMaps().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
 
 	// Delete across versions.
 	if err := mock.AlphaRegionUrlMaps().Delete(ctx, keyAlpha); err != nil {
@@ -2242,6 +2416,9 @@ func TestRegionUrlMapsGroup(t *testing.T) {
 	if err := mock.BetaRegionUrlMaps().Delete(ctx, keyBeta); err != nil {
 		t.Errorf("BetaRegionUrlMaps().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
 	}
+	if err := mock.RegionUrlMaps().Delete(ctx, keyGA); err != nil {
+		t.Errorf("RegionUrlMaps().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
+	}
 
 	// Delete not found.
 	if err := mock.AlphaRegionUrlMaps().Delete(ctx, keyAlpha); err == nil {
@@ -2249,6 +2426,9 @@ func TestRegionUrlMapsGroup(t *testing.T) {
 	}
 	if err := mock.BetaRegionUrlMaps().Delete(ctx, keyBeta); err == nil {
 		t.Errorf("BetaRegionUrlMaps().Delete(%v, %v) = nil; want error", ctx, keyBeta)
+	}
+	if err := mock.RegionUrlMaps().Delete(ctx, keyGA); err == nil {
+		t.Errorf("RegionUrlMaps().Delete(%v, %v) = nil; want error", ctx, keyGA)
 	}
 }
 

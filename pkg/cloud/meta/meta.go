@@ -657,6 +657,7 @@ var AllServices = []*ServiceInfo{
 		serviceType: reflect.TypeOf(&ga.TargetHttpsProxiesService{}),
 		additionalMethods: []string{
 			"SetSslCertificates",
+			"SetSslPolicy",
 			"SetUrlMap",
 		},
 	},
@@ -669,6 +670,7 @@ var AllServices = []*ServiceInfo{
 		serviceType: reflect.TypeOf(&alpha.TargetHttpsProxiesService{}),
 		additionalMethods: []string{
 			"SetSslCertificates",
+			"SetSslPolicy",
 			"SetUrlMap",
 		},
 	},
@@ -681,6 +683,7 @@ var AllServices = []*ServiceInfo{
 		serviceType: reflect.TypeOf(&beta.TargetHttpsProxiesService{}),
 		additionalMethods: []string{
 			"SetSslCertificates",
+			"SetSslPolicy",
 			"SetUrlMap",
 		},
 	},

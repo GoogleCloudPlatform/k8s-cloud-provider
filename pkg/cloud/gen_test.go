@@ -2741,6 +2741,55 @@ func TestSslCertificatesGroup(t *testing.T) {
 	}
 }
 
+func TestSslPoliciesGroup(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pr := &SingleProjectRouter{"mock-project"}
+	mock := NewMockGCE(pr)
+
+	var key *meta.Key
+	keyGA := meta.GlobalKey("key-ga")
+	key = keyGA
+	// Ignore unused variables.
+	_, _, _ = ctx, mock, key
+
+	// Get not found.
+	if _, err := mock.SslPolicies().Get(ctx, key); err == nil {
+		t.Errorf("SslPolicies().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+
+	// Insert.
+	{
+		obj := &ga.SslPolicy{}
+		if err := mock.SslPolicies().Insert(ctx, keyGA, obj); err != nil {
+			t.Errorf("SslPolicies().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
+		}
+	}
+
+	// Get across versions.
+	if obj, err := mock.SslPolicies().Get(ctx, key); err != nil {
+		t.Errorf("SslPolicies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+
+	// List.
+	mock.MockSslPolicies.Objects[*keyGA] = mock.MockSslPolicies.Obj(&ga.SslPolicy{Name: keyGA.Name})
+	want := map[string]bool{
+		"key-ga": true,
+	}
+	_ = want // ignore unused variables.
+
+	// Delete across versions.
+	if err := mock.SslPolicies().Delete(ctx, keyGA); err != nil {
+		t.Errorf("SslPolicies().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
+	}
+
+	// Delete not found.
+	if err := mock.SslPolicies().Delete(ctx, keyGA); err == nil {
+		t.Errorf("SslPolicies().Delete(%v, %v) = nil; want error", ctx, keyGA)
+	}
+}
+
 func TestSubnetworksGroup(t *testing.T) {
 	t.Parallel()
 
@@ -3422,6 +3471,7 @@ func TestResourceIDConversion(t *testing.T) {
 		NewRoutesResourceID("some-project", "my-routes-resource"),
 		NewSecurityPoliciesResourceID("some-project", "my-securityPolicies-resource"),
 		NewSslCertificatesResourceID("some-project", "my-sslCertificates-resource"),
+		NewSslPoliciesResourceID("some-project", "my-sslPolicies-resource"),
 		NewSubnetworksResourceID("some-project", "us-central1", "my-subnetworks-resource"),
 		NewTargetHttpProxiesResourceID("some-project", "my-targetHttpProxies-resource"),
 		NewTargetHttpsProxiesResourceID("some-project", "my-targetHttpsProxies-resource"),

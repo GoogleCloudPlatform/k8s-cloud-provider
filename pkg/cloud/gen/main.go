@@ -728,15 +728,33 @@ func (g *{{.GCEWrapType}}) List(ctx context.Context, zone string, fl *filter.F) 
 		call.Filter(fl.String())
 	}
 	var all []*{{.FQObjectType}}
+  var nextPageToken string
 	f := func(l *{{.ObjectListType}}) error {
 		klog.V(5).Infof("{{.GCEWrapType}}.List(%v, ..., %v): page %+v", ctx, fl, l)
+		nextPageToken = l.NextPageToken
 		all = append(all, l.Items...)
 		return nil
 	}
-	if err := call.Pages(ctx, f); err != nil {
-		klog.V(4).Infof("{{.GCEWrapType}}.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
-		return nil, err
-	}
+	
+  var retryCount int
+  for {
+    select {
+		case <-ctx.Done():
+			klog.V(5).Infof("{{.GCEWrapType}} call.Pages(%v, _) not completed, poll count = %d, ctx.Err = %v", ctx, retryCount, ctx.Err())
+			return nil, ctx.Err()
+		default:
+			// ctx is not canceled, continue immediately
+		}
+		if nextPageToken != "" {
+			call.PageToken(nextPageToken)
+		}
+		if err := call.Pages(ctx, f); err != nil {
+			klog.V(4).Infof("{{.GCEWrapType}}.List(%v, ..., %v) = %v, %v, retrying...", ctx, fl, nil, err)
+		} else {
+			break
+		}
+		retryCount++
+  }
 
 	if klog.V(4) {
 		klog.V(4).Infof("{{.GCEWrapType}}.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)

@@ -415,6 +415,38 @@ func UpdateFirewallHook(ctx context.Context, key *meta.Key, obj *ga.Firewall, m 
 	return nil
 }
 
+// UpdateAlphaFirewallHook defines the hook for updating an alpha Firewall. It replaces the
+// object with the same key in the mock with the updated object.
+func UpdateAlphaFirewallHook(ctx context.Context, key *meta.Key, obj *alpha.Firewall, m *cloud.MockAlphaFirewalls) error {
+	_, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "firewalls")
+	obj.SelfLink = cloud.SelfLink(meta.VersionAlpha, projectID, "firewalls", key)
+
+	m.Objects[*key] = &cloud.MockFirewallsObj{Obj: obj}
+	return nil
+}
+
+// UpdateBetaFirewallHook defines the hook for updating a beta Firewall. It replaces the
+// object with the same key in the mock with the updated object.
+func UpdateBetaFirewallHook(ctx context.Context, key *meta.Key, obj *ga.Firewall, m *cloud.MockBetaFirewalls) error {
+	_, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "firewalls")
+	obj.SelfLink = cloud.SelfLink(meta.VersionBeta, projectID, "firewalls", key)
+
+	m.Objects[*key] = &cloud.MockFirewallsObj{Obj: obj}
+	return nil
+}
+
 // UpdateHealthCheckHook defines the hook for updating a HealthCheck. It
 // replaces the object with the same key in the mock with the updated object.
 func UpdateHealthCheckHook(ctx context.Context, key *meta.Key, obj *ga.HealthCheck, m *cloud.MockHealthChecks) error {
@@ -638,6 +670,22 @@ func UpdateAlphaURLMapHook(ctx context.Context, key *meta.Key, obj *alpha.UrlMap
 	return nil
 }
 
+// UpdateBetaURLMapHook defines the hook for updating a beta UrlMap.
+// It replaces the object with the same key in the mock with the updated object.
+func UpdateBetaURLMapHook(ctx context.Context, key *meta.Key, obj *beta.UrlMap, m *cloud.MockBetaUrlMaps) error {
+	_, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "urlMaps")
+	obj.SelfLink = cloud.SelfLink(meta.VersionBeta, projectID, "urlMaps", key)
+
+	m.Objects[*key] = &cloud.MockUrlMapsObj{Obj: obj}
+	return nil
+}
+
 // UpdateAlphaRegionURLMapHook defines the hook for updating an alpha UrlMap.
 // It replaces the object with the same key in the mock with the updated object.
 func UpdateAlphaRegionURLMapHook(ctx context.Context, key *meta.Key, obj *alpha.UrlMap, m *cloud.MockAlphaRegionUrlMaps) error {
@@ -741,6 +789,17 @@ func SetTargetAlphaGlobalForwardingRuleHook(ctx context.Context, key *meta.Key, 
 	return nil
 }
 
+// SetTargetBetaGlobalForwardingRuleHook defines the hook for setting the target proxy for a beta GlobalForwardingRule.
+func SetTargetBetaGlobalForwardingRuleHook(ctx context.Context, key *meta.Key, obj *beta.TargetReference, m *cloud.MockBetaGlobalForwardingRules) error {
+	fw, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	fw.Target = obj.Target
+	return nil
+}
+
 // SetURLMapTargetHTTPProxyHook defines the hook for setting the url map for a TargetHttpProxy.
 func SetURLMapTargetHTTPProxyHook(ctx context.Context, key *meta.Key, ref *ga.UrlMapReference, m *cloud.MockTargetHttpProxies) error {
 	tp, err := m.Get(ctx, key)
@@ -798,6 +857,28 @@ func SetURLMapRegionTargetHTTPSProxyHook(ctx context.Context, key *meta.Key, ref
 
 // SetURLMapAlphaTargetHTTPProxyHook defines the hook for setting the url map for a TargetHttpProxy.
 func SetURLMapAlphaTargetHTTPProxyHook(ctx context.Context, key *meta.Key, ref *alpha.UrlMapReference, m *cloud.MockAlphaTargetHttpProxies) error {
+	tp, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	tp.UrlMap = ref.UrlMap
+	return nil
+}
+
+// SetURLMapBetaTargetHTTPProxyHook defines the hook for setting the url map for a beta TargetHttpProxy.
+func SetURLMapBetaTargetHTTPProxyHook(ctx context.Context, key *meta.Key, ref *beta.UrlMapReference, m *cloud.MockBetaTargetHttpProxies) error {
+	tp, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	tp.UrlMap = ref.UrlMap
+	return nil
+}
+
+// SetURLMapBetaTargetHTTPSProxyHook defines the hook for setting the url map for a beta TargetHttpsProxy.
+func SetURLMapBetaTargetHTTPSProxyHook(ctx context.Context, key *meta.Key, ref *beta.UrlMapReference, m *cloud.MockBetaTargetHttpsProxies) error {
 	tp, err := m.Get(ctx, key)
 	if err != nil {
 		return err

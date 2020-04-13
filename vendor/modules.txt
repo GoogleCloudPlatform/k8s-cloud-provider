@@ -1,5 +1,7 @@
 # cloud.google.com/go v0.51.0 => cloud.google.com/go v0.51.0
 cloud.google.com/go/compute/metadata
+# github.com/go-logr/logr v0.1.0
+github.com/go-logr/logr
 # github.com/golang/groupcache v0.0.0-20191227052852-215e87163ea7
 github.com/golang/groupcache/lru
 # github.com/golang/protobuf v1.3.2
@@ -111,5 +113,5 @@ google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
-# k8s.io/klog v1.0.0 => k8s.io/klog v1.0.0
-k8s.io/klog
+# k8s.io/klog/v2 v2.0.0
+k8s.io/klog/v2

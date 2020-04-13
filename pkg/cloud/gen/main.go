@@ -99,7 +99,7 @@ import (
 	"sync"
 
 	"google.golang.org/api/googleapi"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	"{{.PackageRoot}}/filter"
 	"{{.PackageRoot}}/meta"

@@ -9,7 +9,7 @@ require (
 	golang.org/x/sys v0.0.0-20200116001909-b77594299b42 // indirect
 	google.golang.org/api v0.15.1-0.20200106000736-b8fc810ca6b5
 	google.golang.org/genproto v0.0.0-20200115191322-ca5a22157cba // indirect
-	k8s.io/klog v1.0.0
+	k8s.io/klog/v2 v2.0.0
 )
 
 replace (
@@ -19,5 +19,4 @@ replace (
 	golang.org/x/sys => golang.org/x/sys v0.0.0-20200116001909-b77594299b42
 	google.golang.org/api => google.golang.org/api v0.15.1-0.20200106000736-b8fc810ca6b5
 	google.golang.org/genproto => google.golang.org/genproto v0.0.0-20200115191322-ca5a22157cba
-	k8s.io/klog => k8s.io/klog v1.0.0
 )

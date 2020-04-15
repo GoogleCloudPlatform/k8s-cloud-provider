@@ -738,9 +738,9 @@ func (g *{{.GCEWrapType}}) List(ctx context.Context, zone string, fl *filter.F) 
 		return nil, err
 	}
 
-	if klog.V(4) {
+	if klog.V(4).Enabled() {
 		klog.V(4).Infof("{{.GCEWrapType}}.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5) {
+	} else if klog.V(5).Enabled() {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -876,9 +876,9 @@ func (g *{{.GCEWrapType}}) AggregatedList(ctx context.Context, fl *filter.F) (ma
 		klog.V(4).Infof("{{.GCEWrapType}}.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
-	if klog.V(4) {
+	if klog.V(4).Enabled() {
 		klog.V(4).Infof("{{.GCEWrapType}}.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5) {
+	} else if klog.V(5).Enabled() {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -957,9 +957,9 @@ func (g *{{.GCEWrapType}}) {{.FcnArgs}} {
 		klog.V(4).Infof("{{.GCEWrapType}}.{{.Name}}(%v, %v, ...) = %v, %v", ctx, key, nil, err)
 		return nil, err
 	}
-	if klog.V(4) {
+	if klog.V(4).Enabled() {
 		klog.V(4).Infof("{{.GCEWrapType}}.{{.Name}}(%v, %v, ...) = [%v items], %v", ctx, key, len(all), nil)
-	} else if klog.V(5) {
+	} else if klog.V(5).Enabled() {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))

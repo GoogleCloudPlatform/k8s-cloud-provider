@@ -51,6 +51,8 @@ type Cloud interface {
 	BetaRegionBackendServices() BetaRegionBackendServices
 	Disks() Disks
 	RegionDisks() RegionDisks
+	AlphaFirewalls() AlphaFirewalls
+	BetaFirewalls() BetaFirewalls
 	Firewalls() Firewalls
 	ForwardingRules() ForwardingRules
 	AlphaForwardingRules() AlphaForwardingRules
@@ -128,6 +130,8 @@ func NewGCE(s *Service) *GCE {
 		gceBetaRegionBackendServices:     &GCEBetaRegionBackendServices{s},
 		gceDisks:                         &GCEDisks{s},
 		gceRegionDisks:                   &GCERegionDisks{s},
+		gceAlphaFirewalls:                &GCEAlphaFirewalls{s},
+		gceBetaFirewalls:                 &GCEBetaFirewalls{s},
 		gceFirewalls:                     &GCEFirewalls{s},
 		gceForwardingRules:               &GCEForwardingRules{s},
 		gceAlphaForwardingRules:          &GCEAlphaForwardingRules{s},
@@ -209,6 +213,8 @@ type GCE struct {
 	gceBetaRegionBackendServices     *GCEBetaRegionBackendServices
 	gceDisks                         *GCEDisks
 	gceRegionDisks                   *GCERegionDisks
+	gceAlphaFirewalls                *GCEAlphaFirewalls
+	gceBetaFirewalls                 *GCEBetaFirewalls
 	gceFirewalls                     *GCEFirewalls
 	gceForwardingRules               *GCEForwardingRules
 	gceAlphaForwardingRules          *GCEAlphaForwardingRules
@@ -333,6 +339,16 @@ func (gce *GCE) Disks() Disks {
 // RegionDisks returns the interface for the ga RegionDisks.
 func (gce *GCE) RegionDisks() RegionDisks {
 	return gce.gceRegionDisks
+}
+
+// AlphaFirewalls returns the interface for the alpha Firewalls.
+func (gce *GCE) AlphaFirewalls() AlphaFirewalls {
+	return gce.gceAlphaFirewalls
+}
+
+// BetaFirewalls returns the interface for the beta Firewalls.
+func (gce *GCE) BetaFirewalls() BetaFirewalls {
+	return gce.gceBetaFirewalls
 }
 
 // Firewalls returns the interface for the ga Firewalls.
@@ -680,6 +696,8 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockBetaRegionBackendServices:     NewMockBetaRegionBackendServices(projectRouter, mockRegionBackendServicesObjs),
 		MockDisks:                         NewMockDisks(projectRouter, mockDisksObjs),
 		MockRegionDisks:                   NewMockRegionDisks(projectRouter, mockRegionDisksObjs),
+		MockAlphaFirewalls:                NewMockAlphaFirewalls(projectRouter, mockFirewallsObjs),
+		MockBetaFirewalls:                 NewMockBetaFirewalls(projectRouter, mockFirewallsObjs),
 		MockFirewalls:                     NewMockFirewalls(projectRouter, mockFirewallsObjs),
 		MockForwardingRules:               NewMockForwardingRules(projectRouter, mockForwardingRulesObjs),
 		MockAlphaForwardingRules:          NewMockAlphaForwardingRules(projectRouter, mockForwardingRulesObjs),
@@ -761,6 +779,8 @@ type MockGCE struct {
 	MockBetaRegionBackendServices     *MockBetaRegionBackendServices
 	MockDisks                         *MockDisks
 	MockRegionDisks                   *MockRegionDisks
+	MockAlphaFirewalls                *MockAlphaFirewalls
+	MockBetaFirewalls                 *MockBetaFirewalls
 	MockFirewalls                     *MockFirewalls
 	MockForwardingRules               *MockForwardingRules
 	MockAlphaForwardingRules          *MockAlphaForwardingRules
@@ -885,6 +905,16 @@ func (mock *MockGCE) Disks() Disks {
 // RegionDisks returns the interface for the ga RegionDisks.
 func (mock *MockGCE) RegionDisks() RegionDisks {
 	return mock.MockRegionDisks
+}
+
+// AlphaFirewalls returns the interface for the alpha Firewalls.
+func (mock *MockGCE) AlphaFirewalls() AlphaFirewalls {
+	return mock.MockAlphaFirewalls
+}
+
+// BetaFirewalls returns the interface for the beta Firewalls.
+func (mock *MockGCE) BetaFirewalls() BetaFirewalls {
+	return mock.MockBetaFirewalls
 }
 
 // Firewalls returns the interface for the ga Firewalls.
@@ -1299,6 +1329,32 @@ func (m *MockDisksObj) ToGA() *ga.Disk {
 // share the same "view" of the objects in the backend.
 type MockFirewallsObj struct {
 	Obj interface{}
+}
+
+// ToAlpha retrieves the given version of the object.
+func (m *MockFirewallsObj) ToAlpha() *alpha.Firewall {
+	if ret, ok := m.Obj.(*alpha.Firewall); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &alpha.Firewall{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *alpha.Firewall via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// ToBeta retrieves the given version of the object.
+func (m *MockFirewallsObj) ToBeta() *beta.Firewall {
+	if ret, ok := m.Obj.(*beta.Firewall); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &beta.Firewall{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *beta.Firewall via JSON: %v", m.Obj, err)
+	}
+	return ret
 }
 
 // ToGA retrieves the given version of the object.
@@ -7561,6 +7617,756 @@ func (g *GCERegionDisks) Resize(ctx context.Context, key *meta.Key, arg0 *ga.Reg
 	}
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCERegionDisks.Resize(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// AlphaFirewalls is an interface that allows for mocking of Firewalls.
+type AlphaFirewalls interface {
+	Get(ctx context.Context, key *meta.Key) (*alpha.Firewall, error)
+	List(ctx context.Context, fl *filter.F) ([]*alpha.Firewall, error)
+	Insert(ctx context.Context, key *meta.Key, obj *alpha.Firewall) error
+	Delete(ctx context.Context, key *meta.Key) error
+	Update(context.Context, *meta.Key, *alpha.Firewall) error
+}
+
+// NewMockAlphaFirewalls returns a new mock for Firewalls.
+func NewMockAlphaFirewalls(pr ProjectRouter, objs map[meta.Key]*MockFirewallsObj) *MockAlphaFirewalls {
+	mock := &MockAlphaFirewalls{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockAlphaFirewalls is the mock for Firewalls.
+type MockAlphaFirewalls struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockFirewallsObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockAlphaFirewalls) (bool, *alpha.Firewall, error)
+	ListHook   func(ctx context.Context, fl *filter.F, m *MockAlphaFirewalls) (bool, []*alpha.Firewall, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *alpha.Firewall, m *MockAlphaFirewalls) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockAlphaFirewalls) (bool, error)
+	UpdateHook func(context.Context, *meta.Key, *alpha.Firewall, *MockAlphaFirewalls) error
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockAlphaFirewalls) Get(ctx context.Context, key *meta.Key) (*alpha.Firewall, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaFirewalls.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockAlphaFirewalls.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToAlpha()
+		klog.V(5).Infof("MockAlphaFirewalls.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockAlphaFirewalls %v not found", key),
+	}
+	klog.V(5).Infof("MockAlphaFirewalls.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockAlphaFirewalls) List(ctx context.Context, fl *filter.F) ([]*alpha.Firewall, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaFirewalls.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockAlphaFirewalls.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*alpha.Firewall
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		objs = append(objs, obj.ToAlpha())
+	}
+
+	klog.V(5).Infof("MockAlphaFirewalls.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockAlphaFirewalls) Insert(ctx context.Context, key *meta.Key, obj *alpha.Firewall) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockAlphaFirewalls.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockAlphaFirewalls.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockAlphaFirewalls %v exists", key),
+		}
+		klog.V(5).Infof("MockAlphaFirewalls.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "firewalls")
+	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "firewalls", key)
+
+	m.Objects[*key] = &MockFirewallsObj{obj}
+	klog.V(5).Infof("MockAlphaFirewalls.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockAlphaFirewalls) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaFirewalls.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockAlphaFirewalls.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockAlphaFirewalls %v not found", key),
+		}
+		klog.V(5).Infof("MockAlphaFirewalls.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockAlphaFirewalls.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockAlphaFirewalls) Obj(o *alpha.Firewall) *MockFirewallsObj {
+	return &MockFirewallsObj{o}
+}
+
+// Update is a mock for the corresponding method.
+func (m *MockAlphaFirewalls) Update(ctx context.Context, key *meta.Key, arg0 *alpha.Firewall) error {
+	if m.UpdateHook != nil {
+		return m.UpdateHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// GCEAlphaFirewalls is a simplifying adapter for the GCE Firewalls.
+type GCEAlphaFirewalls struct {
+	s *Service
+}
+
+// Get the Firewall named by key.
+func (g *GCEAlphaFirewalls) Get(ctx context.Context, key *meta.Key) (*alpha.Firewall, error) {
+	klog.V(5).Infof("GCEAlphaFirewalls.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaFirewalls.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Firewalls")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("alpha"),
+		Service:   "Firewalls",
+	}
+	klog.V(5).Infof("GCEAlphaFirewalls.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaFirewalls.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.Firewalls.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaFirewalls.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all Firewall objects.
+func (g *GCEAlphaFirewalls) List(ctx context.Context, fl *filter.F) ([]*alpha.Firewall, error) {
+	klog.V(5).Infof("GCEAlphaFirewalls.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Firewalls")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("alpha"),
+		Service:   "Firewalls",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEAlphaFirewalls.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Alpha.Firewalls.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*alpha.Firewall
+	f := func(l *alpha.FirewallList) error {
+		klog.V(5).Infof("GCEAlphaFirewalls.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAlphaFirewalls.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCEAlphaFirewalls.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaFirewalls.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert Firewall with key of value obj.
+func (g *GCEAlphaFirewalls) Insert(ctx context.Context, key *meta.Key, obj *alpha.Firewall) error {
+	klog.V(5).Infof("GCEAlphaFirewalls.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaFirewalls.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Firewalls")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("alpha"),
+		Service:   "Firewalls",
+	}
+	klog.V(5).Infof("GCEAlphaFirewalls.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaFirewalls.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Alpha.Firewalls.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaFirewalls.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaFirewalls.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the Firewall referenced by key.
+func (g *GCEAlphaFirewalls) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaFirewalls.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaFirewalls.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Firewalls")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("alpha"),
+		Service:   "Firewalls",
+	}
+	klog.V(5).Infof("GCEAlphaFirewalls.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaFirewalls.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.Firewalls.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaFirewalls.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaFirewalls.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// Update is a method on GCEAlphaFirewalls.
+func (g *GCEAlphaFirewalls) Update(ctx context.Context, key *meta.Key, arg0 *alpha.Firewall) error {
+	klog.V(5).Infof("GCEAlphaFirewalls.Update(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaFirewalls.Update(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Firewalls")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Update",
+		Version:   meta.Version("alpha"),
+		Service:   "Firewalls",
+	}
+	klog.V(5).Infof("GCEAlphaFirewalls.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaFirewalls.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.Firewalls.Update(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaFirewalls.Update(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaFirewalls.Update(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// BetaFirewalls is an interface that allows for mocking of Firewalls.
+type BetaFirewalls interface {
+	Get(ctx context.Context, key *meta.Key) (*beta.Firewall, error)
+	List(ctx context.Context, fl *filter.F) ([]*beta.Firewall, error)
+	Insert(ctx context.Context, key *meta.Key, obj *beta.Firewall) error
+	Delete(ctx context.Context, key *meta.Key) error
+	Update(context.Context, *meta.Key, *beta.Firewall) error
+}
+
+// NewMockBetaFirewalls returns a new mock for Firewalls.
+func NewMockBetaFirewalls(pr ProjectRouter, objs map[meta.Key]*MockFirewallsObj) *MockBetaFirewalls {
+	mock := &MockBetaFirewalls{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockBetaFirewalls is the mock for Firewalls.
+type MockBetaFirewalls struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockFirewallsObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockBetaFirewalls) (bool, *beta.Firewall, error)
+	ListHook   func(ctx context.Context, fl *filter.F, m *MockBetaFirewalls) (bool, []*beta.Firewall, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *beta.Firewall, m *MockBetaFirewalls) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockBetaFirewalls) (bool, error)
+	UpdateHook func(context.Context, *meta.Key, *beta.Firewall, *MockBetaFirewalls) error
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockBetaFirewalls) Get(ctx context.Context, key *meta.Key) (*beta.Firewall, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockBetaFirewalls.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockBetaFirewalls.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToBeta()
+		klog.V(5).Infof("MockBetaFirewalls.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockBetaFirewalls %v not found", key),
+	}
+	klog.V(5).Infof("MockBetaFirewalls.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockBetaFirewalls) List(ctx context.Context, fl *filter.F) ([]*beta.Firewall, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockBetaFirewalls.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockBetaFirewalls.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*beta.Firewall
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToBeta()) {
+			continue
+		}
+		objs = append(objs, obj.ToBeta())
+	}
+
+	klog.V(5).Infof("MockBetaFirewalls.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockBetaFirewalls) Insert(ctx context.Context, key *meta.Key, obj *beta.Firewall) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockBetaFirewalls.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockBetaFirewalls.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockBetaFirewalls %v exists", key),
+		}
+		klog.V(5).Infof("MockBetaFirewalls.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "firewalls")
+	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "firewalls", key)
+
+	m.Objects[*key] = &MockFirewallsObj{obj}
+	klog.V(5).Infof("MockBetaFirewalls.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockBetaFirewalls) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockBetaFirewalls.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockBetaFirewalls.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockBetaFirewalls %v not found", key),
+		}
+		klog.V(5).Infof("MockBetaFirewalls.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockBetaFirewalls.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockBetaFirewalls) Obj(o *beta.Firewall) *MockFirewallsObj {
+	return &MockFirewallsObj{o}
+}
+
+// Update is a mock for the corresponding method.
+func (m *MockBetaFirewalls) Update(ctx context.Context, key *meta.Key, arg0 *beta.Firewall) error {
+	if m.UpdateHook != nil {
+		return m.UpdateHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// GCEBetaFirewalls is a simplifying adapter for the GCE Firewalls.
+type GCEBetaFirewalls struct {
+	s *Service
+}
+
+// Get the Firewall named by key.
+func (g *GCEBetaFirewalls) Get(ctx context.Context, key *meta.Key) (*beta.Firewall, error) {
+	klog.V(5).Infof("GCEBetaFirewalls.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaFirewalls.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Firewalls")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("beta"),
+		Service:   "Firewalls",
+	}
+	klog.V(5).Infof("GCEBetaFirewalls.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaFirewalls.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.Firewalls.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEBetaFirewalls.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all Firewall objects.
+func (g *GCEBetaFirewalls) List(ctx context.Context, fl *filter.F) ([]*beta.Firewall, error) {
+	klog.V(5).Infof("GCEBetaFirewalls.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Firewalls")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("beta"),
+		Service:   "Firewalls",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEBetaFirewalls.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Beta.Firewalls.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*beta.Firewall
+	f := func(l *beta.FirewallList) error {
+		klog.V(5).Infof("GCEBetaFirewalls.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEBetaFirewalls.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCEBetaFirewalls.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEBetaFirewalls.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert Firewall with key of value obj.
+func (g *GCEBetaFirewalls) Insert(ctx context.Context, key *meta.Key, obj *beta.Firewall) error {
+	klog.V(5).Infof("GCEBetaFirewalls.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaFirewalls.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Firewalls")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("beta"),
+		Service:   "Firewalls",
+	}
+	klog.V(5).Infof("GCEBetaFirewalls.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaFirewalls.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Beta.Firewalls.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaFirewalls.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaFirewalls.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the Firewall referenced by key.
+func (g *GCEBetaFirewalls) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEBetaFirewalls.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaFirewalls.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Firewalls")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("beta"),
+		Service:   "Firewalls",
+	}
+	klog.V(5).Infof("GCEBetaFirewalls.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaFirewalls.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.Firewalls.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaFirewalls.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaFirewalls.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// Update is a method on GCEBetaFirewalls.
+func (g *GCEBetaFirewalls) Update(ctx context.Context, key *meta.Key, arg0 *beta.Firewall) error {
+	klog.V(5).Infof("GCEBetaFirewalls.Update(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaFirewalls.Update(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Firewalls")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Update",
+		Version:   meta.Version("beta"),
+		Service:   "Firewalls",
+	}
+	klog.V(5).Infof("GCEBetaFirewalls.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaFirewalls.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.Firewalls.Update(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaFirewalls.Update(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaFirewalls.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
 

@@ -375,17 +375,39 @@ func TestFirewallsGroup(t *testing.T) {
 	mock := NewMockGCE(pr)
 
 	var key *meta.Key
+	keyAlpha := meta.GlobalKey("key-alpha")
+	key = keyAlpha
+	keyBeta := meta.GlobalKey("key-beta")
+	key = keyBeta
 	keyGA := meta.GlobalKey("key-ga")
 	key = keyGA
 	// Ignore unused variables.
 	_, _, _ = ctx, mock, key
 
 	// Get not found.
+	if _, err := mock.AlphaFirewalls().Get(ctx, key); err == nil {
+		t.Errorf("AlphaFirewalls().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.BetaFirewalls().Get(ctx, key); err == nil {
+		t.Errorf("BetaFirewalls().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
 	if _, err := mock.Firewalls().Get(ctx, key); err == nil {
 		t.Errorf("Firewalls().Get(%v, %v) = _, nil; want error", ctx, key)
 	}
 
 	// Insert.
+	{
+		obj := &alpha.Firewall{}
+		if err := mock.AlphaFirewalls().Insert(ctx, keyAlpha, obj); err != nil {
+			t.Errorf("AlphaFirewalls().Insert(%v, %v, %v) = %v; want nil", ctx, keyAlpha, obj, err)
+		}
+	}
+	{
+		obj := &beta.Firewall{}
+		if err := mock.BetaFirewalls().Insert(ctx, keyBeta, obj); err != nil {
+			t.Errorf("BetaFirewalls().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
+		}
+	}
 	{
 		obj := &ga.Firewall{}
 		if err := mock.Firewalls().Insert(ctx, keyGA, obj); err != nil {
@@ -394,16 +416,54 @@ func TestFirewallsGroup(t *testing.T) {
 	}
 
 	// Get across versions.
+	if obj, err := mock.AlphaFirewalls().Get(ctx, key); err != nil {
+		t.Errorf("AlphaFirewalls().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+	if obj, err := mock.BetaFirewalls().Get(ctx, key); err != nil {
+		t.Errorf("BetaFirewalls().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
 	if obj, err := mock.Firewalls().Get(ctx, key); err != nil {
 		t.Errorf("Firewalls().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
 
 	// List.
+	mock.MockAlphaFirewalls.Objects[*keyAlpha] = mock.MockAlphaFirewalls.Obj(&alpha.Firewall{Name: keyAlpha.Name})
+	mock.MockBetaFirewalls.Objects[*keyBeta] = mock.MockBetaFirewalls.Obj(&beta.Firewall{Name: keyBeta.Name})
 	mock.MockFirewalls.Objects[*keyGA] = mock.MockFirewalls.Obj(&ga.Firewall{Name: keyGA.Name})
 	want := map[string]bool{
-		"key-ga": true,
+		"key-alpha": true,
+		"key-beta":  true,
+		"key-ga":    true,
 	}
 	_ = want // ignore unused variables.
+	{
+		objs, err := mock.AlphaFirewalls().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("AlphaFirewalls().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("AlphaFirewalls().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.BetaFirewalls().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("BetaFirewalls().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("BetaFirewalls().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
 	{
 		objs, err := mock.Firewalls().List(ctx, filter.None)
 		if err != nil {
@@ -420,11 +480,23 @@ func TestFirewallsGroup(t *testing.T) {
 	}
 
 	// Delete across versions.
+	if err := mock.AlphaFirewalls().Delete(ctx, keyAlpha); err != nil {
+		t.Errorf("AlphaFirewalls().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
+	}
+	if err := mock.BetaFirewalls().Delete(ctx, keyBeta); err != nil {
+		t.Errorf("BetaFirewalls().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
+	}
 	if err := mock.Firewalls().Delete(ctx, keyGA); err != nil {
 		t.Errorf("Firewalls().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
 	}
 
 	// Delete not found.
+	if err := mock.AlphaFirewalls().Delete(ctx, keyAlpha); err == nil {
+		t.Errorf("AlphaFirewalls().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+	if err := mock.BetaFirewalls().Delete(ctx, keyBeta); err == nil {
+		t.Errorf("BetaFirewalls().Delete(%v, %v) = nil; want error", ctx, keyBeta)
+	}
 	if err := mock.Firewalls().Delete(ctx, keyGA); err == nil {
 		t.Errorf("Firewalls().Delete(%v, %v) = nil; want error", ctx, keyGA)
 	}

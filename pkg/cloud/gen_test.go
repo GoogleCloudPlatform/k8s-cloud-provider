@@ -647,6 +647,8 @@ func TestGlobalAddressesGroup(t *testing.T) {
 	var key *meta.Key
 	keyAlpha := meta.GlobalKey("key-alpha")
 	key = keyAlpha
+	keyBeta := meta.GlobalKey("key-beta")
+	key = keyBeta
 	keyGA := meta.GlobalKey("key-ga")
 	key = keyGA
 	// Ignore unused variables.
@@ -655,6 +657,9 @@ func TestGlobalAddressesGroup(t *testing.T) {
 	// Get not found.
 	if _, err := mock.AlphaGlobalAddresses().Get(ctx, key); err == nil {
 		t.Errorf("AlphaGlobalAddresses().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.BetaGlobalAddresses().Get(ctx, key); err == nil {
+		t.Errorf("BetaGlobalAddresses().Get(%v, %v) = _, nil; want error", ctx, key)
 	}
 	if _, err := mock.GlobalAddresses().Get(ctx, key); err == nil {
 		t.Errorf("GlobalAddresses().Get(%v, %v) = _, nil; want error", ctx, key)
@@ -668,6 +673,12 @@ func TestGlobalAddressesGroup(t *testing.T) {
 		}
 	}
 	{
+		obj := &beta.Address{}
+		if err := mock.BetaGlobalAddresses().Insert(ctx, keyBeta, obj); err != nil {
+			t.Errorf("BetaGlobalAddresses().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
+		}
+	}
+	{
 		obj := &ga.Address{}
 		if err := mock.GlobalAddresses().Insert(ctx, keyGA, obj); err != nil {
 			t.Errorf("GlobalAddresses().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
@@ -678,15 +689,20 @@ func TestGlobalAddressesGroup(t *testing.T) {
 	if obj, err := mock.AlphaGlobalAddresses().Get(ctx, key); err != nil {
 		t.Errorf("AlphaGlobalAddresses().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
+	if obj, err := mock.BetaGlobalAddresses().Get(ctx, key); err != nil {
+		t.Errorf("BetaGlobalAddresses().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
 	if obj, err := mock.GlobalAddresses().Get(ctx, key); err != nil {
 		t.Errorf("GlobalAddresses().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
 
 	// List.
 	mock.MockAlphaGlobalAddresses.Objects[*keyAlpha] = mock.MockAlphaGlobalAddresses.Obj(&alpha.Address{Name: keyAlpha.Name})
+	mock.MockBetaGlobalAddresses.Objects[*keyBeta] = mock.MockBetaGlobalAddresses.Obj(&beta.Address{Name: keyBeta.Name})
 	mock.MockGlobalAddresses.Objects[*keyGA] = mock.MockGlobalAddresses.Obj(&ga.Address{Name: keyGA.Name})
 	want := map[string]bool{
 		"key-alpha": true,
+		"key-beta":  true,
 		"key-ga":    true,
 	}
 	_ = want // ignore unused variables.
@@ -701,6 +717,20 @@ func TestGlobalAddressesGroup(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("AlphaGlobalAddresses().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.BetaGlobalAddresses().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("BetaGlobalAddresses().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("BetaGlobalAddresses().List(); got %+v, want %+v", got, want)
 			}
 		}
 	}
@@ -723,6 +753,9 @@ func TestGlobalAddressesGroup(t *testing.T) {
 	if err := mock.AlphaGlobalAddresses().Delete(ctx, keyAlpha); err != nil {
 		t.Errorf("AlphaGlobalAddresses().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
 	}
+	if err := mock.BetaGlobalAddresses().Delete(ctx, keyBeta); err != nil {
+		t.Errorf("BetaGlobalAddresses().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
+	}
 	if err := mock.GlobalAddresses().Delete(ctx, keyGA); err != nil {
 		t.Errorf("GlobalAddresses().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
 	}
@@ -730,6 +763,9 @@ func TestGlobalAddressesGroup(t *testing.T) {
 	// Delete not found.
 	if err := mock.AlphaGlobalAddresses().Delete(ctx, keyAlpha); err == nil {
 		t.Errorf("AlphaGlobalAddresses().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+	if err := mock.BetaGlobalAddresses().Delete(ctx, keyBeta); err == nil {
+		t.Errorf("BetaGlobalAddresses().Delete(%v, %v) = nil; want error", ctx, keyBeta)
 	}
 	if err := mock.GlobalAddresses().Delete(ctx, keyGA); err == nil {
 		t.Errorf("GlobalAddresses().Delete(%v, %v) = nil; want error", ctx, keyGA)

@@ -42,6 +42,7 @@ type Cloud interface {
 	AlphaAddresses() AlphaAddresses
 	BetaAddresses() BetaAddresses
 	AlphaGlobalAddresses() AlphaGlobalAddresses
+	BetaGlobalAddresses() BetaGlobalAddresses
 	GlobalAddresses() GlobalAddresses
 	BackendServices() BackendServices
 	BetaBackendServices() BetaBackendServices
@@ -121,6 +122,7 @@ func NewGCE(s *Service) *GCE {
 		gceAlphaAddresses:                &GCEAlphaAddresses{s},
 		gceBetaAddresses:                 &GCEBetaAddresses{s},
 		gceAlphaGlobalAddresses:          &GCEAlphaGlobalAddresses{s},
+		gceBetaGlobalAddresses:           &GCEBetaGlobalAddresses{s},
 		gceGlobalAddresses:               &GCEGlobalAddresses{s},
 		gceBackendServices:               &GCEBackendServices{s},
 		gceBetaBackendServices:           &GCEBetaBackendServices{s},
@@ -204,6 +206,7 @@ type GCE struct {
 	gceAlphaAddresses                *GCEAlphaAddresses
 	gceBetaAddresses                 *GCEBetaAddresses
 	gceAlphaGlobalAddresses          *GCEAlphaGlobalAddresses
+	gceBetaGlobalAddresses           *GCEBetaGlobalAddresses
 	gceGlobalAddresses               *GCEGlobalAddresses
 	gceBackendServices               *GCEBackendServices
 	gceBetaBackendServices           *GCEBetaBackendServices
@@ -294,6 +297,11 @@ func (gce *GCE) BetaAddresses() BetaAddresses {
 // AlphaGlobalAddresses returns the interface for the alpha GlobalAddresses.
 func (gce *GCE) AlphaGlobalAddresses() AlphaGlobalAddresses {
 	return gce.gceAlphaGlobalAddresses
+}
+
+// BetaGlobalAddresses returns the interface for the beta GlobalAddresses.
+func (gce *GCE) BetaGlobalAddresses() BetaGlobalAddresses {
+	return gce.gceBetaGlobalAddresses
 }
 
 // GlobalAddresses returns the interface for the ga GlobalAddresses.
@@ -687,6 +695,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockAlphaAddresses:                NewMockAlphaAddresses(projectRouter, mockAddressesObjs),
 		MockBetaAddresses:                 NewMockBetaAddresses(projectRouter, mockAddressesObjs),
 		MockAlphaGlobalAddresses:          NewMockAlphaGlobalAddresses(projectRouter, mockGlobalAddressesObjs),
+		MockBetaGlobalAddresses:           NewMockBetaGlobalAddresses(projectRouter, mockGlobalAddressesObjs),
 		MockGlobalAddresses:               NewMockGlobalAddresses(projectRouter, mockGlobalAddressesObjs),
 		MockBackendServices:               NewMockBackendServices(projectRouter, mockBackendServicesObjs),
 		MockBetaBackendServices:           NewMockBetaBackendServices(projectRouter, mockBackendServicesObjs),
@@ -770,6 +779,7 @@ type MockGCE struct {
 	MockAlphaAddresses                *MockAlphaAddresses
 	MockBetaAddresses                 *MockBetaAddresses
 	MockAlphaGlobalAddresses          *MockAlphaGlobalAddresses
+	MockBetaGlobalAddresses           *MockBetaGlobalAddresses
 	MockGlobalAddresses               *MockGlobalAddresses
 	MockBackendServices               *MockBackendServices
 	MockBetaBackendServices           *MockBetaBackendServices
@@ -860,6 +870,11 @@ func (mock *MockGCE) BetaAddresses() BetaAddresses {
 // AlphaGlobalAddresses returns the interface for the alpha GlobalAddresses.
 func (mock *MockGCE) AlphaGlobalAddresses() AlphaGlobalAddresses {
 	return mock.MockAlphaGlobalAddresses
+}
+
+// BetaGlobalAddresses returns the interface for the beta GlobalAddresses.
+func (mock *MockGCE) BetaGlobalAddresses() BetaGlobalAddresses {
+	return mock.MockBetaGlobalAddresses
 }
 
 // GlobalAddresses returns the interface for the ga GlobalAddresses.
@@ -1432,6 +1447,19 @@ func (m *MockGlobalAddressesObj) ToAlpha() *alpha.Address {
 	ret := &alpha.Address{}
 	if err := copyViaJSON(ret, m.Obj); err != nil {
 		klog.Errorf("Could not convert %T to *alpha.Address via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// ToBeta retrieves the given version of the object.
+func (m *MockGlobalAddressesObj) ToBeta() *beta.Address {
+	if ret, ok := m.Obj.(*beta.Address); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &beta.Address{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *beta.Address via JSON: %v", m.Obj, err)
 	}
 	return ret
 }
@@ -3994,6 +4022,338 @@ func (g *GCEAlphaGlobalAddresses) Delete(ctx context.Context, key *meta.Key) err
 
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCEAlphaGlobalAddresses.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// BetaGlobalAddresses is an interface that allows for mocking of GlobalAddresses.
+type BetaGlobalAddresses interface {
+	Get(ctx context.Context, key *meta.Key) (*beta.Address, error)
+	List(ctx context.Context, fl *filter.F) ([]*beta.Address, error)
+	Insert(ctx context.Context, key *meta.Key, obj *beta.Address) error
+	Delete(ctx context.Context, key *meta.Key) error
+}
+
+// NewMockBetaGlobalAddresses returns a new mock for GlobalAddresses.
+func NewMockBetaGlobalAddresses(pr ProjectRouter, objs map[meta.Key]*MockGlobalAddressesObj) *MockBetaGlobalAddresses {
+	mock := &MockBetaGlobalAddresses{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockBetaGlobalAddresses is the mock for GlobalAddresses.
+type MockBetaGlobalAddresses struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockGlobalAddressesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockBetaGlobalAddresses) (bool, *beta.Address, error)
+	ListHook   func(ctx context.Context, fl *filter.F, m *MockBetaGlobalAddresses) (bool, []*beta.Address, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *beta.Address, m *MockBetaGlobalAddresses) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockBetaGlobalAddresses) (bool, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockBetaGlobalAddresses) Get(ctx context.Context, key *meta.Key) (*beta.Address, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockBetaGlobalAddresses.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockBetaGlobalAddresses.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToBeta()
+		klog.V(5).Infof("MockBetaGlobalAddresses.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockBetaGlobalAddresses %v not found", key),
+	}
+	klog.V(5).Infof("MockBetaGlobalAddresses.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockBetaGlobalAddresses) List(ctx context.Context, fl *filter.F) ([]*beta.Address, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockBetaGlobalAddresses.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockBetaGlobalAddresses.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*beta.Address
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToBeta()) {
+			continue
+		}
+		objs = append(objs, obj.ToBeta())
+	}
+
+	klog.V(5).Infof("MockBetaGlobalAddresses.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockBetaGlobalAddresses) Insert(ctx context.Context, key *meta.Key, obj *beta.Address) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockBetaGlobalAddresses.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockBetaGlobalAddresses.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockBetaGlobalAddresses %v exists", key),
+		}
+		klog.V(5).Infof("MockBetaGlobalAddresses.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "addresses")
+	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "addresses", key)
+
+	m.Objects[*key] = &MockGlobalAddressesObj{obj}
+	klog.V(5).Infof("MockBetaGlobalAddresses.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockBetaGlobalAddresses) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockBetaGlobalAddresses.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockBetaGlobalAddresses.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockBetaGlobalAddresses %v not found", key),
+		}
+		klog.V(5).Infof("MockBetaGlobalAddresses.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockBetaGlobalAddresses.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockBetaGlobalAddresses) Obj(o *beta.Address) *MockGlobalAddressesObj {
+	return &MockGlobalAddressesObj{o}
+}
+
+// GCEBetaGlobalAddresses is a simplifying adapter for the GCE GlobalAddresses.
+type GCEBetaGlobalAddresses struct {
+	s *Service
+}
+
+// Get the Address named by key.
+func (g *GCEBetaGlobalAddresses) Get(ctx context.Context, key *meta.Key) (*beta.Address, error) {
+	klog.V(5).Infof("GCEBetaGlobalAddresses.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaGlobalAddresses.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "GlobalAddresses")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("beta"),
+		Service:   "GlobalAddresses",
+	}
+	klog.V(5).Infof("GCEBetaGlobalAddresses.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaGlobalAddresses.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.GlobalAddresses.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEBetaGlobalAddresses.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all Address objects.
+func (g *GCEBetaGlobalAddresses) List(ctx context.Context, fl *filter.F) ([]*beta.Address, error) {
+	klog.V(5).Infof("GCEBetaGlobalAddresses.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "GlobalAddresses")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("beta"),
+		Service:   "GlobalAddresses",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEBetaGlobalAddresses.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Beta.GlobalAddresses.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*beta.Address
+	f := func(l *beta.AddressList) error {
+		klog.V(5).Infof("GCEBetaGlobalAddresses.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEBetaGlobalAddresses.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCEBetaGlobalAddresses.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEBetaGlobalAddresses.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert Address with key of value obj.
+func (g *GCEBetaGlobalAddresses) Insert(ctx context.Context, key *meta.Key, obj *beta.Address) error {
+	klog.V(5).Infof("GCEBetaGlobalAddresses.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaGlobalAddresses.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "GlobalAddresses")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("beta"),
+		Service:   "GlobalAddresses",
+	}
+	klog.V(5).Infof("GCEBetaGlobalAddresses.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaGlobalAddresses.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Beta.GlobalAddresses.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaGlobalAddresses.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaGlobalAddresses.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the Address referenced by key.
+func (g *GCEBetaGlobalAddresses) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEBetaGlobalAddresses.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaGlobalAddresses.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "GlobalAddresses")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("beta"),
+		Service:   "GlobalAddresses",
+	}
+	klog.V(5).Infof("GCEBetaGlobalAddresses.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaGlobalAddresses.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.GlobalAddresses.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaGlobalAddresses.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaGlobalAddresses.Delete(%v, %v) = %v", ctx, key, err)
 	return err
 }
 

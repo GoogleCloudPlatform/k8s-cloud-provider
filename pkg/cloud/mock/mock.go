@@ -559,14 +559,14 @@ func UpdateRegionBackendServiceHook(ctx context.Context, key *meta.Key, obj *ga.
 // UpdateRegionBackendServiceHook defines the hook for updating a Region
 // BackendsService. It replaces the object with the same key in the mock with
 // the updated object.
-func UpdateAlphaRegionBackendServiceHook(ctx context.Context, key *meta.Key, obj *ga.BackendService, m *cloud.MockAlphaRegionBackendServices) error {
+func UpdateAlphaRegionBackendServiceHook(ctx context.Context, key *meta.Key, obj *alpha.BackendService, m *cloud.MockAlphaRegionBackendServices) error {
 	_, err := m.Get(ctx, key)
 	if err != nil {
 		return err
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "backendServices")
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "backendServices")
 	obj.SelfLink = cloud.SelfLink(meta.VersionAlpha, projectID, "backendServices", key)
 
 	m.Objects[*key] = &cloud.MockRegionBackendServicesObj{Obj: obj}
@@ -576,14 +576,14 @@ func UpdateAlphaRegionBackendServiceHook(ctx context.Context, key *meta.Key, obj
 // UpdateBetaRegionBackendServiceHook defines the hook for updating a Region
 // BackendsService. It replaces the object with the same key in the mock with
 // the updated object.
-func UpdateBetaRegionBackendServiceHook(ctx context.Context, key *meta.Key, obj *ga.BackendService, m *cloud.MockBetaRegionBackendServices) error {
+func UpdateBetaRegionBackendServiceHook(ctx context.Context, key *meta.Key, obj *beta.BackendService, m *cloud.MockBetaRegionBackendServices) error {
 	_, err := m.Get(ctx, key)
 	if err != nil {
 		return err
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "backendServices")
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "backendServices")
 	obj.SelfLink = cloud.SelfLink(meta.VersionAlpha, projectID, "backendServices", key)
 
 	m.Objects[*key] = &cloud.MockRegionBackendServicesObj{Obj: obj}

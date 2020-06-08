@@ -921,6 +921,28 @@ func SetURLMapRegionTargetHTTPProxyHook(ctx context.Context, key *meta.Key, ref 
 	return nil
 }
 
+// SetBackendServiceAlphaTargetTCPProxyHook defines the hook for setting the backend service for an alpha TargetTcpProxy.
+func SetBackendServiceAlphaTargetTCPProxyHook(ctx context.Context, key *meta.Key, ref *alpha.TargetTcpProxiesSetBackendServiceRequest, m *cloud.MockAlphaTargetTcpProxies) error {
+	tp, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	tp.Service = ref.Service
+	return nil
+}
+
+// SetBackendServiceBetaTargetTCPProxyHook defines the hook for setting the backend service for a beta TargetTcpProxy.
+func SetBackendServiceBetaTargetTCPProxyHook(ctx context.Context, key *meta.Key, ref *beta.TargetTcpProxiesSetBackendServiceRequest, m *cloud.MockBetaTargetTcpProxies) error {
+	tp, err := m.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	tp.Service = ref.Service
+	return nil
+}
+
 // SetSslCertificateTargetHTTPSProxyHook defines the hook for setting ssl certificates on a TargetHttpsProxy.
 func SetSslCertificateTargetHTTPSProxyHook(ctx context.Context, key *meta.Key, req *ga.TargetHttpsProxiesSetSslCertificatesRequest, m *cloud.MockTargetHttpsProxies) error {
 	tp, err := m.Get(ctx, key)

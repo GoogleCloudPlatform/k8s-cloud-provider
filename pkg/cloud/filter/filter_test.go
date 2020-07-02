@@ -73,6 +73,7 @@ func TestFilterMatch(t *testing.T) {
 		{f: Regexp("s", "abc").AndEqualBool("b", true), o: &S{}},
 		{f: Regexp("s", "abc"), o: &S{S: "abc"}, want: true},
 		{f: Regexp("s", "a.*"), o: &S{S: "abc"}, want: true},
+		{f: NotRegexp("s", "a.*"), o: &S{S: "abc"}},
 		{f: Regexp("s", "a((("), o: &S{S: "abc"}},
 		{f: NotRegexp("s", "abc"), o: &S{S: "abc"}},
 		{f: EqualInt("i", 10), o: &S{I: 11}},

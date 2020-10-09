@@ -4797,6 +4797,7 @@ type BackendServices interface {
 	Delete(ctx context.Context, key *meta.Key) error
 	GetHealth(context.Context, *meta.Key, *ga.ResourceGroupReference) (*ga.BackendServiceGroupHealth, error)
 	Patch(context.Context, *meta.Key, *ga.BackendService) error
+	SetSecurityPolicy(context.Context, *meta.Key, *ga.SecurityPolicyReference) error
 	Update(context.Context, *meta.Key, *ga.BackendService) error
 }
 
@@ -4833,13 +4834,14 @@ type MockBackendServices struct {
 	// order to add your own logic. Return (true, _, _) to prevent the normal
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
-	GetHook       func(ctx context.Context, key *meta.Key, m *MockBackendServices) (bool, *ga.BackendService, error)
-	ListHook      func(ctx context.Context, fl *filter.F, m *MockBackendServices) (bool, []*ga.BackendService, error)
-	InsertHook    func(ctx context.Context, key *meta.Key, obj *ga.BackendService, m *MockBackendServices) (bool, error)
-	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockBackendServices) (bool, error)
-	GetHealthHook func(context.Context, *meta.Key, *ga.ResourceGroupReference, *MockBackendServices) (*ga.BackendServiceGroupHealth, error)
-	PatchHook     func(context.Context, *meta.Key, *ga.BackendService, *MockBackendServices) error
-	UpdateHook    func(context.Context, *meta.Key, *ga.BackendService, *MockBackendServices) error
+	GetHook               func(ctx context.Context, key *meta.Key, m *MockBackendServices) (bool, *ga.BackendService, error)
+	ListHook              func(ctx context.Context, fl *filter.F, m *MockBackendServices) (bool, []*ga.BackendService, error)
+	InsertHook            func(ctx context.Context, key *meta.Key, obj *ga.BackendService, m *MockBackendServices) (bool, error)
+	DeleteHook            func(ctx context.Context, key *meta.Key, m *MockBackendServices) (bool, error)
+	GetHealthHook         func(context.Context, *meta.Key, *ga.ResourceGroupReference, *MockBackendServices) (*ga.BackendServiceGroupHealth, error)
+	PatchHook             func(context.Context, *meta.Key, *ga.BackendService, *MockBackendServices) error
+	SetSecurityPolicyHook func(context.Context, *meta.Key, *ga.SecurityPolicyReference, *MockBackendServices) error
+	UpdateHook            func(context.Context, *meta.Key, *ga.BackendService, *MockBackendServices) error
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -4997,6 +4999,14 @@ func (m *MockBackendServices) GetHealth(ctx context.Context, key *meta.Key, arg0
 func (m *MockBackendServices) Patch(ctx context.Context, key *meta.Key, arg0 *ga.BackendService) error {
 	if m.PatchHook != nil {
 		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// SetSecurityPolicy is a mock for the corresponding method.
+func (m *MockBackendServices) SetSecurityPolicy(ctx context.Context, key *meta.Key, arg0 *ga.SecurityPolicyReference) error {
+	if m.SetSecurityPolicyHook != nil {
+		return m.SetSecurityPolicyHook(ctx, key, arg0, m)
 	}
 	return nil
 }
@@ -5209,6 +5219,39 @@ func (g *GCEBackendServices) Patch(ctx context.Context, key *meta.Key, arg0 *ga.
 	}
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCEBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// SetSecurityPolicy is a method on GCEBackendServices.
+func (g *GCEBackendServices) SetSecurityPolicy(ctx context.Context, key *meta.Key, arg0 *ga.SecurityPolicyReference) error {
+	klog.V(5).Infof("GCEBackendServices.SetSecurityPolicy(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBackendServices.SetSecurityPolicy(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "BackendServices")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetSecurityPolicy",
+		Version:   meta.Version("ga"),
+		Service:   "BackendServices",
+	}
+	klog.V(5).Infof("GCEBackendServices.SetSecurityPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBackendServices.SetSecurityPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.BackendServices.SetSecurityPolicy(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBackendServices.SetSecurityPolicy(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBackendServices.SetSecurityPolicy(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
 

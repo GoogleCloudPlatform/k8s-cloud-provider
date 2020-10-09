@@ -124,6 +124,7 @@ var AllServices = []*ServiceInfo{
 			"GetHealth",
 			"Patch",
 			"Update",
+			"SetSecurityPolicy",
 		},
 	},
 	{

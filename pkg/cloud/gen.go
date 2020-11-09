@@ -83,6 +83,7 @@ type Cloud interface {
 	Regions() Regions
 	Routes() Routes
 	BetaSecurityPolicies() BetaSecurityPolicies
+	AlphaServiceAttachments() AlphaServiceAttachments
 	SslCertificates() SslCertificates
 	BetaSslCertificates() BetaSslCertificates
 	AlphaSslCertificates() AlphaSslCertificates
@@ -165,6 +166,7 @@ func NewGCE(s *Service) *GCE {
 		gceRegions:                       &GCERegions{s},
 		gceRoutes:                        &GCERoutes{s},
 		gceBetaSecurityPolicies:          &GCEBetaSecurityPolicies{s},
+		gceAlphaServiceAttachments:       &GCEAlphaServiceAttachments{s},
 		gceSslCertificates:               &GCESslCertificates{s},
 		gceBetaSslCertificates:           &GCEBetaSslCertificates{s},
 		gceAlphaSslCertificates:          &GCEAlphaSslCertificates{s},
@@ -251,6 +253,7 @@ type GCE struct {
 	gceRegions                       *GCERegions
 	gceRoutes                        *GCERoutes
 	gceBetaSecurityPolicies          *GCEBetaSecurityPolicies
+	gceAlphaServiceAttachments       *GCEAlphaServiceAttachments
 	gceSslCertificates               *GCESslCertificates
 	gceBetaSslCertificates           *GCEBetaSslCertificates
 	gceAlphaSslCertificates          *GCEAlphaSslCertificates
@@ -510,6 +513,11 @@ func (gce *GCE) BetaSecurityPolicies() BetaSecurityPolicies {
 	return gce.gceBetaSecurityPolicies
 }
 
+// AlphaServiceAttachments returns the interface for the alpha ServiceAttachments.
+func (gce *GCE) AlphaServiceAttachments() AlphaServiceAttachments {
+	return gce.gceAlphaServiceAttachments
+}
+
 // SslCertificates returns the interface for the ga SslCertificates.
 func (gce *GCE) SslCertificates() SslCertificates {
 	return gce.gceSslCertificates
@@ -697,6 +705,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 	mockRegionsObjs := map[meta.Key]*MockRegionsObj{}
 	mockRoutesObjs := map[meta.Key]*MockRoutesObj{}
 	mockSecurityPoliciesObjs := map[meta.Key]*MockSecurityPoliciesObj{}
+	mockServiceAttachmentsObjs := map[meta.Key]*MockServiceAttachmentsObj{}
 	mockSslCertificatesObjs := map[meta.Key]*MockSslCertificatesObj{}
 	mockSslPoliciesObjs := map[meta.Key]*MockSslPoliciesObj{}
 	mockSubnetworksObjs := map[meta.Key]*MockSubnetworksObj{}
@@ -753,6 +762,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockRegions:                       NewMockRegions(projectRouter, mockRegionsObjs),
 		MockRoutes:                        NewMockRoutes(projectRouter, mockRoutesObjs),
 		MockBetaSecurityPolicies:          NewMockBetaSecurityPolicies(projectRouter, mockSecurityPoliciesObjs),
+		MockAlphaServiceAttachments:       NewMockAlphaServiceAttachments(projectRouter, mockServiceAttachmentsObjs),
 		MockSslCertificates:               NewMockSslCertificates(projectRouter, mockSslCertificatesObjs),
 		MockBetaSslCertificates:           NewMockBetaSslCertificates(projectRouter, mockSslCertificatesObjs),
 		MockAlphaSslCertificates:          NewMockAlphaSslCertificates(projectRouter, mockSslCertificatesObjs),
@@ -839,6 +849,7 @@ type MockGCE struct {
 	MockRegions                       *MockRegions
 	MockRoutes                        *MockRoutes
 	MockBetaSecurityPolicies          *MockBetaSecurityPolicies
+	MockAlphaServiceAttachments       *MockAlphaServiceAttachments
 	MockSslCertificates               *MockSslCertificates
 	MockBetaSslCertificates           *MockBetaSslCertificates
 	MockAlphaSslCertificates          *MockAlphaSslCertificates
@@ -1096,6 +1107,11 @@ func (mock *MockGCE) Routes() Routes {
 // BetaSecurityPolicies returns the interface for the beta SecurityPolicies.
 func (mock *MockGCE) BetaSecurityPolicies() BetaSecurityPolicies {
 	return mock.MockBetaSecurityPolicies
+}
+
+// AlphaServiceAttachments returns the interface for the alpha ServiceAttachments.
+func (mock *MockGCE) AlphaServiceAttachments() AlphaServiceAttachments {
+	return mock.MockAlphaServiceAttachments
 }
 
 // SslCertificates returns the interface for the ga SslCertificates.
@@ -2170,6 +2186,26 @@ func (m *MockSecurityPoliciesObj) ToBeta() *beta.SecurityPolicy {
 	ret := &beta.SecurityPolicy{}
 	if err := copyViaJSON(ret, m.Obj); err != nil {
 		klog.Errorf("Could not convert %T to *beta.SecurityPolicy via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// MockServiceAttachmentsObj is used to store the various object versions in the shared
+// map of mocked objects. This allows for multiple API versions to co-exist and
+// share the same "view" of the objects in the backend.
+type MockServiceAttachmentsObj struct {
+	Obj interface{}
+}
+
+// ToAlpha retrieves the given version of the object.
+func (m *MockServiceAttachmentsObj) ToAlpha() *alpha.ServiceAttachment {
+	if ret, ok := m.Obj.(*alpha.ServiceAttachment); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &alpha.ServiceAttachment{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *alpha.ServiceAttachment via JSON: %v", m.Obj, err)
 	}
 	return ret
 }
@@ -20079,6 +20115,338 @@ func (g *GCEBetaSecurityPolicies) RemoveRule(ctx context.Context, key *meta.Key)
 	return err
 }
 
+// AlphaServiceAttachments is an interface that allows for mocking of ServiceAttachments.
+type AlphaServiceAttachments interface {
+	Get(ctx context.Context, key *meta.Key) (*alpha.ServiceAttachment, error)
+	List(ctx context.Context, fl *filter.F) ([]*alpha.ServiceAttachment, error)
+	Insert(ctx context.Context, key *meta.Key, obj *alpha.ServiceAttachment) error
+	Delete(ctx context.Context, key *meta.Key) error
+}
+
+// NewMockAlphaServiceAttachments returns a new mock for ServiceAttachments.
+func NewMockAlphaServiceAttachments(pr ProjectRouter, objs map[meta.Key]*MockServiceAttachmentsObj) *MockAlphaServiceAttachments {
+	mock := &MockAlphaServiceAttachments{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockAlphaServiceAttachments is the mock for ServiceAttachments.
+type MockAlphaServiceAttachments struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockServiceAttachmentsObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockAlphaServiceAttachments) (bool, *alpha.ServiceAttachment, error)
+	ListHook   func(ctx context.Context, fl *filter.F, m *MockAlphaServiceAttachments) (bool, []*alpha.ServiceAttachment, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *alpha.ServiceAttachment, m *MockAlphaServiceAttachments) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockAlphaServiceAttachments) (bool, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockAlphaServiceAttachments) Get(ctx context.Context, key *meta.Key) (*alpha.ServiceAttachment, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaServiceAttachments.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockAlphaServiceAttachments.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToAlpha()
+		klog.V(5).Infof("MockAlphaServiceAttachments.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockAlphaServiceAttachments %v not found", key),
+	}
+	klog.V(5).Infof("MockAlphaServiceAttachments.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockAlphaServiceAttachments) List(ctx context.Context, fl *filter.F) ([]*alpha.ServiceAttachment, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaServiceAttachments.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockAlphaServiceAttachments.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*alpha.ServiceAttachment
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		objs = append(objs, obj.ToAlpha())
+	}
+
+	klog.V(5).Infof("MockAlphaServiceAttachments.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockAlphaServiceAttachments) Insert(ctx context.Context, key *meta.Key, obj *alpha.ServiceAttachment) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockAlphaServiceAttachments.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockAlphaServiceAttachments.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockAlphaServiceAttachments %v exists", key),
+		}
+		klog.V(5).Infof("MockAlphaServiceAttachments.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "serviceAttachments")
+	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "serviceAttachments", key)
+
+	m.Objects[*key] = &MockServiceAttachmentsObj{obj}
+	klog.V(5).Infof("MockAlphaServiceAttachments.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockAlphaServiceAttachments) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaServiceAttachments.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockAlphaServiceAttachments.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockAlphaServiceAttachments %v not found", key),
+		}
+		klog.V(5).Infof("MockAlphaServiceAttachments.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockAlphaServiceAttachments.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockAlphaServiceAttachments) Obj(o *alpha.ServiceAttachment) *MockServiceAttachmentsObj {
+	return &MockServiceAttachmentsObj{o}
+}
+
+// GCEAlphaServiceAttachments is a simplifying adapter for the GCE ServiceAttachments.
+type GCEAlphaServiceAttachments struct {
+	s *Service
+}
+
+// Get the ServiceAttachment named by key.
+func (g *GCEAlphaServiceAttachments) Get(ctx context.Context, key *meta.Key) (*alpha.ServiceAttachment, error) {
+	klog.V(5).Infof("GCEAlphaServiceAttachments.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaServiceAttachments.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ServiceAttachments")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("alpha"),
+		Service:   "ServiceAttachments",
+	}
+	klog.V(5).Infof("GCEAlphaServiceAttachments.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaServiceAttachments.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.ServiceAttachments.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaServiceAttachments.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all ServiceAttachment objects.
+func (g *GCEAlphaServiceAttachments) List(ctx context.Context, fl *filter.F) ([]*alpha.ServiceAttachment, error) {
+	klog.V(5).Infof("GCEAlphaServiceAttachments.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ServiceAttachments")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("alpha"),
+		Service:   "ServiceAttachments",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEAlphaServiceAttachments.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Alpha.ServiceAttachments.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*alpha.ServiceAttachment
+	f := func(l *alpha.ServiceAttachmentList) error {
+		klog.V(5).Infof("GCEAlphaServiceAttachments.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAlphaServiceAttachments.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCEAlphaServiceAttachments.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaServiceAttachments.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert ServiceAttachment with key of value obj.
+func (g *GCEAlphaServiceAttachments) Insert(ctx context.Context, key *meta.Key, obj *alpha.ServiceAttachment) error {
+	klog.V(5).Infof("GCEAlphaServiceAttachments.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaServiceAttachments.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ServiceAttachments")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("alpha"),
+		Service:   "ServiceAttachments",
+	}
+	klog.V(5).Infof("GCEAlphaServiceAttachments.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaServiceAttachments.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Alpha.ServiceAttachments.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaServiceAttachments.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaServiceAttachments.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the ServiceAttachment referenced by key.
+func (g *GCEAlphaServiceAttachments) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaServiceAttachments.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaServiceAttachments.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ServiceAttachments")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("alpha"),
+		Service:   "ServiceAttachments",
+	}
+	klog.V(5).Infof("GCEAlphaServiceAttachments.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaServiceAttachments.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.ServiceAttachments.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaServiceAttachments.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaServiceAttachments.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
 // SslCertificates is an interface that allows for mocking of SslCertificates.
 type SslCertificates interface {
 	Get(ctx context.Context, key *meta.Key) (*ga.SslCertificate, error)
@@ -31994,6 +32362,12 @@ func NewRoutesResourceID(project, name string) *ResourceID {
 func NewSecurityPoliciesResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
 	return &ResourceID{project, "securityPolicies", key}
+}
+
+// NewServiceAttachmentsResourceID creates a ResourceID for the ServiceAttachments resource.
+func NewServiceAttachmentsResourceID(project, name string) *ResourceID {
+	key := meta.GlobalKey(name)
+	return &ResourceID{project, "serviceAttachments", key}
 }
 
 // NewSslCertificatesResourceID creates a ResourceID for the SslCertificates resource.

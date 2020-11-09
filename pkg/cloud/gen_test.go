@@ -2714,6 +2714,69 @@ func TestSecurityPoliciesGroup(t *testing.T) {
 	}
 }
 
+func TestServiceAttachmentsGroup(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pr := &SingleProjectRouter{"mock-project"}
+	mock := NewMockGCE(pr)
+
+	var key *meta.Key
+	keyAlpha := meta.GlobalKey("key-alpha")
+	key = keyAlpha
+	// Ignore unused variables.
+	_, _, _ = ctx, mock, key
+
+	// Get not found.
+	if _, err := mock.AlphaServiceAttachments().Get(ctx, key); err == nil {
+		t.Errorf("AlphaServiceAttachments().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+
+	// Insert.
+	{
+		obj := &alpha.ServiceAttachment{}
+		if err := mock.AlphaServiceAttachments().Insert(ctx, keyAlpha, obj); err != nil {
+			t.Errorf("AlphaServiceAttachments().Insert(%v, %v, %v) = %v; want nil", ctx, keyAlpha, obj, err)
+		}
+	}
+
+	// Get across versions.
+	if obj, err := mock.AlphaServiceAttachments().Get(ctx, key); err != nil {
+		t.Errorf("AlphaServiceAttachments().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+
+	// List.
+	mock.MockAlphaServiceAttachments.Objects[*keyAlpha] = mock.MockAlphaServiceAttachments.Obj(&alpha.ServiceAttachment{Name: keyAlpha.Name})
+	want := map[string]bool{
+		"key-alpha": true,
+	}
+	_ = want // ignore unused variables.
+	{
+		objs, err := mock.AlphaServiceAttachments().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("AlphaServiceAttachments().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("AlphaServiceAttachments().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+
+	// Delete across versions.
+	if err := mock.AlphaServiceAttachments().Delete(ctx, keyAlpha); err != nil {
+		t.Errorf("AlphaServiceAttachments().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
+	}
+
+	// Delete not found.
+	if err := mock.AlphaServiceAttachments().Delete(ctx, keyAlpha); err == nil {
+		t.Errorf("AlphaServiceAttachments().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+}
+
 func TestSslCertificatesGroup(t *testing.T) {
 	t.Parallel()
 
@@ -3677,6 +3740,7 @@ func TestResourceIDConversion(t *testing.T) {
 		NewRegionsResourceID("some-project", "my-regions-resource"),
 		NewRoutesResourceID("some-project", "my-routes-resource"),
 		NewSecurityPoliciesResourceID("some-project", "my-securityPolicies-resource"),
+		NewServiceAttachmentsResourceID("some-project", "my-serviceAttachments-resource"),
 		NewSslCertificatesResourceID("some-project", "my-sslCertificates-resource"),
 		NewSslPoliciesResourceID("some-project", "my-sslPolicies-resource"),
 		NewSubnetworksResourceID("some-project", "us-central1", "my-subnetworks-resource"),

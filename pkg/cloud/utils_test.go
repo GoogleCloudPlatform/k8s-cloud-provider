@@ -150,6 +150,11 @@ func TestParseResourceURL(t *testing.T) {
 			"zones/us-central1-c/instances/instance-1",
 			&ResourceID{"", "instances", meta.ZonalKey("instance-1", "us-central1-c")},
 		},
+		{
+			"https://compute.googleapis.com/compute/v1/projects/some-gce-project/regions/us-central1/backendServices/bs1",
+			&ResourceID{"some-gce-project", "backendServices", meta.RegionalKey("bs1", "us-central1")},
+		},
+		
 	} {
 		r, err := ParseResourceURL(tc.in)
 		if err != nil {

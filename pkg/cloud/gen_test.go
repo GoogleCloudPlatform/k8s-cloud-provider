@@ -2722,7 +2722,7 @@ func TestServiceAttachmentsGroup(t *testing.T) {
 	mock := NewMockGCE(pr)
 
 	var key *meta.Key
-	keyAlpha := meta.GlobalKey("key-alpha")
+	keyAlpha := meta.RegionalKey("key-alpha", "location")
 	key = keyAlpha
 	// Ignore unused variables.
 	_, _, _ = ctx, mock, key
@@ -2752,7 +2752,7 @@ func TestServiceAttachmentsGroup(t *testing.T) {
 	}
 	_ = want // ignore unused variables.
 	{
-		objs, err := mock.AlphaServiceAttachments().List(ctx, filter.None)
+		objs, err := mock.AlphaServiceAttachments().List(ctx, location, filter.None)
 		if err != nil {
 			t.Errorf("AlphaServiceAttachments().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
 		} else {
@@ -3740,7 +3740,7 @@ func TestResourceIDConversion(t *testing.T) {
 		NewRegionsResourceID("some-project", "my-regions-resource"),
 		NewRoutesResourceID("some-project", "my-routes-resource"),
 		NewSecurityPoliciesResourceID("some-project", "my-securityPolicies-resource"),
-		NewServiceAttachmentsResourceID("some-project", "my-serviceAttachments-resource"),
+		NewServiceAttachmentsResourceID("some-project", "us-central1", "my-serviceAttachments-resource"),
 		NewSslCertificatesResourceID("some-project", "my-sslCertificates-resource"),
 		NewSslPoliciesResourceID("some-project", "my-sslPolicies-resource"),
 		NewSubnetworksResourceID("some-project", "us-central1", "my-subnetworks-resource"),

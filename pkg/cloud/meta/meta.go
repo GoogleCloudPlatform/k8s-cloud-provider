@@ -548,7 +548,7 @@ var AllServices = []*ServiceInfo{
 		Service:     "ServiceAttachments",
 		Resource:    "serviceAttachments",
 		version:     VersionAlpha,
-		keyType:     Global,
+		keyType:     Regional,
 		serviceType: reflect.TypeOf(&alpha.ServiceAttachmentsService{}),
 	},
 	{

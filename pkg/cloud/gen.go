@@ -20118,7 +20118,7 @@ func (g *GCEBetaSecurityPolicies) RemoveRule(ctx context.Context, key *meta.Key)
 // AlphaServiceAttachments is an interface that allows for mocking of ServiceAttachments.
 type AlphaServiceAttachments interface {
 	Get(ctx context.Context, key *meta.Key) (*alpha.ServiceAttachment, error)
-	List(ctx context.Context, fl *filter.F) ([]*alpha.ServiceAttachment, error)
+	List(ctx context.Context, region string, fl *filter.F) ([]*alpha.ServiceAttachment, error)
 	Insert(ctx context.Context, key *meta.Key, obj *alpha.ServiceAttachment) error
 	Delete(ctx context.Context, key *meta.Key) error
 }
@@ -20157,7 +20157,7 @@ type MockAlphaServiceAttachments struct {
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
 	GetHook    func(ctx context.Context, key *meta.Key, m *MockAlphaServiceAttachments) (bool, *alpha.ServiceAttachment, error)
-	ListHook   func(ctx context.Context, fl *filter.F, m *MockAlphaServiceAttachments) (bool, []*alpha.ServiceAttachment, error)
+	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockAlphaServiceAttachments) (bool, []*alpha.ServiceAttachment, error)
 	InsertHook func(ctx context.Context, key *meta.Key, obj *alpha.ServiceAttachment, m *MockAlphaServiceAttachments) (bool, error)
 	DeleteHook func(ctx context.Context, key *meta.Key, m *MockAlphaServiceAttachments) (bool, error)
 
@@ -20199,11 +20199,11 @@ func (m *MockAlphaServiceAttachments) Get(ctx context.Context, key *meta.Key) (*
 	return nil, err
 }
 
-// List all of the objects in the mock.
-func (m *MockAlphaServiceAttachments) List(ctx context.Context, fl *filter.F) ([]*alpha.ServiceAttachment, error) {
+// List all of the objects in the mock in the given region.
+func (m *MockAlphaServiceAttachments) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.ServiceAttachment, error) {
 	if m.ListHook != nil {
-		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
-			klog.V(5).Infof("MockAlphaServiceAttachments.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+		if intercept, objs, err := m.ListHook(ctx, region, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaServiceAttachments.List(%v, %q, %v) = [%v items], %v", ctx, region, fl, len(objs), err)
 			return objs, err
 		}
 	}
@@ -20213,20 +20213,23 @@ func (m *MockAlphaServiceAttachments) List(ctx context.Context, fl *filter.F) ([
 
 	if m.ListError != nil {
 		err := *m.ListError
-		klog.V(5).Infof("MockAlphaServiceAttachments.List(%v, %v) = nil, %v", ctx, fl, err)
+		klog.V(5).Infof("MockAlphaServiceAttachments.List(%v, %q, %v) = nil, %v", ctx, region, fl, err)
 
 		return nil, *m.ListError
 	}
 
 	var objs []*alpha.ServiceAttachment
-	for _, obj := range m.Objects {
+	for key, obj := range m.Objects {
+		if key.Region != region {
+			continue
+		}
 		if !fl.Match(obj.ToAlpha()) {
 			continue
 		}
 		objs = append(objs, obj.ToAlpha())
 	}
 
-	klog.V(5).Infof("MockAlphaServiceAttachments.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	klog.V(5).Infof("MockAlphaServiceAttachments.List(%v, %q, %v) = [%v items], nil", ctx, region, fl, len(objs))
 	return objs, nil
 }
 
@@ -20330,7 +20333,7 @@ func (g *GCEAlphaServiceAttachments) Get(ctx context.Context, key *meta.Key) (*a
 		klog.V(4).Infof("GCEAlphaServiceAttachments.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
-	call := g.s.Alpha.ServiceAttachments.Get(projectID, key.Name)
+	call := g.s.Alpha.ServiceAttachments.Get(projectID, key.Region, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaServiceAttachments.Get(%v, %v) = %+v, %v", ctx, key, v, err)
@@ -20338,8 +20341,8 @@ func (g *GCEAlphaServiceAttachments) Get(ctx context.Context, key *meta.Key) (*a
 }
 
 // List all ServiceAttachment objects.
-func (g *GCEAlphaServiceAttachments) List(ctx context.Context, fl *filter.F) ([]*alpha.ServiceAttachment, error) {
-	klog.V(5).Infof("GCEAlphaServiceAttachments.List(%v, %v) called", ctx, fl)
+func (g *GCEAlphaServiceAttachments) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.ServiceAttachment, error) {
+	klog.V(5).Infof("GCEAlphaServiceAttachments.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ServiceAttachments")
 	rk := &RateLimitKey{
 		ProjectID: projectID,
@@ -20350,8 +20353,8 @@ func (g *GCEAlphaServiceAttachments) List(ctx context.Context, fl *filter.F) ([]
 	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaServiceAttachments.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
-	call := g.s.Alpha.ServiceAttachments.List(projectID)
+	klog.V(5).Infof("GCEAlphaServiceAttachments.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	call := g.s.Alpha.ServiceAttachments.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
 	}
@@ -20399,7 +20402,7 @@ func (g *GCEAlphaServiceAttachments) Insert(ctx context.Context, key *meta.Key, 
 		return err
 	}
 	obj.Name = key.Name
-	call := g.s.Alpha.ServiceAttachments.Insert(projectID, obj)
+	call := g.s.Alpha.ServiceAttachments.Insert(projectID, key.Region, obj)
 	call.Context(ctx)
 
 	op, err := call.Do()
@@ -20432,8 +20435,7 @@ func (g *GCEAlphaServiceAttachments) Delete(ctx context.Context, key *meta.Key) 
 		klog.V(4).Infof("GCEAlphaServiceAttachments.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	call := g.s.Alpha.ServiceAttachments.Delete(projectID, key.Name)
-
+	call := g.s.Alpha.ServiceAttachments.Delete(projectID, key.Region, key.Name)
 	call.Context(ctx)
 
 	op, err := call.Do()
@@ -32365,8 +32367,8 @@ func NewSecurityPoliciesResourceID(project, name string) *ResourceID {
 }
 
 // NewServiceAttachmentsResourceID creates a ResourceID for the ServiceAttachments resource.
-func NewServiceAttachmentsResourceID(project, name string) *ResourceID {
-	key := meta.GlobalKey(name)
+func NewServiceAttachmentsResourceID(project, region, name string) *ResourceID {
+	key := meta.RegionalKey(name, region)
 	return &ResourceID{project, "serviceAttachments", key}
 }
 

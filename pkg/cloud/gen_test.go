@@ -2724,12 +2724,17 @@ func TestServiceAttachmentsGroup(t *testing.T) {
 	var key *meta.Key
 	keyAlpha := meta.RegionalKey("key-alpha", "location")
 	key = keyAlpha
+	keyBeta := meta.RegionalKey("key-beta", "location")
+	key = keyBeta
 	// Ignore unused variables.
 	_, _, _ = ctx, mock, key
 
 	// Get not found.
 	if _, err := mock.AlphaServiceAttachments().Get(ctx, key); err == nil {
 		t.Errorf("AlphaServiceAttachments().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.BetaServiceAttachments().Get(ctx, key); err == nil {
+		t.Errorf("BetaServiceAttachments().Get(%v, %v) = _, nil; want error", ctx, key)
 	}
 
 	// Insert.
@@ -2739,16 +2744,27 @@ func TestServiceAttachmentsGroup(t *testing.T) {
 			t.Errorf("AlphaServiceAttachments().Insert(%v, %v, %v) = %v; want nil", ctx, keyAlpha, obj, err)
 		}
 	}
+	{
+		obj := &beta.ServiceAttachment{}
+		if err := mock.BetaServiceAttachments().Insert(ctx, keyBeta, obj); err != nil {
+			t.Errorf("BetaServiceAttachments().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
+		}
+	}
 
 	// Get across versions.
 	if obj, err := mock.AlphaServiceAttachments().Get(ctx, key); err != nil {
 		t.Errorf("AlphaServiceAttachments().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
+	if obj, err := mock.BetaServiceAttachments().Get(ctx, key); err != nil {
+		t.Errorf("BetaServiceAttachments().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
 
 	// List.
 	mock.MockAlphaServiceAttachments.Objects[*keyAlpha] = mock.MockAlphaServiceAttachments.Obj(&alpha.ServiceAttachment{Name: keyAlpha.Name})
+	mock.MockBetaServiceAttachments.Objects[*keyBeta] = mock.MockBetaServiceAttachments.Obj(&beta.ServiceAttachment{Name: keyBeta.Name})
 	want := map[string]bool{
 		"key-alpha": true,
+		"key-beta":  true,
 	}
 	_ = want // ignore unused variables.
 	{
@@ -2765,15 +2781,35 @@ func TestServiceAttachmentsGroup(t *testing.T) {
 			}
 		}
 	}
+	{
+		objs, err := mock.BetaServiceAttachments().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("BetaServiceAttachments().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("BetaServiceAttachments().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
 
 	// Delete across versions.
 	if err := mock.AlphaServiceAttachments().Delete(ctx, keyAlpha); err != nil {
 		t.Errorf("AlphaServiceAttachments().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
 	}
+	if err := mock.BetaServiceAttachments().Delete(ctx, keyBeta); err != nil {
+		t.Errorf("BetaServiceAttachments().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
+	}
 
 	// Delete not found.
 	if err := mock.AlphaServiceAttachments().Delete(ctx, keyAlpha); err == nil {
 		t.Errorf("AlphaServiceAttachments().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+	if err := mock.BetaServiceAttachments().Delete(ctx, keyBeta); err == nil {
+		t.Errorf("BetaServiceAttachments().Delete(%v, %v) = nil; want error", ctx, keyBeta)
 	}
 }
 

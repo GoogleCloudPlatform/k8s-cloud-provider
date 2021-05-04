@@ -20164,6 +20164,7 @@ type AlphaServiceAttachments interface {
 	List(ctx context.Context, region string, fl *filter.F) ([]*alpha.ServiceAttachment, error)
 	Insert(ctx context.Context, key *meta.Key, obj *alpha.ServiceAttachment) error
 	Delete(ctx context.Context, key *meta.Key) error
+	Patch(context.Context, *meta.Key, *alpha.ServiceAttachment) error
 }
 
 // NewMockAlphaServiceAttachments returns a new mock for ServiceAttachments.
@@ -20203,6 +20204,7 @@ type MockAlphaServiceAttachments struct {
 	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockAlphaServiceAttachments) (bool, []*alpha.ServiceAttachment, error)
 	InsertHook func(ctx context.Context, key *meta.Key, obj *alpha.ServiceAttachment, m *MockAlphaServiceAttachments) (bool, error)
 	DeleteHook func(ctx context.Context, key *meta.Key, m *MockAlphaServiceAttachments) (bool, error)
+	PatchHook  func(context.Context, *meta.Key, *alpha.ServiceAttachment, *MockAlphaServiceAttachments) error
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -20351,6 +20353,14 @@ func (m *MockAlphaServiceAttachments) Obj(o *alpha.ServiceAttachment) *MockServi
 	return &MockServiceAttachmentsObj{o}
 }
 
+// Patch is a mock for the corresponding method.
+func (m *MockAlphaServiceAttachments) Patch(ctx context.Context, key *meta.Key, arg0 *alpha.ServiceAttachment) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
 // GCEAlphaServiceAttachments is a simplifying adapter for the GCE ServiceAttachments.
 type GCEAlphaServiceAttachments struct {
 	s *Service
@@ -20489,6 +20499,39 @@ func (g *GCEAlphaServiceAttachments) Delete(ctx context.Context, key *meta.Key) 
 
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCEAlphaServiceAttachments.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// Patch is a method on GCEAlphaServiceAttachments.
+func (g *GCEAlphaServiceAttachments) Patch(ctx context.Context, key *meta.Key, arg0 *alpha.ServiceAttachment) error {
+	klog.V(5).Infof("GCEAlphaServiceAttachments.Patch(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaServiceAttachments.Patch(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ServiceAttachments")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("alpha"),
+		Service:   "ServiceAttachments",
+	}
+	klog.V(5).Infof("GCEAlphaServiceAttachments.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaServiceAttachments.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.ServiceAttachments.Patch(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaServiceAttachments.Patch(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaServiceAttachments.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
 

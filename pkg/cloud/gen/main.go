@@ -297,6 +297,9 @@ type {{.WrapType}} interface {
 {{- if .AggregatedList}}
 	AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*{{.FQObjectType}}, error)
 {{- end}}
+{{- if .ListUsable}}
+	ListUsable(ctx context.Context, fl *filter.F) ([]*{{.FQListUsableObjectType}}, error)
+{{- end}}
 {{- with .Methods -}}
 {{- range .}}
 	{{.InterfaceFunc}}
@@ -349,6 +352,9 @@ type {{.MockWrapType}} struct {
 	{{- if .AggregatedList}}
 	AggregatedListError *error
 	{{- end}}
+	{{- if .ListUsable}}
+	ListUsableError *error
+	{{- end}}
 
 	// xxxHook allow you to intercept the standard processing of the mock in
 	// order to add your own logic. Return (true, _, _) to prevent the normal
@@ -376,6 +382,9 @@ type {{.MockWrapType}} struct {
 	{{- end -}}
 	{{- if .AggregatedList}}
 	AggregatedListHook func(ctx context.Context, fl *filter.F, m *{{.MockWrapType}}) (bool, map[string][]*{{.FQObjectType}}, error)
+	{{- end}}
+	{{- if .ListUsable}}
+	ListUsableHook   func(ctx context.Context, fl *filter.F, m *{{.MockWrapType}}) (bool, []*{{.FQListUsableObjectType}}, error)
 	{{- end}}
 
 {{- with .Methods -}}
@@ -614,6 +623,44 @@ func (m *{{.MockWrapType}}) AggregatedList(ctx context.Context, fl *filter.F) (m
 		objs[location] = append(objs[location], obj.To{{.VersionTitle}}())
 	}
 	klog.V(5).Infof("{{.MockWrapType}}.AggregatedList(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+{{- end}}
+
+{{- if .ListUsable}}
+// List all of the objects in the mock.
+func (m *{{.MockWrapType}}) ListUsable(ctx context.Context, fl *filter.F) ([]*{{.FQListUsableObjectType}}, error) {
+	if m.ListUsableHook != nil {
+		if intercept, objs, err := m.ListUsableHook(ctx, fl, m);  intercept {
+			klog.V(5).Infof("{{.MockWrapType}}.ListUsable(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("{{.MockWrapType}}.ListUsable(%v, %v) = nil, %v", ctx, fl, err)
+		return nil, *m.ListError
+	}
+
+	var objs []*{{.FQListUsableObjectType}}
+
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.To{{.VersionTitle}}()) {
+			continue
+		}
+		{{.Version}}Obj := obj.To{{.VersionTitle}}()
+		dest := &{{.FQListUsableObjectType}}{}
+		// Convert to Usable type to avoid separate Usable struct
+		if err := copyViaJSON(dest, {{.Version}}Obj); err != nil {
+			klog.Errorf("Could not convert %T to *{{.FQListUsableObjectType}} via JSON: %v", {{.Version}}Obj, err)
+		}
+		objs = append(objs, dest)
+	}
+  klog.V(5).Infof("{{.MockWrapType}}.ListUsable(%v, %v) = [%v items], nil", ctx, fl, len(objs))
 	return objs, nil
 }
 {{- end}}
@@ -885,6 +932,50 @@ func (g *{{.GCEWrapType}}) AggregatedList(ctx context.Context, fl *filter.F) (ma
 		}
 		klog.V(5).Infof("{{.GCEWrapType}}.AggregatedList(%v, %v) = %v, %v", ctx, fl, asStr, nil)
 	}
+	return all, nil
+}
+{{- end}}
+
+{{- if .ListUsable}}
+// List all Usable {{.Object}} objects.
+func (g *{{.GCEWrapType}}) ListUsable(ctx context.Context, fl *filter.F) ([]*{{.FQListUsableObjectType}}, error) {
+	klog.V(5).Infof("{{.GCEWrapType}}.ListUsable(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Service}}")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "ListUsable",
+		Version: meta.Version("{{.Version}}"),
+		Service: "{{.Service}}",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("{{.GCEWrapType}}.ListUsable(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.{{.VersionTitle}}.{{.Service}}.ListUsable(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*{{.FQListUsableObjectType}}
+	f := func(l *{{.ObjectListUsableType}}) error {
+		klog.V(5).Infof("{{.GCEWrapType}}.ListUsable(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("{{.GCEWrapType}}.ListUsable(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("{{.GCEWrapType}}.ListUsable(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("{{.GCEWrapType}}.ListUsable(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
 	return all, nil
 }
 {{- end}}

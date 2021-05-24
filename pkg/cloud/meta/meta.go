@@ -126,6 +126,7 @@ var AllServices = []*ServiceInfo{
 			"Update",
 			"SetSecurityPolicy",
 		},
+		options:     AggregatedList,
 	},
 	{
 		Object:      "BackendService",
@@ -138,6 +139,7 @@ var AllServices = []*ServiceInfo{
 			"Update",
 			"SetSecurityPolicy",
 		},
+		options:     AggregatedList,
 	},
 	{
 		Object:      "BackendService",
@@ -150,6 +152,7 @@ var AllServices = []*ServiceInfo{
 			"Update",
 			"SetSecurityPolicy",
 		},
+		options:     AggregatedList,
 	},
 	{
 		Object:      "BackendService",

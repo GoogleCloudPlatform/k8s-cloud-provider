@@ -42,6 +42,8 @@ const (
 	CustomOps = 1 << iota
 	// AggregatedList will generated a method for AggregatedList().
 	AggregatedList = 1 << iota
+	// ListUsable will generate a method for ListUsable().
+	ListUsable = 1 << iota
 
 	// ReadOnly specifies that the given resource is read-only and should not
 	// have insert() or delete() methods generated for the wrapper.

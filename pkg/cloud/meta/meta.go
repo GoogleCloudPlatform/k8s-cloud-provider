@@ -633,6 +633,7 @@ var AllServices = []*ServiceInfo{
 		version:     VersionAlpha,
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&alpha.SubnetworksService{}),
+		options: ListUsable,
 	},
 	{
 		Object:      "Subnetwork",
@@ -641,6 +642,7 @@ var AllServices = []*ServiceInfo{
 		version:     VersionBeta,
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&alpha.SubnetworksService{}),
+		options: ListUsable,
 	},
 	{
 		Object:      "Subnetwork",
@@ -649,6 +651,7 @@ var AllServices = []*ServiceInfo{
 		version:     VersionGA,
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&alpha.SubnetworksService{}),
+		options: ListUsable,
 	},
 	{
 		Object:      "TargetHttpProxy",

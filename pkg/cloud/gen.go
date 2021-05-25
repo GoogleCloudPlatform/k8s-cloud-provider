@@ -23458,6 +23458,7 @@ type AlphaSubnetworks interface {
 	List(ctx context.Context, region string, fl *filter.F) ([]*alpha.Subnetwork, error)
 	Insert(ctx context.Context, key *meta.Key, obj *alpha.Subnetwork) error
 	Delete(ctx context.Context, key *meta.Key) error
+	ListUsable(ctx context.Context, fl *filter.F) ([]*alpha.UsableSubnetwork, error)
 }
 
 // NewMockAlphaSubnetworks returns a new mock for Subnetworks.
@@ -23484,19 +23485,21 @@ type MockAlphaSubnetworks struct {
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
-	GetError    map[meta.Key]error
-	ListError   *error
-	InsertError map[meta.Key]error
-	DeleteError map[meta.Key]error
+	GetError        map[meta.Key]error
+	ListError       *error
+	InsertError     map[meta.Key]error
+	DeleteError     map[meta.Key]error
+	ListUsableError *error
 
 	// xxxHook allow you to intercept the standard processing of the mock in
 	// order to add your own logic. Return (true, _, _) to prevent the normal
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
-	GetHook    func(ctx context.Context, key *meta.Key, m *MockAlphaSubnetworks) (bool, *alpha.Subnetwork, error)
-	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockAlphaSubnetworks) (bool, []*alpha.Subnetwork, error)
-	InsertHook func(ctx context.Context, key *meta.Key, obj *alpha.Subnetwork, m *MockAlphaSubnetworks) (bool, error)
-	DeleteHook func(ctx context.Context, key *meta.Key, m *MockAlphaSubnetworks) (bool, error)
+	GetHook        func(ctx context.Context, key *meta.Key, m *MockAlphaSubnetworks) (bool, *alpha.Subnetwork, error)
+	ListHook       func(ctx context.Context, region string, fl *filter.F, m *MockAlphaSubnetworks) (bool, []*alpha.Subnetwork, error)
+	InsertHook     func(ctx context.Context, key *meta.Key, obj *alpha.Subnetwork, m *MockAlphaSubnetworks) (bool, error)
+	DeleteHook     func(ctx context.Context, key *meta.Key, m *MockAlphaSubnetworks) (bool, error)
+	ListUsableHook func(ctx context.Context, fl *filter.F, m *MockAlphaSubnetworks) (bool, []*alpha.UsableSubnetwork, error)
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -23638,6 +23641,42 @@ func (m *MockAlphaSubnetworks) Delete(ctx context.Context, key *meta.Key) error 
 	delete(m.Objects, *key)
 	klog.V(5).Infof("MockAlphaSubnetworks.Delete(%v, %v) = nil", ctx, key)
 	return nil
+}
+
+// List all of the objects in the mock.
+func (m *MockAlphaSubnetworks) ListUsable(ctx context.Context, fl *filter.F) ([]*alpha.UsableSubnetwork, error) {
+	if m.ListUsableHook != nil {
+		if intercept, objs, err := m.ListUsableHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaSubnetworks.ListUsable(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockAlphaSubnetworks.ListUsable(%v, %v) = nil, %v", ctx, fl, err)
+		return nil, *m.ListError
+	}
+
+	var objs []*alpha.UsableSubnetwork
+
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		alphaObj := obj.ToAlpha()
+		dest := &alpha.UsableSubnetwork{}
+		// Convert to Usable type to avoid separate Usable struct
+		if err := copyViaJSON(dest, alphaObj); err != nil {
+			klog.Errorf("Could not convert %T to *alpha.UsableSubnetwork via JSON: %v", alphaObj, err)
+		}
+		objs = append(objs, dest)
+	}
+	klog.V(5).Infof("MockAlphaSubnetworks.ListUsable(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
 }
 
 // Obj wraps the object for use in the mock.
@@ -23786,12 +23825,55 @@ func (g *GCEAlphaSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 	return err
 }
 
+// List all Usable Subnetwork objects.
+func (g *GCEAlphaSubnetworks) ListUsable(ctx context.Context, fl *filter.F) ([]*alpha.UsableSubnetwork, error) {
+	klog.V(5).Infof("GCEAlphaSubnetworks.ListUsable(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Subnetworks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "ListUsable",
+		Version:   meta.Version("alpha"),
+		Service:   "Subnetworks",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEAlphaSubnetworks.ListUsable(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Alpha.Subnetworks.ListUsable(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*alpha.UsableSubnetwork
+	f := func(l *alpha.UsableSubnetworksAggregatedList) error {
+		klog.V(5).Infof("GCEAlphaSubnetworks.ListUsable(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAlphaSubnetworks.ListUsable(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCEAlphaSubnetworks.ListUsable(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaSubnetworks.ListUsable(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
 // BetaSubnetworks is an interface that allows for mocking of Subnetworks.
 type BetaSubnetworks interface {
 	Get(ctx context.Context, key *meta.Key) (*beta.Subnetwork, error)
 	List(ctx context.Context, region string, fl *filter.F) ([]*beta.Subnetwork, error)
 	Insert(ctx context.Context, key *meta.Key, obj *beta.Subnetwork) error
 	Delete(ctx context.Context, key *meta.Key) error
+	ListUsable(ctx context.Context, fl *filter.F) ([]*beta.UsableSubnetwork, error)
 }
 
 // NewMockBetaSubnetworks returns a new mock for Subnetworks.
@@ -23818,19 +23900,21 @@ type MockBetaSubnetworks struct {
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
-	GetError    map[meta.Key]error
-	ListError   *error
-	InsertError map[meta.Key]error
-	DeleteError map[meta.Key]error
+	GetError        map[meta.Key]error
+	ListError       *error
+	InsertError     map[meta.Key]error
+	DeleteError     map[meta.Key]error
+	ListUsableError *error
 
 	// xxxHook allow you to intercept the standard processing of the mock in
 	// order to add your own logic. Return (true, _, _) to prevent the normal
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
-	GetHook    func(ctx context.Context, key *meta.Key, m *MockBetaSubnetworks) (bool, *beta.Subnetwork, error)
-	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockBetaSubnetworks) (bool, []*beta.Subnetwork, error)
-	InsertHook func(ctx context.Context, key *meta.Key, obj *beta.Subnetwork, m *MockBetaSubnetworks) (bool, error)
-	DeleteHook func(ctx context.Context, key *meta.Key, m *MockBetaSubnetworks) (bool, error)
+	GetHook        func(ctx context.Context, key *meta.Key, m *MockBetaSubnetworks) (bool, *beta.Subnetwork, error)
+	ListHook       func(ctx context.Context, region string, fl *filter.F, m *MockBetaSubnetworks) (bool, []*beta.Subnetwork, error)
+	InsertHook     func(ctx context.Context, key *meta.Key, obj *beta.Subnetwork, m *MockBetaSubnetworks) (bool, error)
+	DeleteHook     func(ctx context.Context, key *meta.Key, m *MockBetaSubnetworks) (bool, error)
+	ListUsableHook func(ctx context.Context, fl *filter.F, m *MockBetaSubnetworks) (bool, []*beta.UsableSubnetwork, error)
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -23972,6 +24056,42 @@ func (m *MockBetaSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 	delete(m.Objects, *key)
 	klog.V(5).Infof("MockBetaSubnetworks.Delete(%v, %v) = nil", ctx, key)
 	return nil
+}
+
+// List all of the objects in the mock.
+func (m *MockBetaSubnetworks) ListUsable(ctx context.Context, fl *filter.F) ([]*beta.UsableSubnetwork, error) {
+	if m.ListUsableHook != nil {
+		if intercept, objs, err := m.ListUsableHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockBetaSubnetworks.ListUsable(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockBetaSubnetworks.ListUsable(%v, %v) = nil, %v", ctx, fl, err)
+		return nil, *m.ListError
+	}
+
+	var objs []*beta.UsableSubnetwork
+
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToBeta()) {
+			continue
+		}
+		betaObj := obj.ToBeta()
+		dest := &beta.UsableSubnetwork{}
+		// Convert to Usable type to avoid separate Usable struct
+		if err := copyViaJSON(dest, betaObj); err != nil {
+			klog.Errorf("Could not convert %T to *beta.UsableSubnetwork via JSON: %v", betaObj, err)
+		}
+		objs = append(objs, dest)
+	}
+	klog.V(5).Infof("MockBetaSubnetworks.ListUsable(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
 }
 
 // Obj wraps the object for use in the mock.
@@ -24120,12 +24240,55 @@ func (g *GCEBetaSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 	return err
 }
 
+// List all Usable Subnetwork objects.
+func (g *GCEBetaSubnetworks) ListUsable(ctx context.Context, fl *filter.F) ([]*beta.UsableSubnetwork, error) {
+	klog.V(5).Infof("GCEBetaSubnetworks.ListUsable(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Subnetworks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "ListUsable",
+		Version:   meta.Version("beta"),
+		Service:   "Subnetworks",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEBetaSubnetworks.ListUsable(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Beta.Subnetworks.ListUsable(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*beta.UsableSubnetwork
+	f := func(l *beta.UsableSubnetworksAggregatedList) error {
+		klog.V(5).Infof("GCEBetaSubnetworks.ListUsable(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEBetaSubnetworks.ListUsable(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCEBetaSubnetworks.ListUsable(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEBetaSubnetworks.ListUsable(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
 // Subnetworks is an interface that allows for mocking of Subnetworks.
 type Subnetworks interface {
 	Get(ctx context.Context, key *meta.Key) (*ga.Subnetwork, error)
 	List(ctx context.Context, region string, fl *filter.F) ([]*ga.Subnetwork, error)
 	Insert(ctx context.Context, key *meta.Key, obj *ga.Subnetwork) error
 	Delete(ctx context.Context, key *meta.Key) error
+	ListUsable(ctx context.Context, fl *filter.F) ([]*ga.UsableSubnetwork, error)
 }
 
 // NewMockSubnetworks returns a new mock for Subnetworks.
@@ -24152,19 +24315,21 @@ type MockSubnetworks struct {
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
-	GetError    map[meta.Key]error
-	ListError   *error
-	InsertError map[meta.Key]error
-	DeleteError map[meta.Key]error
+	GetError        map[meta.Key]error
+	ListError       *error
+	InsertError     map[meta.Key]error
+	DeleteError     map[meta.Key]error
+	ListUsableError *error
 
 	// xxxHook allow you to intercept the standard processing of the mock in
 	// order to add your own logic. Return (true, _, _) to prevent the normal
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
-	GetHook    func(ctx context.Context, key *meta.Key, m *MockSubnetworks) (bool, *ga.Subnetwork, error)
-	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockSubnetworks) (bool, []*ga.Subnetwork, error)
-	InsertHook func(ctx context.Context, key *meta.Key, obj *ga.Subnetwork, m *MockSubnetworks) (bool, error)
-	DeleteHook func(ctx context.Context, key *meta.Key, m *MockSubnetworks) (bool, error)
+	GetHook        func(ctx context.Context, key *meta.Key, m *MockSubnetworks) (bool, *ga.Subnetwork, error)
+	ListHook       func(ctx context.Context, region string, fl *filter.F, m *MockSubnetworks) (bool, []*ga.Subnetwork, error)
+	InsertHook     func(ctx context.Context, key *meta.Key, obj *ga.Subnetwork, m *MockSubnetworks) (bool, error)
+	DeleteHook     func(ctx context.Context, key *meta.Key, m *MockSubnetworks) (bool, error)
+	ListUsableHook func(ctx context.Context, fl *filter.F, m *MockSubnetworks) (bool, []*ga.UsableSubnetwork, error)
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -24306,6 +24471,42 @@ func (m *MockSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 	delete(m.Objects, *key)
 	klog.V(5).Infof("MockSubnetworks.Delete(%v, %v) = nil", ctx, key)
 	return nil
+}
+
+// List all of the objects in the mock.
+func (m *MockSubnetworks) ListUsable(ctx context.Context, fl *filter.F) ([]*ga.UsableSubnetwork, error) {
+	if m.ListUsableHook != nil {
+		if intercept, objs, err := m.ListUsableHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockSubnetworks.ListUsable(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockSubnetworks.ListUsable(%v, %v) = nil, %v", ctx, fl, err)
+		return nil, *m.ListError
+	}
+
+	var objs []*ga.UsableSubnetwork
+
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToGA()) {
+			continue
+		}
+		gaObj := obj.ToGA()
+		dest := &ga.UsableSubnetwork{}
+		// Convert to Usable type to avoid separate Usable struct
+		if err := copyViaJSON(dest, gaObj); err != nil {
+			klog.Errorf("Could not convert %T to *ga.UsableSubnetwork via JSON: %v", gaObj, err)
+		}
+		objs = append(objs, dest)
+	}
+	klog.V(5).Infof("MockSubnetworks.ListUsable(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
 }
 
 // Obj wraps the object for use in the mock.
@@ -24452,6 +24653,48 @@ func (g *GCESubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCESubnetworks.Delete(%v, %v) = %v", ctx, key, err)
 	return err
+}
+
+// List all Usable Subnetwork objects.
+func (g *GCESubnetworks) ListUsable(ctx context.Context, fl *filter.F) ([]*ga.UsableSubnetwork, error) {
+	klog.V(5).Infof("GCESubnetworks.ListUsable(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Subnetworks")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "ListUsable",
+		Version:   meta.Version("ga"),
+		Service:   "Subnetworks",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCESubnetworks.ListUsable(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.GA.Subnetworks.ListUsable(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*ga.UsableSubnetwork
+	f := func(l *ga.UsableSubnetworksAggregatedList) error {
+		klog.V(5).Infof("GCESubnetworks.ListUsable(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCESubnetworks.ListUsable(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCESubnetworks.ListUsable(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCESubnetworks.ListUsable(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
 }
 
 // AlphaTargetHttpProxies is an interface that allows for mocking of TargetHttpProxies.

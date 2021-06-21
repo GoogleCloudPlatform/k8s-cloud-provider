@@ -128,7 +128,7 @@ var AllServices = []*ServiceInfo{
 			"Update",
 			"SetSecurityPolicy",
 		},
-		options:     AggregatedList,
+		options: AggregatedList,
 	},
 	{
 		Object:      "BackendService",
@@ -141,7 +141,7 @@ var AllServices = []*ServiceInfo{
 			"Update",
 			"SetSecurityPolicy",
 		},
-		options:     AggregatedList,
+		options: AggregatedList,
 	},
 	{
 		Object:      "BackendService",
@@ -154,7 +154,7 @@ var AllServices = []*ServiceInfo{
 			"Update",
 			"SetSecurityPolicy",
 		},
-		options:     AggregatedList,
+		options: AggregatedList,
 	},
 	{
 		Object:      "BackendService",
@@ -633,7 +633,7 @@ var AllServices = []*ServiceInfo{
 		version:     VersionAlpha,
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&alpha.SubnetworksService{}),
-		options: ListUsable,
+		options:     ListUsable,
 	},
 	{
 		Object:      "Subnetwork",
@@ -642,7 +642,7 @@ var AllServices = []*ServiceInfo{
 		version:     VersionBeta,
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&alpha.SubnetworksService{}),
-		options: ListUsable,
+		options:     ListUsable,
 	},
 	{
 		Object:      "Subnetwork",
@@ -651,7 +651,7 @@ var AllServices = []*ServiceInfo{
 		version:     VersionGA,
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&alpha.SubnetworksService{}),
-		options: ListUsable,
+		options:     ListUsable,
 	},
 	{
 		Object:      "TargetHttpProxy",
@@ -822,6 +822,17 @@ var AllServices = []*ServiceInfo{
 		version:     VersionBeta,
 		keyType:     Global,
 		serviceType: reflect.TypeOf(&beta.TargetTcpProxiesService{}),
+		additionalMethods: []string{
+			"SetBackendService",
+		},
+	},
+	{
+		Object:      "TargetTcpProxy",
+		Service:     "TargetTcpProxies",
+		Resource:    "targetTcpProxies",
+		version:     VersionGA,
+		keyType:     Global,
+		serviceType: reflect.TypeOf(&ga.TargetTcpProxiesService{}),
 		additionalMethods: []string{
 			"SetBackendService",
 		},

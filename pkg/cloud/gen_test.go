@@ -3477,6 +3477,8 @@ func TestTargetTcpProxiesGroup(t *testing.T) {
 	key = keyAlpha
 	keyBeta := meta.GlobalKey("key-beta")
 	key = keyBeta
+	keyGA := meta.GlobalKey("key-ga")
+	key = keyGA
 	// Ignore unused variables.
 	_, _, _ = ctx, mock, key
 
@@ -3486,6 +3488,9 @@ func TestTargetTcpProxiesGroup(t *testing.T) {
 	}
 	if _, err := mock.BetaTargetTcpProxies().Get(ctx, key); err == nil {
 		t.Errorf("BetaTargetTcpProxies().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.TargetTcpProxies().Get(ctx, key); err == nil {
+		t.Errorf("TargetTcpProxies().Get(%v, %v) = _, nil; want error", ctx, key)
 	}
 
 	// Insert.
@@ -3501,6 +3506,12 @@ func TestTargetTcpProxiesGroup(t *testing.T) {
 			t.Errorf("BetaTargetTcpProxies().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
 		}
 	}
+	{
+		obj := &ga.TargetTcpProxy{}
+		if err := mock.TargetTcpProxies().Insert(ctx, keyGA, obj); err != nil {
+			t.Errorf("TargetTcpProxies().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
+		}
+	}
 
 	// Get across versions.
 	if obj, err := mock.AlphaTargetTcpProxies().Get(ctx, key); err != nil {
@@ -3509,13 +3520,18 @@ func TestTargetTcpProxiesGroup(t *testing.T) {
 	if obj, err := mock.BetaTargetTcpProxies().Get(ctx, key); err != nil {
 		t.Errorf("BetaTargetTcpProxies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
 	}
+	if obj, err := mock.TargetTcpProxies().Get(ctx, key); err != nil {
+		t.Errorf("TargetTcpProxies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
 
 	// List.
 	mock.MockAlphaTargetTcpProxies.Objects[*keyAlpha] = mock.MockAlphaTargetTcpProxies.Obj(&alpha.TargetTcpProxy{Name: keyAlpha.Name})
 	mock.MockBetaTargetTcpProxies.Objects[*keyBeta] = mock.MockBetaTargetTcpProxies.Obj(&beta.TargetTcpProxy{Name: keyBeta.Name})
+	mock.MockTargetTcpProxies.Objects[*keyGA] = mock.MockTargetTcpProxies.Obj(&ga.TargetTcpProxy{Name: keyGA.Name})
 	want := map[string]bool{
 		"key-alpha": true,
 		"key-beta":  true,
+		"key-ga":    true,
 	}
 	_ = want // ignore unused variables.
 	{
@@ -3546,6 +3562,20 @@ func TestTargetTcpProxiesGroup(t *testing.T) {
 			}
 		}
 	}
+	{
+		objs, err := mock.TargetTcpProxies().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("TargetTcpProxies().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("TargetTcpProxies().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
 
 	// Delete across versions.
 	if err := mock.AlphaTargetTcpProxies().Delete(ctx, keyAlpha); err != nil {
@@ -3554,6 +3584,9 @@ func TestTargetTcpProxiesGroup(t *testing.T) {
 	if err := mock.BetaTargetTcpProxies().Delete(ctx, keyBeta); err != nil {
 		t.Errorf("BetaTargetTcpProxies().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
 	}
+	if err := mock.TargetTcpProxies().Delete(ctx, keyGA); err != nil {
+		t.Errorf("TargetTcpProxies().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
+	}
 
 	// Delete not found.
 	if err := mock.AlphaTargetTcpProxies().Delete(ctx, keyAlpha); err == nil {
@@ -3561,6 +3594,9 @@ func TestTargetTcpProxiesGroup(t *testing.T) {
 	}
 	if err := mock.BetaTargetTcpProxies().Delete(ctx, keyBeta); err == nil {
 		t.Errorf("BetaTargetTcpProxies().Delete(%v, %v) = nil; want error", ctx, keyBeta)
+	}
+	if err := mock.TargetTcpProxies().Delete(ctx, keyGA); err == nil {
+		t.Errorf("TargetTcpProxies().Delete(%v, %v) = nil; want error", ctx, keyGA)
 	}
 }
 

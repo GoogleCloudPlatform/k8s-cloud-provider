@@ -110,6 +110,7 @@ type Cloud interface {
 	TargetPools() TargetPools
 	AlphaTargetTcpProxies() AlphaTargetTcpProxies
 	BetaTargetTcpProxies() BetaTargetTcpProxies
+	TargetTcpProxies() TargetTcpProxies
 	AlphaUrlMaps() AlphaUrlMaps
 	BetaUrlMaps() BetaUrlMaps
 	UrlMaps() UrlMaps
@@ -194,6 +195,7 @@ func NewGCE(s *Service) *GCE {
 		gceTargetPools:                   &GCETargetPools{s},
 		gceAlphaTargetTcpProxies:         &GCEAlphaTargetTcpProxies{s},
 		gceBetaTargetTcpProxies:          &GCEBetaTargetTcpProxies{s},
+		gceTargetTcpProxies:              &GCETargetTcpProxies{s},
 		gceAlphaUrlMaps:                  &GCEAlphaUrlMaps{s},
 		gceBetaUrlMaps:                   &GCEBetaUrlMaps{s},
 		gceUrlMaps:                       &GCEUrlMaps{s},
@@ -282,6 +284,7 @@ type GCE struct {
 	gceTargetPools                   *GCETargetPools
 	gceAlphaTargetTcpProxies         *GCEAlphaTargetTcpProxies
 	gceBetaTargetTcpProxies          *GCEBetaTargetTcpProxies
+	gceTargetTcpProxies              *GCETargetTcpProxies
 	gceAlphaUrlMaps                  *GCEAlphaUrlMaps
 	gceBetaUrlMaps                   *GCEBetaUrlMaps
 	gceUrlMaps                       *GCEUrlMaps
@@ -651,6 +654,11 @@ func (gce *GCE) BetaTargetTcpProxies() BetaTargetTcpProxies {
 	return gce.gceBetaTargetTcpProxies
 }
 
+// TargetTcpProxies returns the interface for the ga TargetTcpProxies.
+func (gce *GCE) TargetTcpProxies() TargetTcpProxies {
+	return gce.gceTargetTcpProxies
+}
+
 // AlphaUrlMaps returns the interface for the alpha UrlMaps.
 func (gce *GCE) AlphaUrlMaps() AlphaUrlMaps {
 	return gce.gceAlphaUrlMaps
@@ -797,6 +805,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockTargetPools:                   NewMockTargetPools(projectRouter, mockTargetPoolsObjs),
 		MockAlphaTargetTcpProxies:         NewMockAlphaTargetTcpProxies(projectRouter, mockTargetTcpProxiesObjs),
 		MockBetaTargetTcpProxies:          NewMockBetaTargetTcpProxies(projectRouter, mockTargetTcpProxiesObjs),
+		MockTargetTcpProxies:              NewMockTargetTcpProxies(projectRouter, mockTargetTcpProxiesObjs),
 		MockAlphaUrlMaps:                  NewMockAlphaUrlMaps(projectRouter, mockUrlMapsObjs),
 		MockBetaUrlMaps:                   NewMockBetaUrlMaps(projectRouter, mockUrlMapsObjs),
 		MockUrlMaps:                       NewMockUrlMaps(projectRouter, mockUrlMapsObjs),
@@ -885,6 +894,7 @@ type MockGCE struct {
 	MockTargetPools                   *MockTargetPools
 	MockAlphaTargetTcpProxies         *MockAlphaTargetTcpProxies
 	MockBetaTargetTcpProxies          *MockBetaTargetTcpProxies
+	MockTargetTcpProxies              *MockTargetTcpProxies
 	MockAlphaUrlMaps                  *MockAlphaUrlMaps
 	MockBetaUrlMaps                   *MockBetaUrlMaps
 	MockUrlMaps                       *MockUrlMaps
@@ -1252,6 +1262,11 @@ func (mock *MockGCE) AlphaTargetTcpProxies() AlphaTargetTcpProxies {
 // BetaTargetTcpProxies returns the interface for the beta TargetTcpProxies.
 func (mock *MockGCE) BetaTargetTcpProxies() BetaTargetTcpProxies {
 	return mock.MockBetaTargetTcpProxies
+}
+
+// TargetTcpProxies returns the interface for the ga TargetTcpProxies.
+func (mock *MockGCE) TargetTcpProxies() TargetTcpProxies {
+	return mock.MockTargetTcpProxies
 }
 
 // AlphaUrlMaps returns the interface for the alpha UrlMaps.
@@ -2491,6 +2506,19 @@ func (m *MockTargetTcpProxiesObj) ToBeta() *beta.TargetTcpProxy {
 	ret := &beta.TargetTcpProxy{}
 	if err := copyViaJSON(ret, m.Obj); err != nil {
 		klog.Errorf("Could not convert %T to *beta.TargetTcpProxy via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// ToGA retrieves the given version of the object.
+func (m *MockTargetTcpProxiesObj) ToGA() *ga.TargetTcpProxy {
+	if ret, ok := m.Obj.(*ga.TargetTcpProxy); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &ga.TargetTcpProxy{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *ga.TargetTcpProxy via JSON: %v", m.Obj, err)
 	}
 	return ret
 }
@@ -30806,6 +30834,381 @@ func (g *GCEBetaTargetTcpProxies) SetBackendService(ctx context.Context, key *me
 	}
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCEBetaTargetTcpProxies.SetBackendService(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// TargetTcpProxies is an interface that allows for mocking of TargetTcpProxies.
+type TargetTcpProxies interface {
+	Get(ctx context.Context, key *meta.Key) (*ga.TargetTcpProxy, error)
+	List(ctx context.Context, fl *filter.F) ([]*ga.TargetTcpProxy, error)
+	Insert(ctx context.Context, key *meta.Key, obj *ga.TargetTcpProxy) error
+	Delete(ctx context.Context, key *meta.Key) error
+	SetBackendService(context.Context, *meta.Key, *ga.TargetTcpProxiesSetBackendServiceRequest) error
+}
+
+// NewMockTargetTcpProxies returns a new mock for TargetTcpProxies.
+func NewMockTargetTcpProxies(pr ProjectRouter, objs map[meta.Key]*MockTargetTcpProxiesObj) *MockTargetTcpProxies {
+	mock := &MockTargetTcpProxies{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockTargetTcpProxies is the mock for TargetTcpProxies.
+type MockTargetTcpProxies struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockTargetTcpProxiesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook               func(ctx context.Context, key *meta.Key, m *MockTargetTcpProxies) (bool, *ga.TargetTcpProxy, error)
+	ListHook              func(ctx context.Context, fl *filter.F, m *MockTargetTcpProxies) (bool, []*ga.TargetTcpProxy, error)
+	InsertHook            func(ctx context.Context, key *meta.Key, obj *ga.TargetTcpProxy, m *MockTargetTcpProxies) (bool, error)
+	DeleteHook            func(ctx context.Context, key *meta.Key, m *MockTargetTcpProxies) (bool, error)
+	SetBackendServiceHook func(context.Context, *meta.Key, *ga.TargetTcpProxiesSetBackendServiceRequest, *MockTargetTcpProxies) error
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockTargetTcpProxies) Get(ctx context.Context, key *meta.Key) (*ga.TargetTcpProxy, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockTargetTcpProxies.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockTargetTcpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToGA()
+		klog.V(5).Infof("MockTargetTcpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockTargetTcpProxies %v not found", key),
+	}
+	klog.V(5).Infof("MockTargetTcpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockTargetTcpProxies) List(ctx context.Context, fl *filter.F) ([]*ga.TargetTcpProxy, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockTargetTcpProxies.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockTargetTcpProxies.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*ga.TargetTcpProxy
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToGA()) {
+			continue
+		}
+		objs = append(objs, obj.ToGA())
+	}
+
+	klog.V(5).Infof("MockTargetTcpProxies.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, obj *ga.TargetTcpProxy) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockTargetTcpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockTargetTcpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockTargetTcpProxies %v exists", key),
+		}
+		klog.V(5).Infof("MockTargetTcpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetTcpProxies")
+	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "targetTcpProxies", key)
+
+	m.Objects[*key] = &MockTargetTcpProxiesObj{obj}
+	klog.V(5).Infof("MockTargetTcpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockTargetTcpProxies) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockTargetTcpProxies %v not found", key),
+		}
+		klog.V(5).Infof("MockTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockTargetTcpProxies.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockTargetTcpProxies) Obj(o *ga.TargetTcpProxy) *MockTargetTcpProxiesObj {
+	return &MockTargetTcpProxiesObj{o}
+}
+
+// SetBackendService is a mock for the corresponding method.
+func (m *MockTargetTcpProxies) SetBackendService(ctx context.Context, key *meta.Key, arg0 *ga.TargetTcpProxiesSetBackendServiceRequest) error {
+	if m.SetBackendServiceHook != nil {
+		return m.SetBackendServiceHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// GCETargetTcpProxies is a simplifying adapter for the GCE TargetTcpProxies.
+type GCETargetTcpProxies struct {
+	s *Service
+}
+
+// Get the TargetTcpProxy named by key.
+func (g *GCETargetTcpProxies) Get(ctx context.Context, key *meta.Key) (*ga.TargetTcpProxy, error) {
+	klog.V(5).Infof("GCETargetTcpProxies.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCETargetTcpProxies.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetTcpProxies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("ga"),
+		Service:   "TargetTcpProxies",
+	}
+	klog.V(5).Infof("GCETargetTcpProxies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCETargetTcpProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.GA.TargetTcpProxies.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCETargetTcpProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all TargetTcpProxy objects.
+func (g *GCETargetTcpProxies) List(ctx context.Context, fl *filter.F) ([]*ga.TargetTcpProxy, error) {
+	klog.V(5).Infof("GCETargetTcpProxies.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetTcpProxies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("ga"),
+		Service:   "TargetTcpProxies",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCETargetTcpProxies.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.GA.TargetTcpProxies.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*ga.TargetTcpProxy
+	f := func(l *ga.TargetTcpProxyList) error {
+		klog.V(5).Infof("GCETargetTcpProxies.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCETargetTcpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCETargetTcpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCETargetTcpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert TargetTcpProxy with key of value obj.
+func (g *GCETargetTcpProxies) Insert(ctx context.Context, key *meta.Key, obj *ga.TargetTcpProxy) error {
+	klog.V(5).Infof("GCETargetTcpProxies.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCETargetTcpProxies.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetTcpProxies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("ga"),
+		Service:   "TargetTcpProxies",
+	}
+	klog.V(5).Infof("GCETargetTcpProxies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCETargetTcpProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.GA.TargetTcpProxies.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCETargetTcpProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCETargetTcpProxies.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the TargetTcpProxy referenced by key.
+func (g *GCETargetTcpProxies) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCETargetTcpProxies.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCETargetTcpProxies.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetTcpProxies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("ga"),
+		Service:   "TargetTcpProxies",
+	}
+	klog.V(5).Infof("GCETargetTcpProxies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCETargetTcpProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.TargetTcpProxies.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCETargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCETargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// SetBackendService is a method on GCETargetTcpProxies.
+func (g *GCETargetTcpProxies) SetBackendService(ctx context.Context, key *meta.Key, arg0 *ga.TargetTcpProxiesSetBackendServiceRequest) error {
+	klog.V(5).Infof("GCETargetTcpProxies.SetBackendService(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCETargetTcpProxies.SetBackendService(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetTcpProxies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetBackendService",
+		Version:   meta.Version("ga"),
+		Service:   "TargetTcpProxies",
+	}
+	klog.V(5).Infof("GCETargetTcpProxies.SetBackendService(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCETargetTcpProxies.SetBackendService(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.TargetTcpProxies.SetBackendService(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCETargetTcpProxies.SetBackendService(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCETargetTcpProxies.SetBackendService(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
 

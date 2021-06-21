@@ -81,6 +81,9 @@ type Cloud interface {
 	NetworkEndpointGroups() NetworkEndpointGroups
 	Projects() Projects
 	Regions() Regions
+	AlphaRouters() AlphaRouters
+	BetaRouters() BetaRouters
+	Routers() Routers
 	Routes() Routes
 	BetaSecurityPolicies() BetaSecurityPolicies
 	BetaServiceAttachments() BetaServiceAttachments
@@ -165,6 +168,9 @@ func NewGCE(s *Service) *GCE {
 		gceNetworkEndpointGroups:         &GCENetworkEndpointGroups{s},
 		gceProjects:                      &GCEProjects{s},
 		gceRegions:                       &GCERegions{s},
+		gceAlphaRouters:                  &GCEAlphaRouters{s},
+		gceBetaRouters:                   &GCEBetaRouters{s},
+		gceRouters:                       &GCERouters{s},
 		gceRoutes:                        &GCERoutes{s},
 		gceBetaSecurityPolicies:          &GCEBetaSecurityPolicies{s},
 		gceBetaServiceAttachments:        &GCEBetaServiceAttachments{s},
@@ -253,6 +259,9 @@ type GCE struct {
 	gceNetworkEndpointGroups         *GCENetworkEndpointGroups
 	gceProjects                      *GCEProjects
 	gceRegions                       *GCERegions
+	gceAlphaRouters                  *GCEAlphaRouters
+	gceBetaRouters                   *GCEBetaRouters
+	gceRouters                       *GCERouters
 	gceRoutes                        *GCERoutes
 	gceBetaSecurityPolicies          *GCEBetaSecurityPolicies
 	gceBetaServiceAttachments        *GCEBetaServiceAttachments
@@ -506,6 +515,21 @@ func (gce *GCE) Regions() Regions {
 	return gce.gceRegions
 }
 
+// AlphaRouters returns the interface for the alpha Routers.
+func (gce *GCE) AlphaRouters() AlphaRouters {
+	return gce.gceAlphaRouters
+}
+
+// BetaRouters returns the interface for the beta Routers.
+func (gce *GCE) BetaRouters() BetaRouters {
+	return gce.gceBetaRouters
+}
+
+// Routers returns the interface for the ga Routers.
+func (gce *GCE) Routers() Routers {
+	return gce.gceRouters
+}
+
 // Routes returns the interface for the ga Routes.
 func (gce *GCE) Routes() Routes {
 	return gce.gceRoutes
@@ -711,6 +735,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 	mockRegionTargetHttpsProxiesObjs := map[meta.Key]*MockRegionTargetHttpsProxiesObj{}
 	mockRegionUrlMapsObjs := map[meta.Key]*MockRegionUrlMapsObj{}
 	mockRegionsObjs := map[meta.Key]*MockRegionsObj{}
+	mockRoutersObjs := map[meta.Key]*MockRoutersObj{}
 	mockRoutesObjs := map[meta.Key]*MockRoutesObj{}
 	mockSecurityPoliciesObjs := map[meta.Key]*MockSecurityPoliciesObj{}
 	mockServiceAttachmentsObjs := map[meta.Key]*MockServiceAttachmentsObj{}
@@ -768,6 +793,9 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockNetworkEndpointGroups:         NewMockNetworkEndpointGroups(projectRouter, mockNetworkEndpointGroupsObjs),
 		MockProjects:                      NewMockProjects(projectRouter, mockProjectsObjs),
 		MockRegions:                       NewMockRegions(projectRouter, mockRegionsObjs),
+		MockAlphaRouters:                  NewMockAlphaRouters(projectRouter, mockRoutersObjs),
+		MockBetaRouters:                   NewMockBetaRouters(projectRouter, mockRoutersObjs),
+		MockRouters:                       NewMockRouters(projectRouter, mockRoutersObjs),
 		MockRoutes:                        NewMockRoutes(projectRouter, mockRoutesObjs),
 		MockBetaSecurityPolicies:          NewMockBetaSecurityPolicies(projectRouter, mockSecurityPoliciesObjs),
 		MockBetaServiceAttachments:        NewMockBetaServiceAttachments(projectRouter, mockServiceAttachmentsObjs),
@@ -856,6 +884,9 @@ type MockGCE struct {
 	MockNetworkEndpointGroups         *MockNetworkEndpointGroups
 	MockProjects                      *MockProjects
 	MockRegions                       *MockRegions
+	MockAlphaRouters                  *MockAlphaRouters
+	MockBetaRouters                   *MockBetaRouters
+	MockRouters                       *MockRouters
 	MockRoutes                        *MockRoutes
 	MockBetaSecurityPolicies          *MockBetaSecurityPolicies
 	MockBetaServiceAttachments        *MockBetaServiceAttachments
@@ -1107,6 +1138,21 @@ func (mock *MockGCE) Projects() Projects {
 // Regions returns the interface for the ga Regions.
 func (mock *MockGCE) Regions() Regions {
 	return mock.MockRegions
+}
+
+// AlphaRouters returns the interface for the alpha Routers.
+func (mock *MockGCE) AlphaRouters() AlphaRouters {
+	return mock.MockAlphaRouters
+}
+
+// BetaRouters returns the interface for the beta Routers.
+func (mock *MockGCE) BetaRouters() BetaRouters {
+	return mock.MockBetaRouters
+}
+
+// Routers returns the interface for the ga Routers.
+func (mock *MockGCE) Routers() Routers {
+	return mock.MockRouters
 }
 
 // Routes returns the interface for the ga Routes.
@@ -2161,6 +2207,52 @@ func (m *MockRegionsObj) ToGA() *ga.Region {
 	ret := &ga.Region{}
 	if err := copyViaJSON(ret, m.Obj); err != nil {
 		klog.Errorf("Could not convert %T to *ga.Region via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// MockRoutersObj is used to store the various object versions in the shared
+// map of mocked objects. This allows for multiple API versions to co-exist and
+// share the same "view" of the objects in the backend.
+type MockRoutersObj struct {
+	Obj interface{}
+}
+
+// ToAlpha retrieves the given version of the object.
+func (m *MockRoutersObj) ToAlpha() *alpha.Router {
+	if ret, ok := m.Obj.(*alpha.Router); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &alpha.Router{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *alpha.Router via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// ToBeta retrieves the given version of the object.
+func (m *MockRoutersObj) ToBeta() *beta.Router {
+	if ret, ok := m.Obj.(*beta.Router); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &beta.Router{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *beta.Router via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// ToGA retrieves the given version of the object.
+func (m *MockRoutersObj) ToGA() *ga.Router {
+	if ret, ok := m.Obj.(*ga.Router); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &ga.Router{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *ga.Router via JSON: %v", m.Obj, err)
 	}
 	return ret
 }
@@ -19570,6 +19662,1699 @@ func (g *GCERegions) List(ctx context.Context, fl *filter.F) ([]*ga.Region, erro
 	return all, nil
 }
 
+// AlphaRouters is an interface that allows for mocking of Routers.
+type AlphaRouters interface {
+	Get(ctx context.Context, key *meta.Key) (*alpha.Router, error)
+	List(ctx context.Context, region string, fl *filter.F) ([]*alpha.Router, error)
+	Insert(ctx context.Context, key *meta.Key, obj *alpha.Router) error
+	Delete(ctx context.Context, key *meta.Key) error
+	AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*alpha.Router, error)
+	GetRouterStatus(context.Context, *meta.Key) (*alpha.RouterStatusResponse, error)
+	Patch(context.Context, *meta.Key, *alpha.Router) error
+	Preview(context.Context, *meta.Key, *alpha.Router) (*alpha.RoutersPreviewResponse, error)
+	TestIamPermissions(context.Context, *meta.Key, *alpha.TestPermissionsRequest) (*alpha.TestPermissionsResponse, error)
+}
+
+// NewMockAlphaRouters returns a new mock for Routers.
+func NewMockAlphaRouters(pr ProjectRouter, objs map[meta.Key]*MockRoutersObj) *MockAlphaRouters {
+	mock := &MockAlphaRouters{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockAlphaRouters is the mock for Routers.
+type MockAlphaRouters struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockRoutersObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError            map[meta.Key]error
+	ListError           *error
+	InsertError         map[meta.Key]error
+	DeleteError         map[meta.Key]error
+	AggregatedListError *error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook                func(ctx context.Context, key *meta.Key, m *MockAlphaRouters) (bool, *alpha.Router, error)
+	ListHook               func(ctx context.Context, region string, fl *filter.F, m *MockAlphaRouters) (bool, []*alpha.Router, error)
+	InsertHook             func(ctx context.Context, key *meta.Key, obj *alpha.Router, m *MockAlphaRouters) (bool, error)
+	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockAlphaRouters) (bool, error)
+	AggregatedListHook     func(ctx context.Context, fl *filter.F, m *MockAlphaRouters) (bool, map[string][]*alpha.Router, error)
+	GetRouterStatusHook    func(context.Context, *meta.Key, *MockAlphaRouters) (*alpha.RouterStatusResponse, error)
+	PatchHook              func(context.Context, *meta.Key, *alpha.Router, *MockAlphaRouters) error
+	PreviewHook            func(context.Context, *meta.Key, *alpha.Router, *MockAlphaRouters) (*alpha.RoutersPreviewResponse, error)
+	TestIamPermissionsHook func(context.Context, *meta.Key, *alpha.TestPermissionsRequest, *MockAlphaRouters) (*alpha.TestPermissionsResponse, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockAlphaRouters) Get(ctx context.Context, key *meta.Key) (*alpha.Router, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaRouters.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockAlphaRouters.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToAlpha()
+		klog.V(5).Infof("MockAlphaRouters.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockAlphaRouters %v not found", key),
+	}
+	klog.V(5).Infof("MockAlphaRouters.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock in the given region.
+func (m *MockAlphaRouters) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.Router, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, region, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaRouters.List(%v, %q, %v) = [%v items], %v", ctx, region, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockAlphaRouters.List(%v, %q, %v) = nil, %v", ctx, region, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*alpha.Router
+	for key, obj := range m.Objects {
+		if key.Region != region {
+			continue
+		}
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		objs = append(objs, obj.ToAlpha())
+	}
+
+	klog.V(5).Infof("MockAlphaRouters.List(%v, %q, %v) = [%v items], nil", ctx, region, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockAlphaRouters) Insert(ctx context.Context, key *meta.Key, obj *alpha.Router) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockAlphaRouters.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockAlphaRouters.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockAlphaRouters %v exists", key),
+		}
+		klog.V(5).Infof("MockAlphaRouters.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "routers")
+	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "routers", key)
+
+	m.Objects[*key] = &MockRoutersObj{obj}
+	klog.V(5).Infof("MockAlphaRouters.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockAlphaRouters) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaRouters.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockAlphaRouters.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockAlphaRouters %v not found", key),
+		}
+		klog.V(5).Infof("MockAlphaRouters.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockAlphaRouters.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// AggregatedList is a mock for AggregatedList.
+func (m *MockAlphaRouters) AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*alpha.Router, error) {
+	if m.AggregatedListHook != nil {
+		if intercept, objs, err := m.AggregatedListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaRouters.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.AggregatedListError != nil {
+		err := *m.AggregatedListError
+		klog.V(5).Infof("MockAlphaRouters.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
+		return nil, err
+	}
+
+	objs := map[string][]*alpha.Router{}
+	for _, obj := range m.Objects {
+		res, err := ParseResourceURL(obj.ToAlpha().SelfLink)
+		if err != nil {
+			klog.V(5).Infof("MockAlphaRouters.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
+			return nil, err
+		}
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		location := aggregatedListKey(res.Key)
+		objs[location] = append(objs[location], obj.ToAlpha())
+	}
+	klog.V(5).Infof("MockAlphaRouters.AggregatedList(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockAlphaRouters) Obj(o *alpha.Router) *MockRoutersObj {
+	return &MockRoutersObj{o}
+}
+
+// GetRouterStatus is a mock for the corresponding method.
+func (m *MockAlphaRouters) GetRouterStatus(ctx context.Context, key *meta.Key) (*alpha.RouterStatusResponse, error) {
+	if m.GetRouterStatusHook != nil {
+		return m.GetRouterStatusHook(ctx, key, m)
+	}
+	return nil, fmt.Errorf("GetRouterStatusHook must be set")
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockAlphaRouters) Patch(ctx context.Context, key *meta.Key, arg0 *alpha.Router) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// Preview is a mock for the corresponding method.
+func (m *MockAlphaRouters) Preview(ctx context.Context, key *meta.Key, arg0 *alpha.Router) (*alpha.RoutersPreviewResponse, error) {
+	if m.PreviewHook != nil {
+		return m.PreviewHook(ctx, key, arg0, m)
+	}
+	return nil, fmt.Errorf("PreviewHook must be set")
+}
+
+// TestIamPermissions is a mock for the corresponding method.
+func (m *MockAlphaRouters) TestIamPermissions(ctx context.Context, key *meta.Key, arg0 *alpha.TestPermissionsRequest) (*alpha.TestPermissionsResponse, error) {
+	if m.TestIamPermissionsHook != nil {
+		return m.TestIamPermissionsHook(ctx, key, arg0, m)
+	}
+	return nil, fmt.Errorf("TestIamPermissionsHook must be set")
+}
+
+// GCEAlphaRouters is a simplifying adapter for the GCE Routers.
+type GCEAlphaRouters struct {
+	s *Service
+}
+
+// Get the Router named by key.
+func (g *GCEAlphaRouters) Get(ctx context.Context, key *meta.Key) (*alpha.Router, error) {
+	klog.V(5).Infof("GCEAlphaRouters.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRouters.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("alpha"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCEAlphaRouters.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRouters.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.Routers.Get(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaRouters.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all Router objects.
+func (g *GCEAlphaRouters) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.Router, error) {
+	klog.V(5).Infof("GCEAlphaRouters.List(%v, %v, %v) called", ctx, region, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("alpha"),
+		Service:   "Routers",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEAlphaRouters.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	call := g.s.Alpha.Routers.List(projectID, region)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*alpha.Router
+	f := func(l *alpha.RouterList) error {
+		klog.V(5).Infof("GCEAlphaRouters.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAlphaRouters.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCEAlphaRouters.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaRouters.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert Router with key of value obj.
+func (g *GCEAlphaRouters) Insert(ctx context.Context, key *meta.Key, obj *alpha.Router) error {
+	klog.V(5).Infof("GCEAlphaRouters.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRouters.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("alpha"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCEAlphaRouters.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRouters.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Alpha.Routers.Insert(projectID, key.Region, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaRouters.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaRouters.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the Router referenced by key.
+func (g *GCEAlphaRouters) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaRouters.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRouters.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("alpha"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCEAlphaRouters.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRouters.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.Routers.Delete(projectID, key.Region, key.Name)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaRouters.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaRouters.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// AggregatedList lists all resources of the given type across all locations.
+func (g *GCEAlphaRouters) AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*alpha.Router, error) {
+	klog.V(5).Infof("GCEAlphaRouters.AggregatedList(%v, %v) called", ctx, fl)
+
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "AggregatedList",
+		Version:   meta.Version("alpha"),
+		Service:   "Routers",
+	}
+
+	klog.V(5).Infof("GCEAlphaRouters.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(5).Infof("GCEAlphaRouters.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
+		return nil, err
+	}
+
+	call := g.s.Alpha.Routers.AggregatedList(projectID)
+	call.Context(ctx)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+
+	all := map[string][]*alpha.Router{}
+	f := func(l *alpha.RouterAggregatedList) error {
+		for k, v := range l.Items {
+			klog.V(5).Infof("GCEAlphaRouters.AggregatedList(%v, %v): page[%v]%+v", ctx, fl, k, v)
+			all[k] = append(all[k], v.Routers...)
+		}
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAlphaRouters.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCEAlphaRouters.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaRouters.AggregatedList(%v, %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+	return all, nil
+}
+
+// GetRouterStatus is a method on GCEAlphaRouters.
+func (g *GCEAlphaRouters) GetRouterStatus(ctx context.Context, key *meta.Key) (*alpha.RouterStatusResponse, error) {
+	klog.V(5).Infof("GCEAlphaRouters.GetRouterStatus(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRouters.GetRouterStatus(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "GetRouterStatus",
+		Version:   meta.Version("alpha"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCEAlphaRouters.GetRouterStatus(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRouters.GetRouterStatus(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.Routers.GetRouterStatus(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaRouters.GetRouterStatus(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// Patch is a method on GCEAlphaRouters.
+func (g *GCEAlphaRouters) Patch(ctx context.Context, key *meta.Key, arg0 *alpha.Router) error {
+	klog.V(5).Infof("GCEAlphaRouters.Patch(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRouters.Patch(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("alpha"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCEAlphaRouters.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRouters.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.Routers.Patch(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaRouters.Patch(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaRouters.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// Preview is a method on GCEAlphaRouters.
+func (g *GCEAlphaRouters) Preview(ctx context.Context, key *meta.Key, arg0 *alpha.Router) (*alpha.RoutersPreviewResponse, error) {
+	klog.V(5).Infof("GCEAlphaRouters.Preview(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRouters.Preview(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Preview",
+		Version:   meta.Version("alpha"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCEAlphaRouters.Preview(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRouters.Preview(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.Routers.Preview(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaRouters.Preview(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// TestIamPermissions is a method on GCEAlphaRouters.
+func (g *GCEAlphaRouters) TestIamPermissions(ctx context.Context, key *meta.Key, arg0 *alpha.TestPermissionsRequest) (*alpha.TestPermissionsResponse, error) {
+	klog.V(5).Infof("GCEAlphaRouters.TestIamPermissions(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRouters.TestIamPermissions(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "TestIamPermissions",
+		Version:   meta.Version("alpha"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCEAlphaRouters.TestIamPermissions(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRouters.TestIamPermissions(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.Routers.TestIamPermissions(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaRouters.TestIamPermissions(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// BetaRouters is an interface that allows for mocking of Routers.
+type BetaRouters interface {
+	Get(ctx context.Context, key *meta.Key) (*beta.Router, error)
+	List(ctx context.Context, region string, fl *filter.F) ([]*beta.Router, error)
+	Insert(ctx context.Context, key *meta.Key, obj *beta.Router) error
+	Delete(ctx context.Context, key *meta.Key) error
+	AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*beta.Router, error)
+	GetRouterStatus(context.Context, *meta.Key) (*beta.RouterStatusResponse, error)
+	Patch(context.Context, *meta.Key, *beta.Router) error
+	Preview(context.Context, *meta.Key, *beta.Router) (*beta.RoutersPreviewResponse, error)
+	TestIamPermissions(context.Context, *meta.Key, *beta.TestPermissionsRequest) (*beta.TestPermissionsResponse, error)
+}
+
+// NewMockBetaRouters returns a new mock for Routers.
+func NewMockBetaRouters(pr ProjectRouter, objs map[meta.Key]*MockRoutersObj) *MockBetaRouters {
+	mock := &MockBetaRouters{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockBetaRouters is the mock for Routers.
+type MockBetaRouters struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockRoutersObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError            map[meta.Key]error
+	ListError           *error
+	InsertError         map[meta.Key]error
+	DeleteError         map[meta.Key]error
+	AggregatedListError *error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook                func(ctx context.Context, key *meta.Key, m *MockBetaRouters) (bool, *beta.Router, error)
+	ListHook               func(ctx context.Context, region string, fl *filter.F, m *MockBetaRouters) (bool, []*beta.Router, error)
+	InsertHook             func(ctx context.Context, key *meta.Key, obj *beta.Router, m *MockBetaRouters) (bool, error)
+	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockBetaRouters) (bool, error)
+	AggregatedListHook     func(ctx context.Context, fl *filter.F, m *MockBetaRouters) (bool, map[string][]*beta.Router, error)
+	GetRouterStatusHook    func(context.Context, *meta.Key, *MockBetaRouters) (*beta.RouterStatusResponse, error)
+	PatchHook              func(context.Context, *meta.Key, *beta.Router, *MockBetaRouters) error
+	PreviewHook            func(context.Context, *meta.Key, *beta.Router, *MockBetaRouters) (*beta.RoutersPreviewResponse, error)
+	TestIamPermissionsHook func(context.Context, *meta.Key, *beta.TestPermissionsRequest, *MockBetaRouters) (*beta.TestPermissionsResponse, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockBetaRouters) Get(ctx context.Context, key *meta.Key) (*beta.Router, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockBetaRouters.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockBetaRouters.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToBeta()
+		klog.V(5).Infof("MockBetaRouters.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockBetaRouters %v not found", key),
+	}
+	klog.V(5).Infof("MockBetaRouters.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock in the given region.
+func (m *MockBetaRouters) List(ctx context.Context, region string, fl *filter.F) ([]*beta.Router, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, region, fl, m); intercept {
+			klog.V(5).Infof("MockBetaRouters.List(%v, %q, %v) = [%v items], %v", ctx, region, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockBetaRouters.List(%v, %q, %v) = nil, %v", ctx, region, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*beta.Router
+	for key, obj := range m.Objects {
+		if key.Region != region {
+			continue
+		}
+		if !fl.Match(obj.ToBeta()) {
+			continue
+		}
+		objs = append(objs, obj.ToBeta())
+	}
+
+	klog.V(5).Infof("MockBetaRouters.List(%v, %q, %v) = [%v items], nil", ctx, region, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockBetaRouters) Insert(ctx context.Context, key *meta.Key, obj *beta.Router) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockBetaRouters.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockBetaRouters.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockBetaRouters %v exists", key),
+		}
+		klog.V(5).Infof("MockBetaRouters.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "routers")
+	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "routers", key)
+
+	m.Objects[*key] = &MockRoutersObj{obj}
+	klog.V(5).Infof("MockBetaRouters.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockBetaRouters) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockBetaRouters.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockBetaRouters.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockBetaRouters %v not found", key),
+		}
+		klog.V(5).Infof("MockBetaRouters.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockBetaRouters.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// AggregatedList is a mock for AggregatedList.
+func (m *MockBetaRouters) AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*beta.Router, error) {
+	if m.AggregatedListHook != nil {
+		if intercept, objs, err := m.AggregatedListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockBetaRouters.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.AggregatedListError != nil {
+		err := *m.AggregatedListError
+		klog.V(5).Infof("MockBetaRouters.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
+		return nil, err
+	}
+
+	objs := map[string][]*beta.Router{}
+	for _, obj := range m.Objects {
+		res, err := ParseResourceURL(obj.ToBeta().SelfLink)
+		if err != nil {
+			klog.V(5).Infof("MockBetaRouters.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
+			return nil, err
+		}
+		if !fl.Match(obj.ToBeta()) {
+			continue
+		}
+		location := aggregatedListKey(res.Key)
+		objs[location] = append(objs[location], obj.ToBeta())
+	}
+	klog.V(5).Infof("MockBetaRouters.AggregatedList(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockBetaRouters) Obj(o *beta.Router) *MockRoutersObj {
+	return &MockRoutersObj{o}
+}
+
+// GetRouterStatus is a mock for the corresponding method.
+func (m *MockBetaRouters) GetRouterStatus(ctx context.Context, key *meta.Key) (*beta.RouterStatusResponse, error) {
+	if m.GetRouterStatusHook != nil {
+		return m.GetRouterStatusHook(ctx, key, m)
+	}
+	return nil, fmt.Errorf("GetRouterStatusHook must be set")
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockBetaRouters) Patch(ctx context.Context, key *meta.Key, arg0 *beta.Router) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// Preview is a mock for the corresponding method.
+func (m *MockBetaRouters) Preview(ctx context.Context, key *meta.Key, arg0 *beta.Router) (*beta.RoutersPreviewResponse, error) {
+	if m.PreviewHook != nil {
+		return m.PreviewHook(ctx, key, arg0, m)
+	}
+	return nil, fmt.Errorf("PreviewHook must be set")
+}
+
+// TestIamPermissions is a mock for the corresponding method.
+func (m *MockBetaRouters) TestIamPermissions(ctx context.Context, key *meta.Key, arg0 *beta.TestPermissionsRequest) (*beta.TestPermissionsResponse, error) {
+	if m.TestIamPermissionsHook != nil {
+		return m.TestIamPermissionsHook(ctx, key, arg0, m)
+	}
+	return nil, fmt.Errorf("TestIamPermissionsHook must be set")
+}
+
+// GCEBetaRouters is a simplifying adapter for the GCE Routers.
+type GCEBetaRouters struct {
+	s *Service
+}
+
+// Get the Router named by key.
+func (g *GCEBetaRouters) Get(ctx context.Context, key *meta.Key) (*beta.Router, error) {
+	klog.V(5).Infof("GCEBetaRouters.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaRouters.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("beta"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCEBetaRouters.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaRouters.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.Routers.Get(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEBetaRouters.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all Router objects.
+func (g *GCEBetaRouters) List(ctx context.Context, region string, fl *filter.F) ([]*beta.Router, error) {
+	klog.V(5).Infof("GCEBetaRouters.List(%v, %v, %v) called", ctx, region, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("beta"),
+		Service:   "Routers",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEBetaRouters.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	call := g.s.Beta.Routers.List(projectID, region)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*beta.Router
+	f := func(l *beta.RouterList) error {
+		klog.V(5).Infof("GCEBetaRouters.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEBetaRouters.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCEBetaRouters.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEBetaRouters.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert Router with key of value obj.
+func (g *GCEBetaRouters) Insert(ctx context.Context, key *meta.Key, obj *beta.Router) error {
+	klog.V(5).Infof("GCEBetaRouters.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaRouters.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("beta"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCEBetaRouters.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaRouters.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Beta.Routers.Insert(projectID, key.Region, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaRouters.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaRouters.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the Router referenced by key.
+func (g *GCEBetaRouters) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEBetaRouters.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaRouters.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("beta"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCEBetaRouters.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaRouters.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.Routers.Delete(projectID, key.Region, key.Name)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaRouters.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaRouters.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// AggregatedList lists all resources of the given type across all locations.
+func (g *GCEBetaRouters) AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*beta.Router, error) {
+	klog.V(5).Infof("GCEBetaRouters.AggregatedList(%v, %v) called", ctx, fl)
+
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "AggregatedList",
+		Version:   meta.Version("beta"),
+		Service:   "Routers",
+	}
+
+	klog.V(5).Infof("GCEBetaRouters.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(5).Infof("GCEBetaRouters.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
+		return nil, err
+	}
+
+	call := g.s.Beta.Routers.AggregatedList(projectID)
+	call.Context(ctx)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+
+	all := map[string][]*beta.Router{}
+	f := func(l *beta.RouterAggregatedList) error {
+		for k, v := range l.Items {
+			klog.V(5).Infof("GCEBetaRouters.AggregatedList(%v, %v): page[%v]%+v", ctx, fl, k, v)
+			all[k] = append(all[k], v.Routers...)
+		}
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEBetaRouters.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCEBetaRouters.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEBetaRouters.AggregatedList(%v, %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+	return all, nil
+}
+
+// GetRouterStatus is a method on GCEBetaRouters.
+func (g *GCEBetaRouters) GetRouterStatus(ctx context.Context, key *meta.Key) (*beta.RouterStatusResponse, error) {
+	klog.V(5).Infof("GCEBetaRouters.GetRouterStatus(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaRouters.GetRouterStatus(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "GetRouterStatus",
+		Version:   meta.Version("beta"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCEBetaRouters.GetRouterStatus(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaRouters.GetRouterStatus(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.Routers.GetRouterStatus(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEBetaRouters.GetRouterStatus(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// Patch is a method on GCEBetaRouters.
+func (g *GCEBetaRouters) Patch(ctx context.Context, key *meta.Key, arg0 *beta.Router) error {
+	klog.V(5).Infof("GCEBetaRouters.Patch(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaRouters.Patch(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("beta"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCEBetaRouters.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaRouters.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.Routers.Patch(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaRouters.Patch(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaRouters.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// Preview is a method on GCEBetaRouters.
+func (g *GCEBetaRouters) Preview(ctx context.Context, key *meta.Key, arg0 *beta.Router) (*beta.RoutersPreviewResponse, error) {
+	klog.V(5).Infof("GCEBetaRouters.Preview(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaRouters.Preview(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Preview",
+		Version:   meta.Version("beta"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCEBetaRouters.Preview(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaRouters.Preview(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.Routers.Preview(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEBetaRouters.Preview(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// TestIamPermissions is a method on GCEBetaRouters.
+func (g *GCEBetaRouters) TestIamPermissions(ctx context.Context, key *meta.Key, arg0 *beta.TestPermissionsRequest) (*beta.TestPermissionsResponse, error) {
+	klog.V(5).Infof("GCEBetaRouters.TestIamPermissions(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaRouters.TestIamPermissions(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "TestIamPermissions",
+		Version:   meta.Version("beta"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCEBetaRouters.TestIamPermissions(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaRouters.TestIamPermissions(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.Routers.TestIamPermissions(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEBetaRouters.TestIamPermissions(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// Routers is an interface that allows for mocking of Routers.
+type Routers interface {
+	Get(ctx context.Context, key *meta.Key) (*ga.Router, error)
+	List(ctx context.Context, region string, fl *filter.F) ([]*ga.Router, error)
+	Insert(ctx context.Context, key *meta.Key, obj *ga.Router) error
+	Delete(ctx context.Context, key *meta.Key) error
+	AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*ga.Router, error)
+	GetRouterStatus(context.Context, *meta.Key) (*ga.RouterStatusResponse, error)
+	Patch(context.Context, *meta.Key, *ga.Router) error
+	Preview(context.Context, *meta.Key, *ga.Router) (*ga.RoutersPreviewResponse, error)
+}
+
+// NewMockRouters returns a new mock for Routers.
+func NewMockRouters(pr ProjectRouter, objs map[meta.Key]*MockRoutersObj) *MockRouters {
+	mock := &MockRouters{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockRouters is the mock for Routers.
+type MockRouters struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockRoutersObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError            map[meta.Key]error
+	ListError           *error
+	InsertError         map[meta.Key]error
+	DeleteError         map[meta.Key]error
+	AggregatedListError *error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook             func(ctx context.Context, key *meta.Key, m *MockRouters) (bool, *ga.Router, error)
+	ListHook            func(ctx context.Context, region string, fl *filter.F, m *MockRouters) (bool, []*ga.Router, error)
+	InsertHook          func(ctx context.Context, key *meta.Key, obj *ga.Router, m *MockRouters) (bool, error)
+	DeleteHook          func(ctx context.Context, key *meta.Key, m *MockRouters) (bool, error)
+	AggregatedListHook  func(ctx context.Context, fl *filter.F, m *MockRouters) (bool, map[string][]*ga.Router, error)
+	GetRouterStatusHook func(context.Context, *meta.Key, *MockRouters) (*ga.RouterStatusResponse, error)
+	PatchHook           func(context.Context, *meta.Key, *ga.Router, *MockRouters) error
+	PreviewHook         func(context.Context, *meta.Key, *ga.Router, *MockRouters) (*ga.RoutersPreviewResponse, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockRouters) Get(ctx context.Context, key *meta.Key) (*ga.Router, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockRouters.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockRouters.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToGA()
+		klog.V(5).Infof("MockRouters.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockRouters %v not found", key),
+	}
+	klog.V(5).Infof("MockRouters.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock in the given region.
+func (m *MockRouters) List(ctx context.Context, region string, fl *filter.F) ([]*ga.Router, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, region, fl, m); intercept {
+			klog.V(5).Infof("MockRouters.List(%v, %q, %v) = [%v items], %v", ctx, region, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockRouters.List(%v, %q, %v) = nil, %v", ctx, region, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*ga.Router
+	for key, obj := range m.Objects {
+		if key.Region != region {
+			continue
+		}
+		if !fl.Match(obj.ToGA()) {
+			continue
+		}
+		objs = append(objs, obj.ToGA())
+	}
+
+	klog.V(5).Infof("MockRouters.List(%v, %q, %v) = [%v items], nil", ctx, region, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockRouters) Insert(ctx context.Context, key *meta.Key, obj *ga.Router) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockRouters.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockRouters.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockRouters %v exists", key),
+		}
+		klog.V(5).Infof("MockRouters.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "routers")
+	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "routers", key)
+
+	m.Objects[*key] = &MockRoutersObj{obj}
+	klog.V(5).Infof("MockRouters.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockRouters) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockRouters.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockRouters.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockRouters %v not found", key),
+		}
+		klog.V(5).Infof("MockRouters.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockRouters.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// AggregatedList is a mock for AggregatedList.
+func (m *MockRouters) AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*ga.Router, error) {
+	if m.AggregatedListHook != nil {
+		if intercept, objs, err := m.AggregatedListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockRouters.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.AggregatedListError != nil {
+		err := *m.AggregatedListError
+		klog.V(5).Infof("MockRouters.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
+		return nil, err
+	}
+
+	objs := map[string][]*ga.Router{}
+	for _, obj := range m.Objects {
+		res, err := ParseResourceURL(obj.ToGA().SelfLink)
+		if err != nil {
+			klog.V(5).Infof("MockRouters.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
+			return nil, err
+		}
+		if !fl.Match(obj.ToGA()) {
+			continue
+		}
+		location := aggregatedListKey(res.Key)
+		objs[location] = append(objs[location], obj.ToGA())
+	}
+	klog.V(5).Infof("MockRouters.AggregatedList(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockRouters) Obj(o *ga.Router) *MockRoutersObj {
+	return &MockRoutersObj{o}
+}
+
+// GetRouterStatus is a mock for the corresponding method.
+func (m *MockRouters) GetRouterStatus(ctx context.Context, key *meta.Key) (*ga.RouterStatusResponse, error) {
+	if m.GetRouterStatusHook != nil {
+		return m.GetRouterStatusHook(ctx, key, m)
+	}
+	return nil, fmt.Errorf("GetRouterStatusHook must be set")
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockRouters) Patch(ctx context.Context, key *meta.Key, arg0 *ga.Router) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// Preview is a mock for the corresponding method.
+func (m *MockRouters) Preview(ctx context.Context, key *meta.Key, arg0 *ga.Router) (*ga.RoutersPreviewResponse, error) {
+	if m.PreviewHook != nil {
+		return m.PreviewHook(ctx, key, arg0, m)
+	}
+	return nil, fmt.Errorf("PreviewHook must be set")
+}
+
+// GCERouters is a simplifying adapter for the GCE Routers.
+type GCERouters struct {
+	s *Service
+}
+
+// Get the Router named by key.
+func (g *GCERouters) Get(ctx context.Context, key *meta.Key) (*ga.Router, error) {
+	klog.V(5).Infof("GCERouters.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCERouters.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("ga"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCERouters.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCERouters.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.GA.Routers.Get(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCERouters.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all Router objects.
+func (g *GCERouters) List(ctx context.Context, region string, fl *filter.F) ([]*ga.Router, error) {
+	klog.V(5).Infof("GCERouters.List(%v, %v, %v) called", ctx, region, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("ga"),
+		Service:   "Routers",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCERouters.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	call := g.s.GA.Routers.List(projectID, region)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*ga.Router
+	f := func(l *ga.RouterList) error {
+		klog.V(5).Infof("GCERouters.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCERouters.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCERouters.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCERouters.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert Router with key of value obj.
+func (g *GCERouters) Insert(ctx context.Context, key *meta.Key, obj *ga.Router) error {
+	klog.V(5).Infof("GCERouters.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCERouters.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("ga"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCERouters.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCERouters.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.GA.Routers.Insert(projectID, key.Region, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCERouters.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCERouters.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the Router referenced by key.
+func (g *GCERouters) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCERouters.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCERouters.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("ga"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCERouters.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCERouters.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.Routers.Delete(projectID, key.Region, key.Name)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCERouters.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCERouters.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// AggregatedList lists all resources of the given type across all locations.
+func (g *GCERouters) AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*ga.Router, error) {
+	klog.V(5).Infof("GCERouters.AggregatedList(%v, %v) called", ctx, fl)
+
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "AggregatedList",
+		Version:   meta.Version("ga"),
+		Service:   "Routers",
+	}
+
+	klog.V(5).Infof("GCERouters.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(5).Infof("GCERouters.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
+		return nil, err
+	}
+
+	call := g.s.GA.Routers.AggregatedList(projectID)
+	call.Context(ctx)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+
+	all := map[string][]*ga.Router{}
+	f := func(l *ga.RouterAggregatedList) error {
+		for k, v := range l.Items {
+			klog.V(5).Infof("GCERouters.AggregatedList(%v, %v): page[%v]%+v", ctx, fl, k, v)
+			all[k] = append(all[k], v.Routers...)
+		}
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCERouters.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCERouters.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCERouters.AggregatedList(%v, %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+	return all, nil
+}
+
+// GetRouterStatus is a method on GCERouters.
+func (g *GCERouters) GetRouterStatus(ctx context.Context, key *meta.Key) (*ga.RouterStatusResponse, error) {
+	klog.V(5).Infof("GCERouters.GetRouterStatus(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCERouters.GetRouterStatus(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "GetRouterStatus",
+		Version:   meta.Version("ga"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCERouters.GetRouterStatus(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCERouters.GetRouterStatus(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.GA.Routers.GetRouterStatus(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCERouters.GetRouterStatus(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// Patch is a method on GCERouters.
+func (g *GCERouters) Patch(ctx context.Context, key *meta.Key, arg0 *ga.Router) error {
+	klog.V(5).Infof("GCERouters.Patch(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCERouters.Patch(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("ga"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCERouters.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCERouters.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.Routers.Patch(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCERouters.Patch(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCERouters.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// Preview is a method on GCERouters.
+func (g *GCERouters) Preview(ctx context.Context, key *meta.Key, arg0 *ga.Router) (*ga.RoutersPreviewResponse, error) {
+	klog.V(5).Infof("GCERouters.Preview(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCERouters.Preview(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Preview",
+		Version:   meta.Version("ga"),
+		Service:   "Routers",
+	}
+	klog.V(5).Infof("GCERouters.Preview(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCERouters.Preview(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.GA.Routers.Preview(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCERouters.Preview(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
 // Routes is an interface that allows for mocking of Routes.
 type Routes interface {
 	Get(ctx context.Context, key *meta.Key) (*ga.Route, error)
@@ -33387,6 +35172,12 @@ func NewRegionUrlMapsResourceID(project, region, name string) *ResourceID {
 func NewRegionsResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
 	return &ResourceID{project, "regions", key}
+}
+
+// NewRoutersResourceID creates a ResourceID for the Routers resource.
+func NewRoutersResourceID(project, region, name string) *ResourceID {
+	key := meta.RegionalKey(name, region)
+	return &ResourceID{project, "routers", key}
 }
 
 // NewRoutesResourceID creates a ResourceID for the Routes resource.

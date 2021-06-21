@@ -2588,6 +2588,141 @@ func TestRegionsGroup(t *testing.T) {
 	// Delete not found.
 }
 
+func TestRoutersGroup(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pr := &SingleProjectRouter{"mock-project"}
+	mock := NewMockGCE(pr)
+
+	var key *meta.Key
+	keyAlpha := meta.RegionalKey("key-alpha", "location")
+	key = keyAlpha
+	keyBeta := meta.RegionalKey("key-beta", "location")
+	key = keyBeta
+	keyGA := meta.RegionalKey("key-ga", "location")
+	key = keyGA
+	// Ignore unused variables.
+	_, _, _ = ctx, mock, key
+
+	// Get not found.
+	if _, err := mock.AlphaRouters().Get(ctx, key); err == nil {
+		t.Errorf("AlphaRouters().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.BetaRouters().Get(ctx, key); err == nil {
+		t.Errorf("BetaRouters().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.Routers().Get(ctx, key); err == nil {
+		t.Errorf("Routers().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+
+	// Insert.
+	{
+		obj := &alpha.Router{}
+		if err := mock.AlphaRouters().Insert(ctx, keyAlpha, obj); err != nil {
+			t.Errorf("AlphaRouters().Insert(%v, %v, %v) = %v; want nil", ctx, keyAlpha, obj, err)
+		}
+	}
+	{
+		obj := &beta.Router{}
+		if err := mock.BetaRouters().Insert(ctx, keyBeta, obj); err != nil {
+			t.Errorf("BetaRouters().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
+		}
+	}
+	{
+		obj := &ga.Router{}
+		if err := mock.Routers().Insert(ctx, keyGA, obj); err != nil {
+			t.Errorf("Routers().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
+		}
+	}
+
+	// Get across versions.
+	if obj, err := mock.AlphaRouters().Get(ctx, key); err != nil {
+		t.Errorf("AlphaRouters().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+	if obj, err := mock.BetaRouters().Get(ctx, key); err != nil {
+		t.Errorf("BetaRouters().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+	if obj, err := mock.Routers().Get(ctx, key); err != nil {
+		t.Errorf("Routers().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+
+	// List.
+	mock.MockAlphaRouters.Objects[*keyAlpha] = mock.MockAlphaRouters.Obj(&alpha.Router{Name: keyAlpha.Name})
+	mock.MockBetaRouters.Objects[*keyBeta] = mock.MockBetaRouters.Obj(&beta.Router{Name: keyBeta.Name})
+	mock.MockRouters.Objects[*keyGA] = mock.MockRouters.Obj(&ga.Router{Name: keyGA.Name})
+	want := map[string]bool{
+		"key-alpha": true,
+		"key-beta":  true,
+		"key-ga":    true,
+	}
+	_ = want // ignore unused variables.
+	{
+		objs, err := mock.AlphaRouters().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("AlphaRouters().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("AlphaRouters().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.BetaRouters().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("BetaRouters().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("BetaRouters().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.Routers().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("Routers().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("Routers().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+
+	// Delete across versions.
+	if err := mock.AlphaRouters().Delete(ctx, keyAlpha); err != nil {
+		t.Errorf("AlphaRouters().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
+	}
+	if err := mock.BetaRouters().Delete(ctx, keyBeta); err != nil {
+		t.Errorf("BetaRouters().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
+	}
+	if err := mock.Routers().Delete(ctx, keyGA); err != nil {
+		t.Errorf("Routers().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
+	}
+
+	// Delete not found.
+	if err := mock.AlphaRouters().Delete(ctx, keyAlpha); err == nil {
+		t.Errorf("AlphaRouters().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+	if err := mock.BetaRouters().Delete(ctx, keyBeta); err == nil {
+		t.Errorf("BetaRouters().Delete(%v, %v) = nil; want error", ctx, keyBeta)
+	}
+	if err := mock.Routers().Delete(ctx, keyGA); err == nil {
+		t.Errorf("Routers().Delete(%v, %v) = nil; want error", ctx, keyGA)
+	}
+}
+
 func TestRoutesGroup(t *testing.T) {
 	t.Parallel()
 
@@ -3774,6 +3909,7 @@ func TestResourceIDConversion(t *testing.T) {
 		NewRegionTargetHttpsProxiesResourceID("some-project", "us-central1", "my-targetHttpsProxies-resource"),
 		NewRegionUrlMapsResourceID("some-project", "us-central1", "my-urlMaps-resource"),
 		NewRegionsResourceID("some-project", "my-regions-resource"),
+		NewRoutersResourceID("some-project", "us-central1", "my-routers-resource"),
 		NewRoutesResourceID("some-project", "my-routes-resource"),
 		NewSecurityPoliciesResourceID("some-project", "my-securityPolicies-resource"),
 		NewServiceAttachmentsResourceID("some-project", "us-central1", "my-serviceAttachments-resource"),

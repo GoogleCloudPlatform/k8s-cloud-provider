@@ -1168,6 +1168,141 @@ func TestHttpsHealthChecksGroup(t *testing.T) {
 	}
 }
 
+func TestImagesGroup(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pr := &SingleProjectRouter{"mock-project"}
+	mock := NewMockGCE(pr)
+
+	var key *meta.Key
+	keyAlpha := meta.GlobalKey("key-alpha")
+	key = keyAlpha
+	keyBeta := meta.GlobalKey("key-beta")
+	key = keyBeta
+	keyGA := meta.GlobalKey("key-ga")
+	key = keyGA
+	// Ignore unused variables.
+	_, _, _ = ctx, mock, key
+
+	// Get not found.
+	if _, err := mock.AlphaImages().Get(ctx, key); err == nil {
+		t.Errorf("AlphaImages().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.BetaImages().Get(ctx, key); err == nil {
+		t.Errorf("BetaImages().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.Images().Get(ctx, key); err == nil {
+		t.Errorf("Images().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+
+	// Insert.
+	{
+		obj := &alpha.Image{}
+		if err := mock.AlphaImages().Insert(ctx, keyAlpha, obj); err != nil {
+			t.Errorf("AlphaImages().Insert(%v, %v, %v) = %v; want nil", ctx, keyAlpha, obj, err)
+		}
+	}
+	{
+		obj := &beta.Image{}
+		if err := mock.BetaImages().Insert(ctx, keyBeta, obj); err != nil {
+			t.Errorf("BetaImages().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
+		}
+	}
+	{
+		obj := &ga.Image{}
+		if err := mock.Images().Insert(ctx, keyGA, obj); err != nil {
+			t.Errorf("Images().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
+		}
+	}
+
+	// Get across versions.
+	if obj, err := mock.AlphaImages().Get(ctx, key); err != nil {
+		t.Errorf("AlphaImages().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+	if obj, err := mock.BetaImages().Get(ctx, key); err != nil {
+		t.Errorf("BetaImages().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+	if obj, err := mock.Images().Get(ctx, key); err != nil {
+		t.Errorf("Images().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+
+	// List.
+	mock.MockAlphaImages.Objects[*keyAlpha] = mock.MockAlphaImages.Obj(&alpha.Image{Name: keyAlpha.Name})
+	mock.MockBetaImages.Objects[*keyBeta] = mock.MockBetaImages.Obj(&beta.Image{Name: keyBeta.Name})
+	mock.MockImages.Objects[*keyGA] = mock.MockImages.Obj(&ga.Image{Name: keyGA.Name})
+	want := map[string]bool{
+		"key-alpha": true,
+		"key-beta":  true,
+		"key-ga":    true,
+	}
+	_ = want // ignore unused variables.
+	{
+		objs, err := mock.AlphaImages().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("AlphaImages().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("AlphaImages().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.BetaImages().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("BetaImages().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("BetaImages().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.Images().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("Images().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("Images().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+
+	// Delete across versions.
+	if err := mock.AlphaImages().Delete(ctx, keyAlpha); err != nil {
+		t.Errorf("AlphaImages().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
+	}
+	if err := mock.BetaImages().Delete(ctx, keyBeta); err != nil {
+		t.Errorf("BetaImages().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
+	}
+	if err := mock.Images().Delete(ctx, keyGA); err != nil {
+		t.Errorf("Images().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
+	}
+
+	// Delete not found.
+	if err := mock.AlphaImages().Delete(ctx, keyAlpha); err == nil {
+		t.Errorf("AlphaImages().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+	if err := mock.BetaImages().Delete(ctx, keyBeta); err == nil {
+		t.Errorf("BetaImages().Delete(%v, %v) = nil; want error", ctx, keyBeta)
+	}
+	if err := mock.Images().Delete(ctx, keyGA); err == nil {
+		t.Errorf("Images().Delete(%v, %v) = nil; want error", ctx, keyGA)
+	}
+}
+
 func TestInstanceGroupsGroup(t *testing.T) {
 	t.Parallel()
 
@@ -3896,6 +4031,7 @@ func TestResourceIDConversion(t *testing.T) {
 		NewHealthChecksResourceID("some-project", "my-healthChecks-resource"),
 		NewHttpHealthChecksResourceID("some-project", "my-httpHealthChecks-resource"),
 		NewHttpsHealthChecksResourceID("some-project", "my-httpsHealthChecks-resource"),
+		NewImagesResourceID("some-project", "my-Images-resource"),
 		NewInstanceGroupsResourceID("some-project", "us-east1-b", "my-instanceGroups-resource"),
 		NewInstancesResourceID("some-project", "us-east1-b", "my-instances-resource"),
 		NewNetworkEndpointGroupsResourceID("some-project", "us-east1-b", "my-networkEndpointGroups-resource"),

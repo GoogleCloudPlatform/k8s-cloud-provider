@@ -73,6 +73,9 @@ type Cloud interface {
 	Instances() Instances
 	BetaInstances() BetaInstances
 	AlphaInstances() AlphaInstances
+	Images() Images
+	BetaImages() BetaImages
+	AlphaImages() AlphaImages
 	AlphaNetworks() AlphaNetworks
 	BetaNetworks() BetaNetworks
 	Networks() Networks
@@ -160,6 +163,9 @@ func NewGCE(s *Service) *GCE {
 		gceInstances:                     &GCEInstances{s},
 		gceBetaInstances:                 &GCEBetaInstances{s},
 		gceAlphaInstances:                &GCEAlphaInstances{s},
+		gceImages:                        &GCEImages{s},
+		gceBetaImages:                    &GCEBetaImages{s},
+		gceAlphaImages:                   &GCEAlphaImages{s},
 		gceAlphaNetworks:                 &GCEAlphaNetworks{s},
 		gceBetaNetworks:                  &GCEBetaNetworks{s},
 		gceNetworks:                      &GCENetworks{s},
@@ -251,6 +257,9 @@ type GCE struct {
 	gceInstances                     *GCEInstances
 	gceBetaInstances                 *GCEBetaInstances
 	gceAlphaInstances                *GCEAlphaInstances
+	gceImages                        *GCEImages
+	gceBetaImages                    *GCEBetaImages
+	gceAlphaImages                   *GCEAlphaImages
 	gceAlphaNetworks                 *GCEAlphaNetworks
 	gceBetaNetworks                  *GCEBetaNetworks
 	gceNetworks                      *GCENetworks
@@ -473,6 +482,21 @@ func (gce *GCE) BetaInstances() BetaInstances {
 // AlphaInstances returns the interface for the alpha Instances.
 func (gce *GCE) AlphaInstances() AlphaInstances {
 	return gce.gceAlphaInstances
+}
+
+// Images returns the interface for the ga Images.
+func (gce *GCE) Images() Images {
+	return gce.gceImages
+}
+
+// BetaImages returns the interface for the beta Images.
+func (gce *GCE) BetaImages() BetaImages {
+	return gce.gceBetaImages
+}
+
+// AlphaImages returns the interface for the alpha Images.
+func (gce *GCE) AlphaImages() AlphaImages {
+	return gce.gceAlphaImages
 }
 
 // AlphaNetworks returns the interface for the alpha Networks.
@@ -722,6 +746,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 	mockHealthChecksObjs := map[meta.Key]*MockHealthChecksObj{}
 	mockHttpHealthChecksObjs := map[meta.Key]*MockHttpHealthChecksObj{}
 	mockHttpsHealthChecksObjs := map[meta.Key]*MockHttpsHealthChecksObj{}
+	mockImagesObjs := map[meta.Key]*MockImagesObj{}
 	mockInstanceGroupsObjs := map[meta.Key]*MockInstanceGroupsObj{}
 	mockInstancesObjs := map[meta.Key]*MockInstancesObj{}
 	mockNetworkEndpointGroupsObjs := map[meta.Key]*MockNetworkEndpointGroupsObj{}
@@ -785,6 +810,9 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockInstances:                     NewMockInstances(projectRouter, mockInstancesObjs),
 		MockBetaInstances:                 NewMockBetaInstances(projectRouter, mockInstancesObjs),
 		MockAlphaInstances:                NewMockAlphaInstances(projectRouter, mockInstancesObjs),
+		MockImages:                        NewMockImages(projectRouter, mockImagesObjs),
+		MockBetaImages:                    NewMockBetaImages(projectRouter, mockImagesObjs),
+		MockAlphaImages:                   NewMockAlphaImages(projectRouter, mockImagesObjs),
 		MockAlphaNetworks:                 NewMockAlphaNetworks(projectRouter, mockNetworksObjs),
 		MockBetaNetworks:                  NewMockBetaNetworks(projectRouter, mockNetworksObjs),
 		MockNetworks:                      NewMockNetworks(projectRouter, mockNetworksObjs),
@@ -876,6 +904,9 @@ type MockGCE struct {
 	MockInstances                     *MockInstances
 	MockBetaInstances                 *MockBetaInstances
 	MockAlphaInstances                *MockAlphaInstances
+	MockImages                        *MockImages
+	MockBetaImages                    *MockBetaImages
+	MockAlphaImages                   *MockAlphaImages
 	MockAlphaNetworks                 *MockAlphaNetworks
 	MockBetaNetworks                  *MockBetaNetworks
 	MockNetworks                      *MockNetworks
@@ -1098,6 +1129,21 @@ func (mock *MockGCE) BetaInstances() BetaInstances {
 // AlphaInstances returns the interface for the alpha Instances.
 func (mock *MockGCE) AlphaInstances() AlphaInstances {
 	return mock.MockAlphaInstances
+}
+
+// Images returns the interface for the ga Images.
+func (mock *MockGCE) Images() Images {
+	return mock.MockImages
+}
+
+// BetaImages returns the interface for the beta Images.
+func (mock *MockGCE) BetaImages() BetaImages {
+	return mock.MockBetaImages
+}
+
+// AlphaImages returns the interface for the alpha Images.
+func (mock *MockGCE) AlphaImages() AlphaImages {
+	return mock.MockAlphaImages
 }
 
 // AlphaNetworks returns the interface for the alpha Networks.
@@ -1713,6 +1759,52 @@ func (m *MockHttpsHealthChecksObj) ToGA() *ga.HttpsHealthCheck {
 	ret := &ga.HttpsHealthCheck{}
 	if err := copyViaJSON(ret, m.Obj); err != nil {
 		klog.Errorf("Could not convert %T to *ga.HttpsHealthCheck via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// MockImagesObj is used to store the various object versions in the shared
+// map of mocked objects. This allows for multiple API versions to co-exist and
+// share the same "view" of the objects in the backend.
+type MockImagesObj struct {
+	Obj interface{}
+}
+
+// ToAlpha retrieves the given version of the object.
+func (m *MockImagesObj) ToAlpha() *alpha.Image {
+	if ret, ok := m.Obj.(*alpha.Image); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &alpha.Image{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *alpha.Image via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// ToBeta retrieves the given version of the object.
+func (m *MockImagesObj) ToBeta() *beta.Image {
+	if ret, ok := m.Obj.(*beta.Image); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &beta.Image{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *beta.Image via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// ToGA retrieves the given version of the object.
+func (m *MockImagesObj) ToGA() *ga.Image {
+	if ret, ok := m.Obj.(*ga.Image); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &ga.Image{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *ga.Image via JSON: %v", m.Obj, err)
 	}
 	return ret
 }
@@ -16749,6 +16841,1716 @@ func (g *GCEAlphaInstances) UpdateNetworkInterface(ctx context.Context, key *met
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCEAlphaInstances.UpdateNetworkInterface(%v, %v, ...) = %+v", ctx, key, err)
 	return err
+}
+
+// Images is an interface that allows for mocking of Images.
+type Images interface {
+	Get(ctx context.Context, key *meta.Key) (*ga.Image, error)
+	List(ctx context.Context, fl *filter.F) ([]*ga.Image, error)
+	Insert(ctx context.Context, key *meta.Key, obj *ga.Image) error
+	Delete(ctx context.Context, key *meta.Key) error
+	GetFromFamily(context.Context, *meta.Key) (*ga.Image, error)
+	GetIamPolicy(context.Context, *meta.Key) (*ga.Policy, error)
+	Patch(context.Context, *meta.Key, *ga.Image) error
+	SetIamPolicy(context.Context, *meta.Key, *ga.GlobalSetPolicyRequest) (*ga.Policy, error)
+	SetLabels(context.Context, *meta.Key, *ga.GlobalSetLabelsRequest) error
+	TestIamPermissions(context.Context, *meta.Key, *ga.TestPermissionsRequest) (*ga.TestPermissionsResponse, error)
+}
+
+// NewMockImages returns a new mock for Images.
+func NewMockImages(pr ProjectRouter, objs map[meta.Key]*MockImagesObj) *MockImages {
+	mock := &MockImages{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockImages is the mock for Images.
+type MockImages struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockImagesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook                func(ctx context.Context, key *meta.Key, m *MockImages) (bool, *ga.Image, error)
+	ListHook               func(ctx context.Context, fl *filter.F, m *MockImages) (bool, []*ga.Image, error)
+	InsertHook             func(ctx context.Context, key *meta.Key, obj *ga.Image, m *MockImages) (bool, error)
+	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockImages) (bool, error)
+	GetFromFamilyHook      func(context.Context, *meta.Key, *MockImages) (*ga.Image, error)
+	GetIamPolicyHook       func(context.Context, *meta.Key, *MockImages) (*ga.Policy, error)
+	PatchHook              func(context.Context, *meta.Key, *ga.Image, *MockImages) error
+	SetIamPolicyHook       func(context.Context, *meta.Key, *ga.GlobalSetPolicyRequest, *MockImages) (*ga.Policy, error)
+	SetLabelsHook          func(context.Context, *meta.Key, *ga.GlobalSetLabelsRequest, *MockImages) error
+	TestIamPermissionsHook func(context.Context, *meta.Key, *ga.TestPermissionsRequest, *MockImages) (*ga.TestPermissionsResponse, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockImages) Get(ctx context.Context, key *meta.Key) (*ga.Image, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockImages.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockImages.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToGA()
+		klog.V(5).Infof("MockImages.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockImages %v not found", key),
+	}
+	klog.V(5).Infof("MockImages.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockImages) List(ctx context.Context, fl *filter.F) ([]*ga.Image, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockImages.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockImages.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*ga.Image
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToGA()) {
+			continue
+		}
+		objs = append(objs, obj.ToGA())
+	}
+
+	klog.V(5).Infof("MockImages.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockImages) Insert(ctx context.Context, key *meta.Key, obj *ga.Image) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockImages.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockImages.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockImages %v exists", key),
+		}
+		klog.V(5).Infof("MockImages.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "Images")
+	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "Images", key)
+
+	m.Objects[*key] = &MockImagesObj{obj}
+	klog.V(5).Infof("MockImages.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockImages) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockImages.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockImages.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockImages %v not found", key),
+		}
+		klog.V(5).Infof("MockImages.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockImages.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockImages) Obj(o *ga.Image) *MockImagesObj {
+	return &MockImagesObj{o}
+}
+
+// GetFromFamily is a mock for the corresponding method.
+func (m *MockImages) GetFromFamily(ctx context.Context, key *meta.Key) (*ga.Image, error) {
+	if m.GetFromFamilyHook != nil {
+		return m.GetFromFamilyHook(ctx, key, m)
+	}
+	return nil, fmt.Errorf("GetFromFamilyHook must be set")
+}
+
+// GetIamPolicy is a mock for the corresponding method.
+func (m *MockImages) GetIamPolicy(ctx context.Context, key *meta.Key) (*ga.Policy, error) {
+	if m.GetIamPolicyHook != nil {
+		return m.GetIamPolicyHook(ctx, key, m)
+	}
+	return nil, fmt.Errorf("GetIamPolicyHook must be set")
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockImages) Patch(ctx context.Context, key *meta.Key, arg0 *ga.Image) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// SetIamPolicy is a mock for the corresponding method.
+func (m *MockImages) SetIamPolicy(ctx context.Context, key *meta.Key, arg0 *ga.GlobalSetPolicyRequest) (*ga.Policy, error) {
+	if m.SetIamPolicyHook != nil {
+		return m.SetIamPolicyHook(ctx, key, arg0, m)
+	}
+	return nil, fmt.Errorf("SetIamPolicyHook must be set")
+}
+
+// SetLabels is a mock for the corresponding method.
+func (m *MockImages) SetLabels(ctx context.Context, key *meta.Key, arg0 *ga.GlobalSetLabelsRequest) error {
+	if m.SetLabelsHook != nil {
+		return m.SetLabelsHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// TestIamPermissions is a mock for the corresponding method.
+func (m *MockImages) TestIamPermissions(ctx context.Context, key *meta.Key, arg0 *ga.TestPermissionsRequest) (*ga.TestPermissionsResponse, error) {
+	if m.TestIamPermissionsHook != nil {
+		return m.TestIamPermissionsHook(ctx, key, arg0, m)
+	}
+	return nil, fmt.Errorf("TestIamPermissionsHook must be set")
+}
+
+// GCEImages is a simplifying adapter for the GCE Images.
+type GCEImages struct {
+	s *Service
+}
+
+// Get the Image named by key.
+func (g *GCEImages) Get(ctx context.Context, key *meta.Key) (*ga.Image, error) {
+	klog.V(5).Infof("GCEImages.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEImages.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("ga"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEImages.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEImages.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.GA.Images.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEImages.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all Image objects.
+func (g *GCEImages) List(ctx context.Context, fl *filter.F) ([]*ga.Image, error) {
+	klog.V(5).Infof("GCEImages.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("ga"),
+		Service:   "Images",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEImages.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.GA.Images.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*ga.Image
+	f := func(l *ga.ImageList) error {
+		klog.V(5).Infof("GCEImages.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEImages.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCEImages.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEImages.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert Image with key of value obj.
+func (g *GCEImages) Insert(ctx context.Context, key *meta.Key, obj *ga.Image) error {
+	klog.V(5).Infof("GCEImages.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEImages.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("ga"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEImages.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEImages.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.GA.Images.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEImages.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEImages.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the Image referenced by key.
+func (g *GCEImages) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEImages.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEImages.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("ga"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEImages.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEImages.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.Images.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEImages.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEImages.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// GetFromFamily is a method on GCEImages.
+func (g *GCEImages) GetFromFamily(ctx context.Context, key *meta.Key) (*ga.Image, error) {
+	klog.V(5).Infof("GCEImages.GetFromFamily(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEImages.GetFromFamily(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "GetFromFamily",
+		Version:   meta.Version("ga"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEImages.GetFromFamily(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEImages.GetFromFamily(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.GA.Images.GetFromFamily(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEImages.GetFromFamily(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// GetIamPolicy is a method on GCEImages.
+func (g *GCEImages) GetIamPolicy(ctx context.Context, key *meta.Key) (*ga.Policy, error) {
+	klog.V(5).Infof("GCEImages.GetIamPolicy(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEImages.GetIamPolicy(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "GetIamPolicy",
+		Version:   meta.Version("ga"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEImages.GetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEImages.GetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.GA.Images.GetIamPolicy(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEImages.GetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// Patch is a method on GCEImages.
+func (g *GCEImages) Patch(ctx context.Context, key *meta.Key, arg0 *ga.Image) error {
+	klog.V(5).Infof("GCEImages.Patch(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEImages.Patch(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("ga"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEImages.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEImages.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.Images.Patch(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEImages.Patch(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEImages.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// SetIamPolicy is a method on GCEImages.
+func (g *GCEImages) SetIamPolicy(ctx context.Context, key *meta.Key, arg0 *ga.GlobalSetPolicyRequest) (*ga.Policy, error) {
+	klog.V(5).Infof("GCEImages.SetIamPolicy(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEImages.SetIamPolicy(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetIamPolicy",
+		Version:   meta.Version("ga"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEImages.SetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEImages.SetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.GA.Images.SetIamPolicy(projectID, key.Name, arg0)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEImages.SetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// SetLabels is a method on GCEImages.
+func (g *GCEImages) SetLabels(ctx context.Context, key *meta.Key, arg0 *ga.GlobalSetLabelsRequest) error {
+	klog.V(5).Infof("GCEImages.SetLabels(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEImages.SetLabels(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetLabels",
+		Version:   meta.Version("ga"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEImages.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEImages.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.Images.SetLabels(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEImages.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEImages.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// TestIamPermissions is a method on GCEImages.
+func (g *GCEImages) TestIamPermissions(ctx context.Context, key *meta.Key, arg0 *ga.TestPermissionsRequest) (*ga.TestPermissionsResponse, error) {
+	klog.V(5).Infof("GCEImages.TestIamPermissions(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEImages.TestIamPermissions(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "TestIamPermissions",
+		Version:   meta.Version("ga"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEImages.TestIamPermissions(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEImages.TestIamPermissions(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.GA.Images.TestIamPermissions(projectID, key.Name, arg0)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEImages.TestIamPermissions(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// BetaImages is an interface that allows for mocking of Images.
+type BetaImages interface {
+	Get(ctx context.Context, key *meta.Key) (*beta.Image, error)
+	List(ctx context.Context, fl *filter.F) ([]*beta.Image, error)
+	Insert(ctx context.Context, key *meta.Key, obj *beta.Image) error
+	Delete(ctx context.Context, key *meta.Key) error
+	GetFromFamily(context.Context, *meta.Key) (*beta.Image, error)
+	GetIamPolicy(context.Context, *meta.Key) (*beta.Policy, error)
+	Patch(context.Context, *meta.Key, *beta.Image) error
+	SetIamPolicy(context.Context, *meta.Key, *beta.GlobalSetPolicyRequest) (*beta.Policy, error)
+	SetLabels(context.Context, *meta.Key, *beta.GlobalSetLabelsRequest) error
+	TestIamPermissions(context.Context, *meta.Key, *beta.TestPermissionsRequest) (*beta.TestPermissionsResponse, error)
+}
+
+// NewMockBetaImages returns a new mock for Images.
+func NewMockBetaImages(pr ProjectRouter, objs map[meta.Key]*MockImagesObj) *MockBetaImages {
+	mock := &MockBetaImages{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockBetaImages is the mock for Images.
+type MockBetaImages struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockImagesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook                func(ctx context.Context, key *meta.Key, m *MockBetaImages) (bool, *beta.Image, error)
+	ListHook               func(ctx context.Context, fl *filter.F, m *MockBetaImages) (bool, []*beta.Image, error)
+	InsertHook             func(ctx context.Context, key *meta.Key, obj *beta.Image, m *MockBetaImages) (bool, error)
+	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockBetaImages) (bool, error)
+	GetFromFamilyHook      func(context.Context, *meta.Key, *MockBetaImages) (*beta.Image, error)
+	GetIamPolicyHook       func(context.Context, *meta.Key, *MockBetaImages) (*beta.Policy, error)
+	PatchHook              func(context.Context, *meta.Key, *beta.Image, *MockBetaImages) error
+	SetIamPolicyHook       func(context.Context, *meta.Key, *beta.GlobalSetPolicyRequest, *MockBetaImages) (*beta.Policy, error)
+	SetLabelsHook          func(context.Context, *meta.Key, *beta.GlobalSetLabelsRequest, *MockBetaImages) error
+	TestIamPermissionsHook func(context.Context, *meta.Key, *beta.TestPermissionsRequest, *MockBetaImages) (*beta.TestPermissionsResponse, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockBetaImages) Get(ctx context.Context, key *meta.Key) (*beta.Image, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockBetaImages.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockBetaImages.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToBeta()
+		klog.V(5).Infof("MockBetaImages.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockBetaImages %v not found", key),
+	}
+	klog.V(5).Infof("MockBetaImages.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockBetaImages) List(ctx context.Context, fl *filter.F) ([]*beta.Image, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockBetaImages.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockBetaImages.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*beta.Image
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToBeta()) {
+			continue
+		}
+		objs = append(objs, obj.ToBeta())
+	}
+
+	klog.V(5).Infof("MockBetaImages.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockBetaImages) Insert(ctx context.Context, key *meta.Key, obj *beta.Image) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockBetaImages.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockBetaImages.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockBetaImages %v exists", key),
+		}
+		klog.V(5).Infof("MockBetaImages.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "Images")
+	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "Images", key)
+
+	m.Objects[*key] = &MockImagesObj{obj}
+	klog.V(5).Infof("MockBetaImages.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockBetaImages) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockBetaImages.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockBetaImages.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockBetaImages %v not found", key),
+		}
+		klog.V(5).Infof("MockBetaImages.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockBetaImages.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockBetaImages) Obj(o *beta.Image) *MockImagesObj {
+	return &MockImagesObj{o}
+}
+
+// GetFromFamily is a mock for the corresponding method.
+func (m *MockBetaImages) GetFromFamily(ctx context.Context, key *meta.Key) (*beta.Image, error) {
+	if m.GetFromFamilyHook != nil {
+		return m.GetFromFamilyHook(ctx, key, m)
+	}
+	return nil, fmt.Errorf("GetFromFamilyHook must be set")
+}
+
+// GetIamPolicy is a mock for the corresponding method.
+func (m *MockBetaImages) GetIamPolicy(ctx context.Context, key *meta.Key) (*beta.Policy, error) {
+	if m.GetIamPolicyHook != nil {
+		return m.GetIamPolicyHook(ctx, key, m)
+	}
+	return nil, fmt.Errorf("GetIamPolicyHook must be set")
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockBetaImages) Patch(ctx context.Context, key *meta.Key, arg0 *beta.Image) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// SetIamPolicy is a mock for the corresponding method.
+func (m *MockBetaImages) SetIamPolicy(ctx context.Context, key *meta.Key, arg0 *beta.GlobalSetPolicyRequest) (*beta.Policy, error) {
+	if m.SetIamPolicyHook != nil {
+		return m.SetIamPolicyHook(ctx, key, arg0, m)
+	}
+	return nil, fmt.Errorf("SetIamPolicyHook must be set")
+}
+
+// SetLabels is a mock for the corresponding method.
+func (m *MockBetaImages) SetLabels(ctx context.Context, key *meta.Key, arg0 *beta.GlobalSetLabelsRequest) error {
+	if m.SetLabelsHook != nil {
+		return m.SetLabelsHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// TestIamPermissions is a mock for the corresponding method.
+func (m *MockBetaImages) TestIamPermissions(ctx context.Context, key *meta.Key, arg0 *beta.TestPermissionsRequest) (*beta.TestPermissionsResponse, error) {
+	if m.TestIamPermissionsHook != nil {
+		return m.TestIamPermissionsHook(ctx, key, arg0, m)
+	}
+	return nil, fmt.Errorf("TestIamPermissionsHook must be set")
+}
+
+// GCEBetaImages is a simplifying adapter for the GCE Images.
+type GCEBetaImages struct {
+	s *Service
+}
+
+// Get the Image named by key.
+func (g *GCEBetaImages) Get(ctx context.Context, key *meta.Key) (*beta.Image, error) {
+	klog.V(5).Infof("GCEBetaImages.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaImages.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("beta"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEBetaImages.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaImages.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.Images.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEBetaImages.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all Image objects.
+func (g *GCEBetaImages) List(ctx context.Context, fl *filter.F) ([]*beta.Image, error) {
+	klog.V(5).Infof("GCEBetaImages.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("beta"),
+		Service:   "Images",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEBetaImages.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Beta.Images.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*beta.Image
+	f := func(l *beta.ImageList) error {
+		klog.V(5).Infof("GCEBetaImages.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEBetaImages.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCEBetaImages.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEBetaImages.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert Image with key of value obj.
+func (g *GCEBetaImages) Insert(ctx context.Context, key *meta.Key, obj *beta.Image) error {
+	klog.V(5).Infof("GCEBetaImages.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaImages.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("beta"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEBetaImages.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaImages.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Beta.Images.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaImages.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaImages.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the Image referenced by key.
+func (g *GCEBetaImages) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEBetaImages.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaImages.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("beta"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEBetaImages.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaImages.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.Images.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaImages.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaImages.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// GetFromFamily is a method on GCEBetaImages.
+func (g *GCEBetaImages) GetFromFamily(ctx context.Context, key *meta.Key) (*beta.Image, error) {
+	klog.V(5).Infof("GCEBetaImages.GetFromFamily(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaImages.GetFromFamily(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "GetFromFamily",
+		Version:   meta.Version("beta"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEBetaImages.GetFromFamily(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaImages.GetFromFamily(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.Images.GetFromFamily(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEBetaImages.GetFromFamily(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// GetIamPolicy is a method on GCEBetaImages.
+func (g *GCEBetaImages) GetIamPolicy(ctx context.Context, key *meta.Key) (*beta.Policy, error) {
+	klog.V(5).Infof("GCEBetaImages.GetIamPolicy(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaImages.GetIamPolicy(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "GetIamPolicy",
+		Version:   meta.Version("beta"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEBetaImages.GetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaImages.GetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.Images.GetIamPolicy(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEBetaImages.GetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// Patch is a method on GCEBetaImages.
+func (g *GCEBetaImages) Patch(ctx context.Context, key *meta.Key, arg0 *beta.Image) error {
+	klog.V(5).Infof("GCEBetaImages.Patch(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaImages.Patch(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("beta"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEBetaImages.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaImages.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.Images.Patch(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaImages.Patch(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaImages.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// SetIamPolicy is a method on GCEBetaImages.
+func (g *GCEBetaImages) SetIamPolicy(ctx context.Context, key *meta.Key, arg0 *beta.GlobalSetPolicyRequest) (*beta.Policy, error) {
+	klog.V(5).Infof("GCEBetaImages.SetIamPolicy(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaImages.SetIamPolicy(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetIamPolicy",
+		Version:   meta.Version("beta"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEBetaImages.SetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaImages.SetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.Images.SetIamPolicy(projectID, key.Name, arg0)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEBetaImages.SetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// SetLabels is a method on GCEBetaImages.
+func (g *GCEBetaImages) SetLabels(ctx context.Context, key *meta.Key, arg0 *beta.GlobalSetLabelsRequest) error {
+	klog.V(5).Infof("GCEBetaImages.SetLabels(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaImages.SetLabels(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetLabels",
+		Version:   meta.Version("beta"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEBetaImages.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaImages.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.Images.SetLabels(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaImages.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaImages.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// TestIamPermissions is a method on GCEBetaImages.
+func (g *GCEBetaImages) TestIamPermissions(ctx context.Context, key *meta.Key, arg0 *beta.TestPermissionsRequest) (*beta.TestPermissionsResponse, error) {
+	klog.V(5).Infof("GCEBetaImages.TestIamPermissions(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaImages.TestIamPermissions(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "TestIamPermissions",
+		Version:   meta.Version("beta"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEBetaImages.TestIamPermissions(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaImages.TestIamPermissions(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.Images.TestIamPermissions(projectID, key.Name, arg0)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEBetaImages.TestIamPermissions(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// AlphaImages is an interface that allows for mocking of Images.
+type AlphaImages interface {
+	Get(ctx context.Context, key *meta.Key) (*alpha.Image, error)
+	List(ctx context.Context, fl *filter.F) ([]*alpha.Image, error)
+	Insert(ctx context.Context, key *meta.Key, obj *alpha.Image) error
+	Delete(ctx context.Context, key *meta.Key) error
+	GetFromFamily(context.Context, *meta.Key) (*alpha.Image, error)
+	GetIamPolicy(context.Context, *meta.Key) (*alpha.Policy, error)
+	Patch(context.Context, *meta.Key, *alpha.Image) error
+	SetIamPolicy(context.Context, *meta.Key, *alpha.GlobalSetPolicyRequest) (*alpha.Policy, error)
+	SetLabels(context.Context, *meta.Key, *alpha.GlobalSetLabelsRequest) error
+	TestIamPermissions(context.Context, *meta.Key, *alpha.TestPermissionsRequest) (*alpha.TestPermissionsResponse, error)
+}
+
+// NewMockAlphaImages returns a new mock for Images.
+func NewMockAlphaImages(pr ProjectRouter, objs map[meta.Key]*MockImagesObj) *MockAlphaImages {
+	mock := &MockAlphaImages{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockAlphaImages is the mock for Images.
+type MockAlphaImages struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockImagesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook                func(ctx context.Context, key *meta.Key, m *MockAlphaImages) (bool, *alpha.Image, error)
+	ListHook               func(ctx context.Context, fl *filter.F, m *MockAlphaImages) (bool, []*alpha.Image, error)
+	InsertHook             func(ctx context.Context, key *meta.Key, obj *alpha.Image, m *MockAlphaImages) (bool, error)
+	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockAlphaImages) (bool, error)
+	GetFromFamilyHook      func(context.Context, *meta.Key, *MockAlphaImages) (*alpha.Image, error)
+	GetIamPolicyHook       func(context.Context, *meta.Key, *MockAlphaImages) (*alpha.Policy, error)
+	PatchHook              func(context.Context, *meta.Key, *alpha.Image, *MockAlphaImages) error
+	SetIamPolicyHook       func(context.Context, *meta.Key, *alpha.GlobalSetPolicyRequest, *MockAlphaImages) (*alpha.Policy, error)
+	SetLabelsHook          func(context.Context, *meta.Key, *alpha.GlobalSetLabelsRequest, *MockAlphaImages) error
+	TestIamPermissionsHook func(context.Context, *meta.Key, *alpha.TestPermissionsRequest, *MockAlphaImages) (*alpha.TestPermissionsResponse, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockAlphaImages) Get(ctx context.Context, key *meta.Key) (*alpha.Image, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaImages.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockAlphaImages.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToAlpha()
+		klog.V(5).Infof("MockAlphaImages.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockAlphaImages %v not found", key),
+	}
+	klog.V(5).Infof("MockAlphaImages.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockAlphaImages) List(ctx context.Context, fl *filter.F) ([]*alpha.Image, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaImages.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockAlphaImages.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*alpha.Image
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		objs = append(objs, obj.ToAlpha())
+	}
+
+	klog.V(5).Infof("MockAlphaImages.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockAlphaImages) Insert(ctx context.Context, key *meta.Key, obj *alpha.Image) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockAlphaImages.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockAlphaImages.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockAlphaImages %v exists", key),
+		}
+		klog.V(5).Infof("MockAlphaImages.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "Images")
+	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "Images", key)
+
+	m.Objects[*key] = &MockImagesObj{obj}
+	klog.V(5).Infof("MockAlphaImages.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockAlphaImages) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaImages.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockAlphaImages.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockAlphaImages %v not found", key),
+		}
+		klog.V(5).Infof("MockAlphaImages.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockAlphaImages.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockAlphaImages) Obj(o *alpha.Image) *MockImagesObj {
+	return &MockImagesObj{o}
+}
+
+// GetFromFamily is a mock for the corresponding method.
+func (m *MockAlphaImages) GetFromFamily(ctx context.Context, key *meta.Key) (*alpha.Image, error) {
+	if m.GetFromFamilyHook != nil {
+		return m.GetFromFamilyHook(ctx, key, m)
+	}
+	return nil, fmt.Errorf("GetFromFamilyHook must be set")
+}
+
+// GetIamPolicy is a mock for the corresponding method.
+func (m *MockAlphaImages) GetIamPolicy(ctx context.Context, key *meta.Key) (*alpha.Policy, error) {
+	if m.GetIamPolicyHook != nil {
+		return m.GetIamPolicyHook(ctx, key, m)
+	}
+	return nil, fmt.Errorf("GetIamPolicyHook must be set")
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockAlphaImages) Patch(ctx context.Context, key *meta.Key, arg0 *alpha.Image) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// SetIamPolicy is a mock for the corresponding method.
+func (m *MockAlphaImages) SetIamPolicy(ctx context.Context, key *meta.Key, arg0 *alpha.GlobalSetPolicyRequest) (*alpha.Policy, error) {
+	if m.SetIamPolicyHook != nil {
+		return m.SetIamPolicyHook(ctx, key, arg0, m)
+	}
+	return nil, fmt.Errorf("SetIamPolicyHook must be set")
+}
+
+// SetLabels is a mock for the corresponding method.
+func (m *MockAlphaImages) SetLabels(ctx context.Context, key *meta.Key, arg0 *alpha.GlobalSetLabelsRequest) error {
+	if m.SetLabelsHook != nil {
+		return m.SetLabelsHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// TestIamPermissions is a mock for the corresponding method.
+func (m *MockAlphaImages) TestIamPermissions(ctx context.Context, key *meta.Key, arg0 *alpha.TestPermissionsRequest) (*alpha.TestPermissionsResponse, error) {
+	if m.TestIamPermissionsHook != nil {
+		return m.TestIamPermissionsHook(ctx, key, arg0, m)
+	}
+	return nil, fmt.Errorf("TestIamPermissionsHook must be set")
+}
+
+// GCEAlphaImages is a simplifying adapter for the GCE Images.
+type GCEAlphaImages struct {
+	s *Service
+}
+
+// Get the Image named by key.
+func (g *GCEAlphaImages) Get(ctx context.Context, key *meta.Key) (*alpha.Image, error) {
+	klog.V(5).Infof("GCEAlphaImages.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaImages.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("alpha"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEAlphaImages.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaImages.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.Images.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaImages.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all Image objects.
+func (g *GCEAlphaImages) List(ctx context.Context, fl *filter.F) ([]*alpha.Image, error) {
+	klog.V(5).Infof("GCEAlphaImages.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("alpha"),
+		Service:   "Images",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEAlphaImages.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Alpha.Images.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*alpha.Image
+	f := func(l *alpha.ImageList) error {
+		klog.V(5).Infof("GCEAlphaImages.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAlphaImages.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCEAlphaImages.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaImages.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert Image with key of value obj.
+func (g *GCEAlphaImages) Insert(ctx context.Context, key *meta.Key, obj *alpha.Image) error {
+	klog.V(5).Infof("GCEAlphaImages.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaImages.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("alpha"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEAlphaImages.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaImages.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Alpha.Images.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaImages.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaImages.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the Image referenced by key.
+func (g *GCEAlphaImages) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaImages.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaImages.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("alpha"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEAlphaImages.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaImages.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.Images.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaImages.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaImages.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// GetFromFamily is a method on GCEAlphaImages.
+func (g *GCEAlphaImages) GetFromFamily(ctx context.Context, key *meta.Key) (*alpha.Image, error) {
+	klog.V(5).Infof("GCEAlphaImages.GetFromFamily(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaImages.GetFromFamily(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "GetFromFamily",
+		Version:   meta.Version("alpha"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEAlphaImages.GetFromFamily(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaImages.GetFromFamily(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.Images.GetFromFamily(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaImages.GetFromFamily(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// GetIamPolicy is a method on GCEAlphaImages.
+func (g *GCEAlphaImages) GetIamPolicy(ctx context.Context, key *meta.Key) (*alpha.Policy, error) {
+	klog.V(5).Infof("GCEAlphaImages.GetIamPolicy(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaImages.GetIamPolicy(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "GetIamPolicy",
+		Version:   meta.Version("alpha"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEAlphaImages.GetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaImages.GetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.Images.GetIamPolicy(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaImages.GetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// Patch is a method on GCEAlphaImages.
+func (g *GCEAlphaImages) Patch(ctx context.Context, key *meta.Key, arg0 *alpha.Image) error {
+	klog.V(5).Infof("GCEAlphaImages.Patch(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaImages.Patch(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("alpha"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEAlphaImages.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaImages.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.Images.Patch(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaImages.Patch(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaImages.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// SetIamPolicy is a method on GCEAlphaImages.
+func (g *GCEAlphaImages) SetIamPolicy(ctx context.Context, key *meta.Key, arg0 *alpha.GlobalSetPolicyRequest) (*alpha.Policy, error) {
+	klog.V(5).Infof("GCEAlphaImages.SetIamPolicy(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaImages.SetIamPolicy(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetIamPolicy",
+		Version:   meta.Version("alpha"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEAlphaImages.SetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaImages.SetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.Images.SetIamPolicy(projectID, key.Name, arg0)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaImages.SetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// SetLabels is a method on GCEAlphaImages.
+func (g *GCEAlphaImages) SetLabels(ctx context.Context, key *meta.Key, arg0 *alpha.GlobalSetLabelsRequest) error {
+	klog.V(5).Infof("GCEAlphaImages.SetLabels(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaImages.SetLabels(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetLabels",
+		Version:   meta.Version("alpha"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEAlphaImages.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaImages.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.Images.SetLabels(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaImages.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaImages.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// TestIamPermissions is a method on GCEAlphaImages.
+func (g *GCEAlphaImages) TestIamPermissions(ctx context.Context, key *meta.Key, arg0 *alpha.TestPermissionsRequest) (*alpha.TestPermissionsResponse, error) {
+	klog.V(5).Infof("GCEAlphaImages.TestIamPermissions(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaImages.TestIamPermissions(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "TestIamPermissions",
+		Version:   meta.Version("alpha"),
+		Service:   "Images",
+	}
+	klog.V(5).Infof("GCEAlphaImages.TestIamPermissions(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaImages.TestIamPermissions(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.Images.TestIamPermissions(projectID, key.Name, arg0)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaImages.TestIamPermissions(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
 }
 
 // AlphaNetworks is an interface that allows for mocking of Networks.
@@ -35094,6 +36896,12 @@ func NewHttpHealthChecksResourceID(project, name string) *ResourceID {
 func NewHttpsHealthChecksResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
 	return &ResourceID{project, "httpsHealthChecks", key}
+}
+
+// NewImagesResourceID creates a ResourceID for the Images resource.
+func NewImagesResourceID(project, name string) *ResourceID {
+	key := meta.GlobalKey(name)
+	return &ResourceID{project, "Images", key}
 }
 
 // NewInstanceGroupsResourceID creates a ResourceID for the InstanceGroups resource.

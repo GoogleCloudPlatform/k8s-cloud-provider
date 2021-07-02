@@ -871,6 +871,17 @@ var AllServices = []*ServiceInfo{
 		},
 	},
 	{
+		Object:      "TargetTcpProxy",
+		Service:     "TargetTcpProxies",
+		Resource:    "targetTcpProxies",
+		version:     VersionGA,
+		keyType:     Global,
+		serviceType: reflect.TypeOf(&ga.TargetTcpProxiesService{}),
+		additionalMethods: []string{
+			"SetBackendService",
+		},
+	},
+	{
 		Object:      "UrlMap",
 		Service:     "UrlMaps",
 		Resource:    "urlMaps",

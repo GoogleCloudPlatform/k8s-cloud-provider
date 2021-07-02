@@ -42,6 +42,11 @@ func TestEqualResourceID(t *testing.T) {
 			a: &ResourceID{"some-gce-project", "projects", meta.GlobalKey("us-central1")},
 			b: &ResourceID{"some-gce-project", "projects", meta.GlobalKey("us-central1")},
 		},
+		{
+			a: nil,
+			b: nil,
+		},
+
 	} {
 		if !tc.a.Equal(tc.b) {
 			t.Errorf("%v.Equal(%v) = false, want true", tc.a, tc.b)
@@ -63,6 +68,10 @@ func TestEqualResourceID(t *testing.T) {
 		{
 			a: &ResourceID{"some-gce-project", "networks", meta.GlobalKey("us-central1")},
 			b: &ResourceID{"some-gce-project", "projects", meta.GlobalKey("us-central1")},
+		},
+		{
+			a: &ResourceID{"some-gce-project", "projects", meta.GlobalKey("us-central1")},
+			b: nil,
 		},
 	} {
 		if tc.a.Equal(tc.b) {

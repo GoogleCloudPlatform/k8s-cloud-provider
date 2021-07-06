@@ -4944,6 +4944,8 @@ type BackendServices interface {
 	Insert(ctx context.Context, key *meta.Key, obj *ga.BackendService) error
 	Delete(ctx context.Context, key *meta.Key) error
 	AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*ga.BackendService, error)
+	AddSignedUrlKey(context.Context, *meta.Key, *ga.SignedUrlKey) error
+	DeleteSignedUrlKey(context.Context, *meta.Key, string) error
 	GetHealth(context.Context, *meta.Key, *ga.ResourceGroupReference) (*ga.BackendServiceGroupHealth, error)
 	Patch(context.Context, *meta.Key, *ga.BackendService) error
 	SetSecurityPolicy(context.Context, *meta.Key, *ga.SecurityPolicyReference) error
@@ -4984,15 +4986,17 @@ type MockBackendServices struct {
 	// order to add your own logic. Return (true, _, _) to prevent the normal
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
-	GetHook               func(ctx context.Context, key *meta.Key, m *MockBackendServices) (bool, *ga.BackendService, error)
-	ListHook              func(ctx context.Context, fl *filter.F, m *MockBackendServices) (bool, []*ga.BackendService, error)
-	InsertHook            func(ctx context.Context, key *meta.Key, obj *ga.BackendService, m *MockBackendServices) (bool, error)
-	DeleteHook            func(ctx context.Context, key *meta.Key, m *MockBackendServices) (bool, error)
-	AggregatedListHook    func(ctx context.Context, fl *filter.F, m *MockBackendServices) (bool, map[string][]*ga.BackendService, error)
-	GetHealthHook         func(context.Context, *meta.Key, *ga.ResourceGroupReference, *MockBackendServices) (*ga.BackendServiceGroupHealth, error)
-	PatchHook             func(context.Context, *meta.Key, *ga.BackendService, *MockBackendServices) error
-	SetSecurityPolicyHook func(context.Context, *meta.Key, *ga.SecurityPolicyReference, *MockBackendServices) error
-	UpdateHook            func(context.Context, *meta.Key, *ga.BackendService, *MockBackendServices) error
+	GetHook                func(ctx context.Context, key *meta.Key, m *MockBackendServices) (bool, *ga.BackendService, error)
+	ListHook               func(ctx context.Context, fl *filter.F, m *MockBackendServices) (bool, []*ga.BackendService, error)
+	InsertHook             func(ctx context.Context, key *meta.Key, obj *ga.BackendService, m *MockBackendServices) (bool, error)
+	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockBackendServices) (bool, error)
+	AggregatedListHook     func(ctx context.Context, fl *filter.F, m *MockBackendServices) (bool, map[string][]*ga.BackendService, error)
+	AddSignedUrlKeyHook    func(context.Context, *meta.Key, *ga.SignedUrlKey, *MockBackendServices) error
+	DeleteSignedUrlKeyHook func(context.Context, *meta.Key, string, *MockBackendServices) error
+	GetHealthHook          func(context.Context, *meta.Key, *ga.ResourceGroupReference, *MockBackendServices) (*ga.BackendServiceGroupHealth, error)
+	PatchHook              func(context.Context, *meta.Key, *ga.BackendService, *MockBackendServices) error
+	SetSecurityPolicyHook  func(context.Context, *meta.Key, *ga.SecurityPolicyReference, *MockBackendServices) error
+	UpdateHook             func(context.Context, *meta.Key, *ga.BackendService, *MockBackendServices) error
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -5171,6 +5175,22 @@ func (m *MockBackendServices) AggregatedList(ctx context.Context, fl *filter.F) 
 // Obj wraps the object for use in the mock.
 func (m *MockBackendServices) Obj(o *ga.BackendService) *MockBackendServicesObj {
 	return &MockBackendServicesObj{o}
+}
+
+// AddSignedUrlKey is a mock for the corresponding method.
+func (m *MockBackendServices) AddSignedUrlKey(ctx context.Context, key *meta.Key, arg0 *ga.SignedUrlKey) error {
+	if m.AddSignedUrlKeyHook != nil {
+		return m.AddSignedUrlKeyHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// DeleteSignedUrlKey is a mock for the corresponding method.
+func (m *MockBackendServices) DeleteSignedUrlKey(ctx context.Context, key *meta.Key, arg0 string) error {
+	if m.DeleteSignedUrlKeyHook != nil {
+		return m.DeleteSignedUrlKeyHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // GetHealth is a mock for the corresponding method.
@@ -5395,6 +5415,72 @@ func (g *GCEBackendServices) AggregatedList(ctx context.Context, fl *filter.F) (
 	return all, nil
 }
 
+// AddSignedUrlKey is a method on GCEBackendServices.
+func (g *GCEBackendServices) AddSignedUrlKey(ctx context.Context, key *meta.Key, arg0 *ga.SignedUrlKey) error {
+	klog.V(5).Infof("GCEBackendServices.AddSignedUrlKey(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBackendServices.AddSignedUrlKey(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "BackendServices")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "AddSignedUrlKey",
+		Version:   meta.Version("ga"),
+		Service:   "BackendServices",
+	}
+	klog.V(5).Infof("GCEBackendServices.AddSignedUrlKey(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBackendServices.AddSignedUrlKey(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.BackendServices.AddSignedUrlKey(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBackendServices.AddSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBackendServices.AddSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// DeleteSignedUrlKey is a method on GCEBackendServices.
+func (g *GCEBackendServices) DeleteSignedUrlKey(ctx context.Context, key *meta.Key, arg0 string) error {
+	klog.V(5).Infof("GCEBackendServices.DeleteSignedUrlKey(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBackendServices.DeleteSignedUrlKey(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "BackendServices")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "DeleteSignedUrlKey",
+		Version:   meta.Version("ga"),
+		Service:   "BackendServices",
+	}
+	klog.V(5).Infof("GCEBackendServices.DeleteSignedUrlKey(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBackendServices.DeleteSignedUrlKey(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.BackendServices.DeleteSignedUrlKey(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBackendServices.DeleteSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBackendServices.DeleteSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // GetHealth is a method on GCEBackendServices.
 func (g *GCEBackendServices) GetHealth(ctx context.Context, key *meta.Key, arg0 *ga.ResourceGroupReference) (*ga.BackendServiceGroupHealth, error) {
 	klog.V(5).Infof("GCEBackendServices.GetHealth(%v, %v, ...): called", ctx, key)
@@ -5529,6 +5615,8 @@ type BetaBackendServices interface {
 	Insert(ctx context.Context, key *meta.Key, obj *beta.BackendService) error
 	Delete(ctx context.Context, key *meta.Key) error
 	AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*beta.BackendService, error)
+	AddSignedUrlKey(context.Context, *meta.Key, *beta.SignedUrlKey) error
+	DeleteSignedUrlKey(context.Context, *meta.Key, string) error
 	SetSecurityPolicy(context.Context, *meta.Key, *beta.SecurityPolicyReference) error
 	Update(context.Context, *meta.Key, *beta.BackendService) error
 }
@@ -5567,13 +5655,15 @@ type MockBetaBackendServices struct {
 	// order to add your own logic. Return (true, _, _) to prevent the normal
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
-	GetHook               func(ctx context.Context, key *meta.Key, m *MockBetaBackendServices) (bool, *beta.BackendService, error)
-	ListHook              func(ctx context.Context, fl *filter.F, m *MockBetaBackendServices) (bool, []*beta.BackendService, error)
-	InsertHook            func(ctx context.Context, key *meta.Key, obj *beta.BackendService, m *MockBetaBackendServices) (bool, error)
-	DeleteHook            func(ctx context.Context, key *meta.Key, m *MockBetaBackendServices) (bool, error)
-	AggregatedListHook    func(ctx context.Context, fl *filter.F, m *MockBetaBackendServices) (bool, map[string][]*beta.BackendService, error)
-	SetSecurityPolicyHook func(context.Context, *meta.Key, *beta.SecurityPolicyReference, *MockBetaBackendServices) error
-	UpdateHook            func(context.Context, *meta.Key, *beta.BackendService, *MockBetaBackendServices) error
+	GetHook                func(ctx context.Context, key *meta.Key, m *MockBetaBackendServices) (bool, *beta.BackendService, error)
+	ListHook               func(ctx context.Context, fl *filter.F, m *MockBetaBackendServices) (bool, []*beta.BackendService, error)
+	InsertHook             func(ctx context.Context, key *meta.Key, obj *beta.BackendService, m *MockBetaBackendServices) (bool, error)
+	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockBetaBackendServices) (bool, error)
+	AggregatedListHook     func(ctx context.Context, fl *filter.F, m *MockBetaBackendServices) (bool, map[string][]*beta.BackendService, error)
+	AddSignedUrlKeyHook    func(context.Context, *meta.Key, *beta.SignedUrlKey, *MockBetaBackendServices) error
+	DeleteSignedUrlKeyHook func(context.Context, *meta.Key, string, *MockBetaBackendServices) error
+	SetSecurityPolicyHook  func(context.Context, *meta.Key, *beta.SecurityPolicyReference, *MockBetaBackendServices) error
+	UpdateHook             func(context.Context, *meta.Key, *beta.BackendService, *MockBetaBackendServices) error
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -5752,6 +5842,22 @@ func (m *MockBetaBackendServices) AggregatedList(ctx context.Context, fl *filter
 // Obj wraps the object for use in the mock.
 func (m *MockBetaBackendServices) Obj(o *beta.BackendService) *MockBackendServicesObj {
 	return &MockBackendServicesObj{o}
+}
+
+// AddSignedUrlKey is a mock for the corresponding method.
+func (m *MockBetaBackendServices) AddSignedUrlKey(ctx context.Context, key *meta.Key, arg0 *beta.SignedUrlKey) error {
+	if m.AddSignedUrlKeyHook != nil {
+		return m.AddSignedUrlKeyHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// DeleteSignedUrlKey is a mock for the corresponding method.
+func (m *MockBetaBackendServices) DeleteSignedUrlKey(ctx context.Context, key *meta.Key, arg0 string) error {
+	if m.DeleteSignedUrlKeyHook != nil {
+		return m.DeleteSignedUrlKeyHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetSecurityPolicy is a mock for the corresponding method.
@@ -5960,6 +6066,72 @@ func (g *GCEBetaBackendServices) AggregatedList(ctx context.Context, fl *filter.
 	return all, nil
 }
 
+// AddSignedUrlKey is a method on GCEBetaBackendServices.
+func (g *GCEBetaBackendServices) AddSignedUrlKey(ctx context.Context, key *meta.Key, arg0 *beta.SignedUrlKey) error {
+	klog.V(5).Infof("GCEBetaBackendServices.AddSignedUrlKey(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaBackendServices.AddSignedUrlKey(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "BackendServices")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "AddSignedUrlKey",
+		Version:   meta.Version("beta"),
+		Service:   "BackendServices",
+	}
+	klog.V(5).Infof("GCEBetaBackendServices.AddSignedUrlKey(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaBackendServices.AddSignedUrlKey(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.BackendServices.AddSignedUrlKey(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaBackendServices.AddSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaBackendServices.AddSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// DeleteSignedUrlKey is a method on GCEBetaBackendServices.
+func (g *GCEBetaBackendServices) DeleteSignedUrlKey(ctx context.Context, key *meta.Key, arg0 string) error {
+	klog.V(5).Infof("GCEBetaBackendServices.DeleteSignedUrlKey(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaBackendServices.DeleteSignedUrlKey(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "BackendServices")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "DeleteSignedUrlKey",
+		Version:   meta.Version("beta"),
+		Service:   "BackendServices",
+	}
+	klog.V(5).Infof("GCEBetaBackendServices.DeleteSignedUrlKey(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaBackendServices.DeleteSignedUrlKey(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.BackendServices.DeleteSignedUrlKey(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaBackendServices.DeleteSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaBackendServices.DeleteSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // SetSecurityPolicy is a method on GCEBetaBackendServices.
 func (g *GCEBetaBackendServices) SetSecurityPolicy(ctx context.Context, key *meta.Key, arg0 *beta.SecurityPolicyReference) error {
 	klog.V(5).Infof("GCEBetaBackendServices.SetSecurityPolicy(%v, %v, ...): called", ctx, key)
@@ -6033,6 +6205,8 @@ type AlphaBackendServices interface {
 	Insert(ctx context.Context, key *meta.Key, obj *alpha.BackendService) error
 	Delete(ctx context.Context, key *meta.Key) error
 	AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*alpha.BackendService, error)
+	AddSignedUrlKey(context.Context, *meta.Key, *alpha.SignedUrlKey) error
+	DeleteSignedUrlKey(context.Context, *meta.Key, string) error
 	SetSecurityPolicy(context.Context, *meta.Key, *alpha.SecurityPolicyReference) error
 	Update(context.Context, *meta.Key, *alpha.BackendService) error
 }
@@ -6071,13 +6245,15 @@ type MockAlphaBackendServices struct {
 	// order to add your own logic. Return (true, _, _) to prevent the normal
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
-	GetHook               func(ctx context.Context, key *meta.Key, m *MockAlphaBackendServices) (bool, *alpha.BackendService, error)
-	ListHook              func(ctx context.Context, fl *filter.F, m *MockAlphaBackendServices) (bool, []*alpha.BackendService, error)
-	InsertHook            func(ctx context.Context, key *meta.Key, obj *alpha.BackendService, m *MockAlphaBackendServices) (bool, error)
-	DeleteHook            func(ctx context.Context, key *meta.Key, m *MockAlphaBackendServices) (bool, error)
-	AggregatedListHook    func(ctx context.Context, fl *filter.F, m *MockAlphaBackendServices) (bool, map[string][]*alpha.BackendService, error)
-	SetSecurityPolicyHook func(context.Context, *meta.Key, *alpha.SecurityPolicyReference, *MockAlphaBackendServices) error
-	UpdateHook            func(context.Context, *meta.Key, *alpha.BackendService, *MockAlphaBackendServices) error
+	GetHook                func(ctx context.Context, key *meta.Key, m *MockAlphaBackendServices) (bool, *alpha.BackendService, error)
+	ListHook               func(ctx context.Context, fl *filter.F, m *MockAlphaBackendServices) (bool, []*alpha.BackendService, error)
+	InsertHook             func(ctx context.Context, key *meta.Key, obj *alpha.BackendService, m *MockAlphaBackendServices) (bool, error)
+	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockAlphaBackendServices) (bool, error)
+	AggregatedListHook     func(ctx context.Context, fl *filter.F, m *MockAlphaBackendServices) (bool, map[string][]*alpha.BackendService, error)
+	AddSignedUrlKeyHook    func(context.Context, *meta.Key, *alpha.SignedUrlKey, *MockAlphaBackendServices) error
+	DeleteSignedUrlKeyHook func(context.Context, *meta.Key, string, *MockAlphaBackendServices) error
+	SetSecurityPolicyHook  func(context.Context, *meta.Key, *alpha.SecurityPolicyReference, *MockAlphaBackendServices) error
+	UpdateHook             func(context.Context, *meta.Key, *alpha.BackendService, *MockAlphaBackendServices) error
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -6256,6 +6432,22 @@ func (m *MockAlphaBackendServices) AggregatedList(ctx context.Context, fl *filte
 // Obj wraps the object for use in the mock.
 func (m *MockAlphaBackendServices) Obj(o *alpha.BackendService) *MockBackendServicesObj {
 	return &MockBackendServicesObj{o}
+}
+
+// AddSignedUrlKey is a mock for the corresponding method.
+func (m *MockAlphaBackendServices) AddSignedUrlKey(ctx context.Context, key *meta.Key, arg0 *alpha.SignedUrlKey) error {
+	if m.AddSignedUrlKeyHook != nil {
+		return m.AddSignedUrlKeyHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// DeleteSignedUrlKey is a mock for the corresponding method.
+func (m *MockAlphaBackendServices) DeleteSignedUrlKey(ctx context.Context, key *meta.Key, arg0 string) error {
+	if m.DeleteSignedUrlKeyHook != nil {
+		return m.DeleteSignedUrlKeyHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetSecurityPolicy is a mock for the corresponding method.
@@ -6462,6 +6654,72 @@ func (g *GCEAlphaBackendServices) AggregatedList(ctx context.Context, fl *filter
 		klog.V(5).Infof("GCEAlphaBackendServices.AggregatedList(%v, %v) = %v, %v", ctx, fl, asStr, nil)
 	}
 	return all, nil
+}
+
+// AddSignedUrlKey is a method on GCEAlphaBackendServices.
+func (g *GCEAlphaBackendServices) AddSignedUrlKey(ctx context.Context, key *meta.Key, arg0 *alpha.SignedUrlKey) error {
+	klog.V(5).Infof("GCEAlphaBackendServices.AddSignedUrlKey(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaBackendServices.AddSignedUrlKey(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "BackendServices")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "AddSignedUrlKey",
+		Version:   meta.Version("alpha"),
+		Service:   "BackendServices",
+	}
+	klog.V(5).Infof("GCEAlphaBackendServices.AddSignedUrlKey(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaBackendServices.AddSignedUrlKey(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.BackendServices.AddSignedUrlKey(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaBackendServices.AddSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaBackendServices.AddSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// DeleteSignedUrlKey is a method on GCEAlphaBackendServices.
+func (g *GCEAlphaBackendServices) DeleteSignedUrlKey(ctx context.Context, key *meta.Key, arg0 string) error {
+	klog.V(5).Infof("GCEAlphaBackendServices.DeleteSignedUrlKey(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaBackendServices.DeleteSignedUrlKey(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "BackendServices")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "DeleteSignedUrlKey",
+		Version:   meta.Version("alpha"),
+		Service:   "BackendServices",
+	}
+	klog.V(5).Infof("GCEAlphaBackendServices.DeleteSignedUrlKey(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaBackendServices.DeleteSignedUrlKey(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.BackendServices.DeleteSignedUrlKey(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaBackendServices.DeleteSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaBackendServices.DeleteSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
+	return err
 }
 
 // SetSecurityPolicy is a method on GCEAlphaBackendServices.

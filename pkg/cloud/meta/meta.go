@@ -127,6 +127,8 @@ var AllServices = []*ServiceInfo{
 			"Patch",
 			"Update",
 			"SetSecurityPolicy",
+			"AddSignedUrlKey",
+			"DeleteSignedUrlKey",
 		},
 		options: AggregatedList,
 	},
@@ -140,6 +142,8 @@ var AllServices = []*ServiceInfo{
 		additionalMethods: []string{
 			"Update",
 			"SetSecurityPolicy",
+			"AddSignedUrlKey",
+			"DeleteSignedUrlKey",
 		},
 		options: AggregatedList,
 	},
@@ -153,6 +157,8 @@ var AllServices = []*ServiceInfo{
 		additionalMethods: []string{
 			"Update",
 			"SetSecurityPolicy",
+			"AddSignedUrlKey",
+			"DeleteSignedUrlKey",
 		},
 		options: AggregatedList,
 	},

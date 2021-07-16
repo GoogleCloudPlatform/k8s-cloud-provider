@@ -249,7 +249,7 @@ func (fp *filterPredicate) match(o interface{}) bool {
 			return false
 		}
 		match = x == *fp.s
-		if fp.op < regexpNotEquals {
+		if fp.op == regexpEquals || fp.op == regexpNotEquals {
 			match = re.Match([]byte(x))
 		}
 	case int:

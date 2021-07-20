@@ -55,6 +55,7 @@ type Cloud interface {
 	AlphaFirewalls() AlphaFirewalls
 	BetaFirewalls() BetaFirewalls
 	Firewalls() Firewalls
+	AlphaNetworkFirewallPolicies() AlphaNetworkFirewallPolicies
 	ForwardingRules() ForwardingRules
 	AlphaForwardingRules() AlphaForwardingRules
 	BetaForwardingRules() BetaForwardingRules
@@ -146,6 +147,7 @@ func NewGCE(s *Service) *GCE {
 		gceAlphaFirewalls:                &GCEAlphaFirewalls{s},
 		gceBetaFirewalls:                 &GCEBetaFirewalls{s},
 		gceFirewalls:                     &GCEFirewalls{s},
+		gceAlphaNetworkFirewallPolicies:  &GCEAlphaNetworkFirewallPolicies{s},
 		gceForwardingRules:               &GCEForwardingRules{s},
 		gceAlphaForwardingRules:          &GCEAlphaForwardingRules{s},
 		gceBetaForwardingRules:           &GCEBetaForwardingRules{s},
@@ -241,6 +243,7 @@ type GCE struct {
 	gceAlphaFirewalls                *GCEAlphaFirewalls
 	gceBetaFirewalls                 *GCEBetaFirewalls
 	gceFirewalls                     *GCEFirewalls
+	gceAlphaNetworkFirewallPolicies  *GCEAlphaNetworkFirewallPolicies
 	gceForwardingRules               *GCEForwardingRules
 	gceAlphaForwardingRules          *GCEAlphaForwardingRules
 	gceBetaForwardingRules           *GCEBetaForwardingRules
@@ -395,6 +398,11 @@ func (gce *GCE) BetaFirewalls() BetaFirewalls {
 // Firewalls returns the interface for the ga Firewalls.
 func (gce *GCE) Firewalls() Firewalls {
 	return gce.gceFirewalls
+}
+
+// AlphaNetworkFirewallPolicies returns the interface for the alpha NetworkFirewallPolicies.
+func (gce *GCE) AlphaNetworkFirewallPolicies() AlphaNetworkFirewallPolicies {
+	return gce.gceAlphaNetworkFirewallPolicies
 }
 
 // ForwardingRules returns the interface for the ga ForwardingRules.
@@ -758,6 +766,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 	mockInstanceGroupsObjs := map[meta.Key]*MockInstanceGroupsObj{}
 	mockInstancesObjs := map[meta.Key]*MockInstancesObj{}
 	mockNetworkEndpointGroupsObjs := map[meta.Key]*MockNetworkEndpointGroupsObj{}
+	mockNetworkFirewallPoliciesObjs := map[meta.Key]*MockNetworkFirewallPoliciesObj{}
 	mockNetworksObjs := map[meta.Key]*MockNetworksObj{}
 	mockProjectsObjs := map[meta.Key]*MockProjectsObj{}
 	mockRegionBackendServicesObjs := map[meta.Key]*MockRegionBackendServicesObj{}
@@ -800,6 +809,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockAlphaFirewalls:                NewMockAlphaFirewalls(projectRouter, mockFirewallsObjs),
 		MockBetaFirewalls:                 NewMockBetaFirewalls(projectRouter, mockFirewallsObjs),
 		MockFirewalls:                     NewMockFirewalls(projectRouter, mockFirewallsObjs),
+		MockAlphaNetworkFirewallPolicies:  NewMockAlphaNetworkFirewallPolicies(projectRouter, mockNetworkFirewallPoliciesObjs),
 		MockForwardingRules:               NewMockForwardingRules(projectRouter, mockForwardingRulesObjs),
 		MockAlphaForwardingRules:          NewMockAlphaForwardingRules(projectRouter, mockForwardingRulesObjs),
 		MockBetaForwardingRules:           NewMockBetaForwardingRules(projectRouter, mockForwardingRulesObjs),
@@ -895,6 +905,7 @@ type MockGCE struct {
 	MockAlphaFirewalls                *MockAlphaFirewalls
 	MockBetaFirewalls                 *MockBetaFirewalls
 	MockFirewalls                     *MockFirewalls
+	MockAlphaNetworkFirewallPolicies  *MockAlphaNetworkFirewallPolicies
 	MockForwardingRules               *MockForwardingRules
 	MockAlphaForwardingRules          *MockAlphaForwardingRules
 	MockBetaForwardingRules           *MockBetaForwardingRules
@@ -1049,6 +1060,11 @@ func (mock *MockGCE) BetaFirewalls() BetaFirewalls {
 // Firewalls returns the interface for the ga Firewalls.
 func (mock *MockGCE) Firewalls() Firewalls {
 	return mock.MockFirewalls
+}
+
+// AlphaNetworkFirewallPolicies returns the interface for the alpha NetworkFirewallPolicies.
+func (mock *MockGCE) AlphaNetworkFirewallPolicies() AlphaNetworkFirewallPolicies {
+	return mock.MockAlphaNetworkFirewallPolicies
 }
 
 // ForwardingRules returns the interface for the ga ForwardingRules.
@@ -1932,6 +1948,26 @@ func (m *MockNetworkEndpointGroupsObj) ToGA() *ga.NetworkEndpointGroup {
 	ret := &ga.NetworkEndpointGroup{}
 	if err := copyViaJSON(ret, m.Obj); err != nil {
 		klog.Errorf("Could not convert %T to *ga.NetworkEndpointGroup via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// MockNetworkFirewallPoliciesObj is used to store the various object versions in the shared
+// map of mocked objects. This allows for multiple API versions to co-exist and
+// share the same "view" of the objects in the backend.
+type MockNetworkFirewallPoliciesObj struct {
+	Obj interface{}
+}
+
+// ToAlpha retrieves the given version of the object.
+func (m *MockNetworkFirewallPoliciesObj) ToAlpha() *alpha.FirewallPolicy {
+	if ret, ok := m.Obj.(*alpha.FirewallPolicy); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &alpha.FirewallPolicy{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *alpha.FirewallPolicy via JSON: %v", m.Obj, err)
 	}
 	return ret
 }
@@ -9744,6 +9780,829 @@ func (g *GCEFirewalls) Update(ctx context.Context, key *meta.Key, arg0 *ga.Firew
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCEFirewalls.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
+}
+
+// AlphaNetworkFirewallPolicies is an interface that allows for mocking of NetworkFirewallPolicies.
+type AlphaNetworkFirewallPolicies interface {
+	Get(ctx context.Context, key *meta.Key) (*alpha.FirewallPolicy, error)
+	List(ctx context.Context, fl *filter.F) ([]*alpha.FirewallPolicy, error)
+	Insert(ctx context.Context, key *meta.Key, obj *alpha.FirewallPolicy) error
+	Delete(ctx context.Context, key *meta.Key) error
+	AddAssociation(context.Context, *meta.Key, *alpha.FirewallPolicyAssociation) error
+	AddRule(context.Context, *meta.Key, *alpha.FirewallPolicyRule) error
+	CloneRules(context.Context, *meta.Key) error
+	GetAssociation(context.Context, *meta.Key) (*alpha.FirewallPolicyAssociation, error)
+	GetIamPolicy(context.Context, *meta.Key) (*alpha.Policy, error)
+	GetRule(context.Context, *meta.Key) (*alpha.FirewallPolicyRule, error)
+	Patch(context.Context, *meta.Key, *alpha.FirewallPolicy) error
+	PatchRule(context.Context, *meta.Key, *alpha.FirewallPolicyRule) error
+	RemoveAssociation(context.Context, *meta.Key) error
+	RemoveRule(context.Context, *meta.Key) error
+	SetIamPolicy(context.Context, *meta.Key, *alpha.GlobalSetPolicyRequest) (*alpha.Policy, error)
+	TestIamPermissions(context.Context, *meta.Key, *alpha.TestPermissionsRequest) (*alpha.TestPermissionsResponse, error)
+}
+
+// NewMockAlphaNetworkFirewallPolicies returns a new mock for NetworkFirewallPolicies.
+func NewMockAlphaNetworkFirewallPolicies(pr ProjectRouter, objs map[meta.Key]*MockNetworkFirewallPoliciesObj) *MockAlphaNetworkFirewallPolicies {
+	mock := &MockAlphaNetworkFirewallPolicies{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockAlphaNetworkFirewallPolicies is the mock for NetworkFirewallPolicies.
+type MockAlphaNetworkFirewallPolicies struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockNetworkFirewallPoliciesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook                func(ctx context.Context, key *meta.Key, m *MockAlphaNetworkFirewallPolicies) (bool, *alpha.FirewallPolicy, error)
+	ListHook               func(ctx context.Context, fl *filter.F, m *MockAlphaNetworkFirewallPolicies) (bool, []*alpha.FirewallPolicy, error)
+	InsertHook             func(ctx context.Context, key *meta.Key, obj *alpha.FirewallPolicy, m *MockAlphaNetworkFirewallPolicies) (bool, error)
+	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockAlphaNetworkFirewallPolicies) (bool, error)
+	AddAssociationHook     func(context.Context, *meta.Key, *alpha.FirewallPolicyAssociation, *MockAlphaNetworkFirewallPolicies) error
+	AddRuleHook            func(context.Context, *meta.Key, *alpha.FirewallPolicyRule, *MockAlphaNetworkFirewallPolicies) error
+	CloneRulesHook         func(context.Context, *meta.Key, *MockAlphaNetworkFirewallPolicies) error
+	GetAssociationHook     func(context.Context, *meta.Key, *MockAlphaNetworkFirewallPolicies) (*alpha.FirewallPolicyAssociation, error)
+	GetIamPolicyHook       func(context.Context, *meta.Key, *MockAlphaNetworkFirewallPolicies) (*alpha.Policy, error)
+	GetRuleHook            func(context.Context, *meta.Key, *MockAlphaNetworkFirewallPolicies) (*alpha.FirewallPolicyRule, error)
+	PatchHook              func(context.Context, *meta.Key, *alpha.FirewallPolicy, *MockAlphaNetworkFirewallPolicies) error
+	PatchRuleHook          func(context.Context, *meta.Key, *alpha.FirewallPolicyRule, *MockAlphaNetworkFirewallPolicies) error
+	RemoveAssociationHook  func(context.Context, *meta.Key, *MockAlphaNetworkFirewallPolicies) error
+	RemoveRuleHook         func(context.Context, *meta.Key, *MockAlphaNetworkFirewallPolicies) error
+	SetIamPolicyHook       func(context.Context, *meta.Key, *alpha.GlobalSetPolicyRequest, *MockAlphaNetworkFirewallPolicies) (*alpha.Policy, error)
+	TestIamPermissionsHook func(context.Context, *meta.Key, *alpha.TestPermissionsRequest, *MockAlphaNetworkFirewallPolicies) (*alpha.TestPermissionsResponse, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockAlphaNetworkFirewallPolicies) Get(ctx context.Context, key *meta.Key) (*alpha.FirewallPolicy, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToAlpha()
+		klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockAlphaNetworkFirewallPolicies %v not found", key),
+	}
+	klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockAlphaNetworkFirewallPolicies) List(ctx context.Context, fl *filter.F) ([]*alpha.FirewallPolicy, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*alpha.FirewallPolicy
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		objs = append(objs, obj.ToAlpha())
+	}
+
+	klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockAlphaNetworkFirewallPolicies) Insert(ctx context.Context, key *meta.Key, obj *alpha.FirewallPolicy) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockAlphaNetworkFirewallPolicies %v exists", key),
+		}
+		klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networkFirewallPolicies")
+	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "networkFirewallPolicies", key)
+
+	m.Objects[*key] = &MockNetworkFirewallPoliciesObj{obj}
+	klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockAlphaNetworkFirewallPolicies) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockAlphaNetworkFirewallPolicies %v not found", key),
+		}
+		klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockAlphaNetworkFirewallPolicies) Obj(o *alpha.FirewallPolicy) *MockNetworkFirewallPoliciesObj {
+	return &MockNetworkFirewallPoliciesObj{o}
+}
+
+// AddAssociation is a mock for the corresponding method.
+func (m *MockAlphaNetworkFirewallPolicies) AddAssociation(ctx context.Context, key *meta.Key, arg0 *alpha.FirewallPolicyAssociation) error {
+	if m.AddAssociationHook != nil {
+		return m.AddAssociationHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// AddRule is a mock for the corresponding method.
+func (m *MockAlphaNetworkFirewallPolicies) AddRule(ctx context.Context, key *meta.Key, arg0 *alpha.FirewallPolicyRule) error {
+	if m.AddRuleHook != nil {
+		return m.AddRuleHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// CloneRules is a mock for the corresponding method.
+func (m *MockAlphaNetworkFirewallPolicies) CloneRules(ctx context.Context, key *meta.Key) error {
+	if m.CloneRulesHook != nil {
+		return m.CloneRulesHook(ctx, key, m)
+	}
+	return nil
+}
+
+// GetAssociation is a mock for the corresponding method.
+func (m *MockAlphaNetworkFirewallPolicies) GetAssociation(ctx context.Context, key *meta.Key) (*alpha.FirewallPolicyAssociation, error) {
+	if m.GetAssociationHook != nil {
+		return m.GetAssociationHook(ctx, key, m)
+	}
+	return nil, fmt.Errorf("GetAssociationHook must be set")
+}
+
+// GetIamPolicy is a mock for the corresponding method.
+func (m *MockAlphaNetworkFirewallPolicies) GetIamPolicy(ctx context.Context, key *meta.Key) (*alpha.Policy, error) {
+	if m.GetIamPolicyHook != nil {
+		return m.GetIamPolicyHook(ctx, key, m)
+	}
+	return nil, fmt.Errorf("GetIamPolicyHook must be set")
+}
+
+// GetRule is a mock for the corresponding method.
+func (m *MockAlphaNetworkFirewallPolicies) GetRule(ctx context.Context, key *meta.Key) (*alpha.FirewallPolicyRule, error) {
+	if m.GetRuleHook != nil {
+		return m.GetRuleHook(ctx, key, m)
+	}
+	return nil, fmt.Errorf("GetRuleHook must be set")
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockAlphaNetworkFirewallPolicies) Patch(ctx context.Context, key *meta.Key, arg0 *alpha.FirewallPolicy) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// PatchRule is a mock for the corresponding method.
+func (m *MockAlphaNetworkFirewallPolicies) PatchRule(ctx context.Context, key *meta.Key, arg0 *alpha.FirewallPolicyRule) error {
+	if m.PatchRuleHook != nil {
+		return m.PatchRuleHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// RemoveAssociation is a mock for the corresponding method.
+func (m *MockAlphaNetworkFirewallPolicies) RemoveAssociation(ctx context.Context, key *meta.Key) error {
+	if m.RemoveAssociationHook != nil {
+		return m.RemoveAssociationHook(ctx, key, m)
+	}
+	return nil
+}
+
+// RemoveRule is a mock for the corresponding method.
+func (m *MockAlphaNetworkFirewallPolicies) RemoveRule(ctx context.Context, key *meta.Key) error {
+	if m.RemoveRuleHook != nil {
+		return m.RemoveRuleHook(ctx, key, m)
+	}
+	return nil
+}
+
+// SetIamPolicy is a mock for the corresponding method.
+func (m *MockAlphaNetworkFirewallPolicies) SetIamPolicy(ctx context.Context, key *meta.Key, arg0 *alpha.GlobalSetPolicyRequest) (*alpha.Policy, error) {
+	if m.SetIamPolicyHook != nil {
+		return m.SetIamPolicyHook(ctx, key, arg0, m)
+	}
+	return nil, fmt.Errorf("SetIamPolicyHook must be set")
+}
+
+// TestIamPermissions is a mock for the corresponding method.
+func (m *MockAlphaNetworkFirewallPolicies) TestIamPermissions(ctx context.Context, key *meta.Key, arg0 *alpha.TestPermissionsRequest) (*alpha.TestPermissionsResponse, error) {
+	if m.TestIamPermissionsHook != nil {
+		return m.TestIamPermissionsHook(ctx, key, arg0, m)
+	}
+	return nil, fmt.Errorf("TestIamPermissionsHook must be set")
+}
+
+// GCEAlphaNetworkFirewallPolicies is a simplifying adapter for the GCE NetworkFirewallPolicies.
+type GCEAlphaNetworkFirewallPolicies struct {
+	s *Service
+}
+
+// Get the FirewallPolicy named by key.
+func (g *GCEAlphaNetworkFirewallPolicies) Get(ctx context.Context, key *meta.Key) (*alpha.FirewallPolicy, error) {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworkFirewallPolicies.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("alpha"),
+		Service:   "NetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.NetworkFirewallPolicies.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all FirewallPolicy objects.
+func (g *GCEAlphaNetworkFirewallPolicies) List(ctx context.Context, fl *filter.F) ([]*alpha.FirewallPolicy, error) {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("alpha"),
+		Service:   "NetworkFirewallPolicies",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.Alpha.NetworkFirewallPolicies.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*alpha.FirewallPolicy
+	f := func(l *alpha.FirewallPolicyList) error {
+		klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert FirewallPolicy with key of value obj.
+func (g *GCEAlphaNetworkFirewallPolicies) Insert(ctx context.Context, key *meta.Key, obj *alpha.FirewallPolicy) error {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworkFirewallPolicies.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("alpha"),
+		Service:   "NetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Alpha.NetworkFirewallPolicies.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the FirewallPolicy referenced by key.
+func (g *GCEAlphaNetworkFirewallPolicies) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworkFirewallPolicies.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("alpha"),
+		Service:   "NetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.NetworkFirewallPolicies.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// AddAssociation is a method on GCEAlphaNetworkFirewallPolicies.
+func (g *GCEAlphaNetworkFirewallPolicies) AddAssociation(ctx context.Context, key *meta.Key, arg0 *alpha.FirewallPolicyAssociation) error {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.AddAssociation(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworkFirewallPolicies.AddAssociation(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "AddAssociation",
+		Version:   meta.Version("alpha"),
+		Service:   "NetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.AddAssociation(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.AddAssociation(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.NetworkFirewallPolicies.AddAssociation(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.AddAssociation(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.AddAssociation(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// AddRule is a method on GCEAlphaNetworkFirewallPolicies.
+func (g *GCEAlphaNetworkFirewallPolicies) AddRule(ctx context.Context, key *meta.Key, arg0 *alpha.FirewallPolicyRule) error {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.AddRule(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworkFirewallPolicies.AddRule(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "AddRule",
+		Version:   meta.Version("alpha"),
+		Service:   "NetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.AddRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.AddRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.NetworkFirewallPolicies.AddRule(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.AddRule(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.AddRule(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// CloneRules is a method on GCEAlphaNetworkFirewallPolicies.
+func (g *GCEAlphaNetworkFirewallPolicies) CloneRules(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.CloneRules(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworkFirewallPolicies.CloneRules(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "CloneRules",
+		Version:   meta.Version("alpha"),
+		Service:   "NetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.CloneRules(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.CloneRules(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.NetworkFirewallPolicies.CloneRules(projectID, key.Name)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.CloneRules(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.CloneRules(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// GetAssociation is a method on GCEAlphaNetworkFirewallPolicies.
+func (g *GCEAlphaNetworkFirewallPolicies) GetAssociation(ctx context.Context, key *meta.Key) (*alpha.FirewallPolicyAssociation, error) {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.GetAssociation(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworkFirewallPolicies.GetAssociation(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "GetAssociation",
+		Version:   meta.Version("alpha"),
+		Service:   "NetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.GetAssociation(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.GetAssociation(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.NetworkFirewallPolicies.GetAssociation(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.GetAssociation(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// GetIamPolicy is a method on GCEAlphaNetworkFirewallPolicies.
+func (g *GCEAlphaNetworkFirewallPolicies) GetIamPolicy(ctx context.Context, key *meta.Key) (*alpha.Policy, error) {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "GetIamPolicy",
+		Version:   meta.Version("alpha"),
+		Service:   "NetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.NetworkFirewallPolicies.GetIamPolicy(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// GetRule is a method on GCEAlphaNetworkFirewallPolicies.
+func (g *GCEAlphaNetworkFirewallPolicies) GetRule(ctx context.Context, key *meta.Key) (*alpha.FirewallPolicyRule, error) {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.GetRule(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworkFirewallPolicies.GetRule(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "GetRule",
+		Version:   meta.Version("alpha"),
+		Service:   "NetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.GetRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.GetRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.NetworkFirewallPolicies.GetRule(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.GetRule(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// Patch is a method on GCEAlphaNetworkFirewallPolicies.
+func (g *GCEAlphaNetworkFirewallPolicies) Patch(ctx context.Context, key *meta.Key, arg0 *alpha.FirewallPolicy) error {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.Patch(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworkFirewallPolicies.Patch(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("alpha"),
+		Service:   "NetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.NetworkFirewallPolicies.Patch(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Patch(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// PatchRule is a method on GCEAlphaNetworkFirewallPolicies.
+func (g *GCEAlphaNetworkFirewallPolicies) PatchRule(ctx context.Context, key *meta.Key, arg0 *alpha.FirewallPolicyRule) error {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.PatchRule(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworkFirewallPolicies.PatchRule(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "PatchRule",
+		Version:   meta.Version("alpha"),
+		Service:   "NetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.PatchRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.PatchRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.NetworkFirewallPolicies.PatchRule(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.PatchRule(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.PatchRule(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// RemoveAssociation is a method on GCEAlphaNetworkFirewallPolicies.
+func (g *GCEAlphaNetworkFirewallPolicies) RemoveAssociation(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "RemoveAssociation",
+		Version:   meta.Version("alpha"),
+		Service:   "NetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.NetworkFirewallPolicies.RemoveAssociation(projectID, key.Name)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// RemoveRule is a method on GCEAlphaNetworkFirewallPolicies.
+func (g *GCEAlphaNetworkFirewallPolicies) RemoveRule(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.RemoveRule(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworkFirewallPolicies.RemoveRule(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "RemoveRule",
+		Version:   meta.Version("alpha"),
+		Service:   "NetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.RemoveRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.RemoveRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.NetworkFirewallPolicies.RemoveRule(projectID, key.Name)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.RemoveRule(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.RemoveRule(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// SetIamPolicy is a method on GCEAlphaNetworkFirewallPolicies.
+func (g *GCEAlphaNetworkFirewallPolicies) SetIamPolicy(ctx context.Context, key *meta.Key, arg0 *alpha.GlobalSetPolicyRequest) (*alpha.Policy, error) {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetIamPolicy",
+		Version:   meta.Version("alpha"),
+		Service:   "NetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.NetworkFirewallPolicies.SetIamPolicy(projectID, key.Name, arg0)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// TestIamPermissions is a method on GCEAlphaNetworkFirewallPolicies.
+func (g *GCEAlphaNetworkFirewallPolicies) TestIamPermissions(ctx context.Context, key *meta.Key, arg0 *alpha.TestPermissionsRequest) (*alpha.TestPermissionsResponse, error) {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "TestIamPermissions",
+		Version:   meta.Version("alpha"),
+		Service:   "NetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.NetworkFirewallPolicies.TestIamPermissions(projectID, key.Name, arg0)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
 }
 
 // ForwardingRules is an interface that allows for mocking of ForwardingRules.
@@ -37452,6 +38311,12 @@ func NewInstancesResourceID(project, zone, name string) *ResourceID {
 func NewNetworkEndpointGroupsResourceID(project, zone, name string) *ResourceID {
 	key := meta.ZonalKey(name, zone)
 	return &ResourceID{project, "networkEndpointGroups", key}
+}
+
+// NewNetworkFirewallPoliciesResourceID creates a ResourceID for the NetworkFirewallPolicies resource.
+func NewNetworkFirewallPoliciesResourceID(project, name string) *ResourceID {
+	key := meta.GlobalKey(name)
+	return &ResourceID{project, "networkFirewallPolicies", key}
 }
 
 // NewNetworksResourceID creates a ResourceID for the Networks resource.

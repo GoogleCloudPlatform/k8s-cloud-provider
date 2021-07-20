@@ -2198,6 +2198,69 @@ func TestRegionHealthChecksGroup(t *testing.T) {
 	}
 }
 
+func TestRegionNetworkFirewallPoliciesGroup(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pr := &SingleProjectRouter{"mock-project"}
+	mock := NewMockGCE(pr)
+
+	var key *meta.Key
+	keyAlpha := meta.RegionalKey("key-alpha", "location")
+	key = keyAlpha
+	// Ignore unused variables.
+	_, _, _ = ctx, mock, key
+
+	// Get not found.
+	if _, err := mock.AlphaRegionNetworkFirewallPolicies().Get(ctx, key); err == nil {
+		t.Errorf("AlphaRegionNetworkFirewallPolicies().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+
+	// Insert.
+	{
+		obj := &alpha.FirewallPolicy{}
+		if err := mock.AlphaRegionNetworkFirewallPolicies().Insert(ctx, keyAlpha, obj); err != nil {
+			t.Errorf("AlphaRegionNetworkFirewallPolicies().Insert(%v, %v, %v) = %v; want nil", ctx, keyAlpha, obj, err)
+		}
+	}
+
+	// Get across versions.
+	if obj, err := mock.AlphaRegionNetworkFirewallPolicies().Get(ctx, key); err != nil {
+		t.Errorf("AlphaRegionNetworkFirewallPolicies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+
+	// List.
+	mock.MockAlphaRegionNetworkFirewallPolicies.Objects[*keyAlpha] = mock.MockAlphaRegionNetworkFirewallPolicies.Obj(&alpha.FirewallPolicy{Name: keyAlpha.Name})
+	want := map[string]bool{
+		"key-alpha": true,
+	}
+	_ = want // ignore unused variables.
+	{
+		objs, err := mock.AlphaRegionNetworkFirewallPolicies().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("AlphaRegionNetworkFirewallPolicies().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("AlphaRegionNetworkFirewallPolicies().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+
+	// Delete across versions.
+	if err := mock.AlphaRegionNetworkFirewallPolicies().Delete(ctx, keyAlpha); err != nil {
+		t.Errorf("AlphaRegionNetworkFirewallPolicies().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
+	}
+
+	// Delete not found.
+	if err := mock.AlphaRegionNetworkFirewallPolicies().Delete(ctx, keyAlpha); err == nil {
+		t.Errorf("AlphaRegionNetworkFirewallPolicies().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+}
+
 func TestRegionSslCertificatesGroup(t *testing.T) {
 	t.Parallel()
 
@@ -4140,6 +4203,7 @@ func TestResourceIDConversion(t *testing.T) {
 		NewRegionBackendServicesResourceID("some-project", "us-central1", "my-backendServices-resource"),
 		NewRegionDisksResourceID("some-project", "us-central1", "my-disks-resource"),
 		NewRegionHealthChecksResourceID("some-project", "us-central1", "my-healthChecks-resource"),
+		NewRegionNetworkFirewallPoliciesResourceID("some-project", "us-central1", "my-regionNetworkFirewallPolicies-resource"),
 		NewRegionSslCertificatesResourceID("some-project", "us-central1", "my-sslCertificates-resource"),
 		NewRegionTargetHttpProxiesResourceID("some-project", "us-central1", "my-targetHttpProxies-resource"),
 		NewRegionTargetHttpsProxiesResourceID("some-project", "us-central1", "my-targetHttpsProxies-resource"),

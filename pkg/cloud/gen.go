@@ -56,6 +56,7 @@ type Cloud interface {
 	BetaFirewalls() BetaFirewalls
 	Firewalls() Firewalls
 	AlphaNetworkFirewallPolicies() AlphaNetworkFirewallPolicies
+	AlphaRegionNetworkFirewallPolicies() AlphaRegionNetworkFirewallPolicies
 	ForwardingRules() ForwardingRules
 	AlphaForwardingRules() AlphaForwardingRules
 	BetaForwardingRules() BetaForwardingRules
@@ -130,93 +131,94 @@ type Cloud interface {
 // NewGCE returns a GCE.
 func NewGCE(s *Service) *GCE {
 	g := &GCE{
-		gceAddresses:                     &GCEAddresses{s},
-		gceAlphaAddresses:                &GCEAlphaAddresses{s},
-		gceBetaAddresses:                 &GCEBetaAddresses{s},
-		gceAlphaGlobalAddresses:          &GCEAlphaGlobalAddresses{s},
-		gceBetaGlobalAddresses:           &GCEBetaGlobalAddresses{s},
-		gceGlobalAddresses:               &GCEGlobalAddresses{s},
-		gceBackendServices:               &GCEBackendServices{s},
-		gceBetaBackendServices:           &GCEBetaBackendServices{s},
-		gceAlphaBackendServices:          &GCEAlphaBackendServices{s},
-		gceRegionBackendServices:         &GCERegionBackendServices{s},
-		gceAlphaRegionBackendServices:    &GCEAlphaRegionBackendServices{s},
-		gceBetaRegionBackendServices:     &GCEBetaRegionBackendServices{s},
-		gceDisks:                         &GCEDisks{s},
-		gceRegionDisks:                   &GCERegionDisks{s},
-		gceAlphaFirewalls:                &GCEAlphaFirewalls{s},
-		gceBetaFirewalls:                 &GCEBetaFirewalls{s},
-		gceFirewalls:                     &GCEFirewalls{s},
-		gceAlphaNetworkFirewallPolicies:  &GCEAlphaNetworkFirewallPolicies{s},
-		gceForwardingRules:               &GCEForwardingRules{s},
-		gceAlphaForwardingRules:          &GCEAlphaForwardingRules{s},
-		gceBetaForwardingRules:           &GCEBetaForwardingRules{s},
-		gceAlphaGlobalForwardingRules:    &GCEAlphaGlobalForwardingRules{s},
-		gceBetaGlobalForwardingRules:     &GCEBetaGlobalForwardingRules{s},
-		gceGlobalForwardingRules:         &GCEGlobalForwardingRules{s},
-		gceHealthChecks:                  &GCEHealthChecks{s},
-		gceAlphaHealthChecks:             &GCEAlphaHealthChecks{s},
-		gceBetaHealthChecks:              &GCEBetaHealthChecks{s},
-		gceAlphaRegionHealthChecks:       &GCEAlphaRegionHealthChecks{s},
-		gceBetaRegionHealthChecks:        &GCEBetaRegionHealthChecks{s},
-		gceRegionHealthChecks:            &GCERegionHealthChecks{s},
-		gceHttpHealthChecks:              &GCEHttpHealthChecks{s},
-		gceHttpsHealthChecks:             &GCEHttpsHealthChecks{s},
-		gceInstanceGroups:                &GCEInstanceGroups{s},
-		gceInstances:                     &GCEInstances{s},
-		gceBetaInstances:                 &GCEBetaInstances{s},
-		gceAlphaInstances:                &GCEAlphaInstances{s},
-		gceImages:                        &GCEImages{s},
-		gceBetaImages:                    &GCEBetaImages{s},
-		gceAlphaImages:                   &GCEAlphaImages{s},
-		gceAlphaNetworks:                 &GCEAlphaNetworks{s},
-		gceBetaNetworks:                  &GCEBetaNetworks{s},
-		gceNetworks:                      &GCENetworks{s},
-		gceAlphaNetworkEndpointGroups:    &GCEAlphaNetworkEndpointGroups{s},
-		gceBetaNetworkEndpointGroups:     &GCEBetaNetworkEndpointGroups{s},
-		gceNetworkEndpointGroups:         &GCENetworkEndpointGroups{s},
-		gceProjects:                      &GCEProjects{s},
-		gceRegions:                       &GCERegions{s},
-		gceAlphaRouters:                  &GCEAlphaRouters{s},
-		gceBetaRouters:                   &GCEBetaRouters{s},
-		gceRouters:                       &GCERouters{s},
-		gceRoutes:                        &GCERoutes{s},
-		gceBetaSecurityPolicies:          &GCEBetaSecurityPolicies{s},
-		gceBetaServiceAttachments:        &GCEBetaServiceAttachments{s},
-		gceAlphaServiceAttachments:       &GCEAlphaServiceAttachments{s},
-		gceSslCertificates:               &GCESslCertificates{s},
-		gceBetaSslCertificates:           &GCEBetaSslCertificates{s},
-		gceAlphaSslCertificates:          &GCEAlphaSslCertificates{s},
-		gceAlphaRegionSslCertificates:    &GCEAlphaRegionSslCertificates{s},
-		gceBetaRegionSslCertificates:     &GCEBetaRegionSslCertificates{s},
-		gceRegionSslCertificates:         &GCERegionSslCertificates{s},
-		gceSslPolicies:                   &GCESslPolicies{s},
-		gceAlphaSubnetworks:              &GCEAlphaSubnetworks{s},
-		gceBetaSubnetworks:               &GCEBetaSubnetworks{s},
-		gceSubnetworks:                   &GCESubnetworks{s},
-		gceAlphaTargetHttpProxies:        &GCEAlphaTargetHttpProxies{s},
-		gceBetaTargetHttpProxies:         &GCEBetaTargetHttpProxies{s},
-		gceTargetHttpProxies:             &GCETargetHttpProxies{s},
-		gceAlphaRegionTargetHttpProxies:  &GCEAlphaRegionTargetHttpProxies{s},
-		gceBetaRegionTargetHttpProxies:   &GCEBetaRegionTargetHttpProxies{s},
-		gceRegionTargetHttpProxies:       &GCERegionTargetHttpProxies{s},
-		gceTargetHttpsProxies:            &GCETargetHttpsProxies{s},
-		gceAlphaTargetHttpsProxies:       &GCEAlphaTargetHttpsProxies{s},
-		gceBetaTargetHttpsProxies:        &GCEBetaTargetHttpsProxies{s},
-		gceAlphaRegionTargetHttpsProxies: &GCEAlphaRegionTargetHttpsProxies{s},
-		gceBetaRegionTargetHttpsProxies:  &GCEBetaRegionTargetHttpsProxies{s},
-		gceRegionTargetHttpsProxies:      &GCERegionTargetHttpsProxies{s},
-		gceTargetPools:                   &GCETargetPools{s},
-		gceAlphaTargetTcpProxies:         &GCEAlphaTargetTcpProxies{s},
-		gceBetaTargetTcpProxies:          &GCEBetaTargetTcpProxies{s},
-		gceTargetTcpProxies:              &GCETargetTcpProxies{s},
-		gceAlphaUrlMaps:                  &GCEAlphaUrlMaps{s},
-		gceBetaUrlMaps:                   &GCEBetaUrlMaps{s},
-		gceUrlMaps:                       &GCEUrlMaps{s},
-		gceAlphaRegionUrlMaps:            &GCEAlphaRegionUrlMaps{s},
-		gceBetaRegionUrlMaps:             &GCEBetaRegionUrlMaps{s},
-		gceRegionUrlMaps:                 &GCERegionUrlMaps{s},
-		gceZones:                         &GCEZones{s},
+		gceAddresses:                          &GCEAddresses{s},
+		gceAlphaAddresses:                     &GCEAlphaAddresses{s},
+		gceBetaAddresses:                      &GCEBetaAddresses{s},
+		gceAlphaGlobalAddresses:               &GCEAlphaGlobalAddresses{s},
+		gceBetaGlobalAddresses:                &GCEBetaGlobalAddresses{s},
+		gceGlobalAddresses:                    &GCEGlobalAddresses{s},
+		gceBackendServices:                    &GCEBackendServices{s},
+		gceBetaBackendServices:                &GCEBetaBackendServices{s},
+		gceAlphaBackendServices:               &GCEAlphaBackendServices{s},
+		gceRegionBackendServices:              &GCERegionBackendServices{s},
+		gceAlphaRegionBackendServices:         &GCEAlphaRegionBackendServices{s},
+		gceBetaRegionBackendServices:          &GCEBetaRegionBackendServices{s},
+		gceDisks:                              &GCEDisks{s},
+		gceRegionDisks:                        &GCERegionDisks{s},
+		gceAlphaFirewalls:                     &GCEAlphaFirewalls{s},
+		gceBetaFirewalls:                      &GCEBetaFirewalls{s},
+		gceFirewalls:                          &GCEFirewalls{s},
+		gceAlphaNetworkFirewallPolicies:       &GCEAlphaNetworkFirewallPolicies{s},
+		gceAlphaRegionNetworkFirewallPolicies: &GCEAlphaRegionNetworkFirewallPolicies{s},
+		gceForwardingRules:                    &GCEForwardingRules{s},
+		gceAlphaForwardingRules:               &GCEAlphaForwardingRules{s},
+		gceBetaForwardingRules:                &GCEBetaForwardingRules{s},
+		gceAlphaGlobalForwardingRules:         &GCEAlphaGlobalForwardingRules{s},
+		gceBetaGlobalForwardingRules:          &GCEBetaGlobalForwardingRules{s},
+		gceGlobalForwardingRules:              &GCEGlobalForwardingRules{s},
+		gceHealthChecks:                       &GCEHealthChecks{s},
+		gceAlphaHealthChecks:                  &GCEAlphaHealthChecks{s},
+		gceBetaHealthChecks:                   &GCEBetaHealthChecks{s},
+		gceAlphaRegionHealthChecks:            &GCEAlphaRegionHealthChecks{s},
+		gceBetaRegionHealthChecks:             &GCEBetaRegionHealthChecks{s},
+		gceRegionHealthChecks:                 &GCERegionHealthChecks{s},
+		gceHttpHealthChecks:                   &GCEHttpHealthChecks{s},
+		gceHttpsHealthChecks:                  &GCEHttpsHealthChecks{s},
+		gceInstanceGroups:                     &GCEInstanceGroups{s},
+		gceInstances:                          &GCEInstances{s},
+		gceBetaInstances:                      &GCEBetaInstances{s},
+		gceAlphaInstances:                     &GCEAlphaInstances{s},
+		gceImages:                             &GCEImages{s},
+		gceBetaImages:                         &GCEBetaImages{s},
+		gceAlphaImages:                        &GCEAlphaImages{s},
+		gceAlphaNetworks:                      &GCEAlphaNetworks{s},
+		gceBetaNetworks:                       &GCEBetaNetworks{s},
+		gceNetworks:                           &GCENetworks{s},
+		gceAlphaNetworkEndpointGroups:         &GCEAlphaNetworkEndpointGroups{s},
+		gceBetaNetworkEndpointGroups:          &GCEBetaNetworkEndpointGroups{s},
+		gceNetworkEndpointGroups:              &GCENetworkEndpointGroups{s},
+		gceProjects:                           &GCEProjects{s},
+		gceRegions:                            &GCERegions{s},
+		gceAlphaRouters:                       &GCEAlphaRouters{s},
+		gceBetaRouters:                        &GCEBetaRouters{s},
+		gceRouters:                            &GCERouters{s},
+		gceRoutes:                             &GCERoutes{s},
+		gceBetaSecurityPolicies:               &GCEBetaSecurityPolicies{s},
+		gceBetaServiceAttachments:             &GCEBetaServiceAttachments{s},
+		gceAlphaServiceAttachments:            &GCEAlphaServiceAttachments{s},
+		gceSslCertificates:                    &GCESslCertificates{s},
+		gceBetaSslCertificates:                &GCEBetaSslCertificates{s},
+		gceAlphaSslCertificates:               &GCEAlphaSslCertificates{s},
+		gceAlphaRegionSslCertificates:         &GCEAlphaRegionSslCertificates{s},
+		gceBetaRegionSslCertificates:          &GCEBetaRegionSslCertificates{s},
+		gceRegionSslCertificates:              &GCERegionSslCertificates{s},
+		gceSslPolicies:                        &GCESslPolicies{s},
+		gceAlphaSubnetworks:                   &GCEAlphaSubnetworks{s},
+		gceBetaSubnetworks:                    &GCEBetaSubnetworks{s},
+		gceSubnetworks:                        &GCESubnetworks{s},
+		gceAlphaTargetHttpProxies:             &GCEAlphaTargetHttpProxies{s},
+		gceBetaTargetHttpProxies:              &GCEBetaTargetHttpProxies{s},
+		gceTargetHttpProxies:                  &GCETargetHttpProxies{s},
+		gceAlphaRegionTargetHttpProxies:       &GCEAlphaRegionTargetHttpProxies{s},
+		gceBetaRegionTargetHttpProxies:        &GCEBetaRegionTargetHttpProxies{s},
+		gceRegionTargetHttpProxies:            &GCERegionTargetHttpProxies{s},
+		gceTargetHttpsProxies:                 &GCETargetHttpsProxies{s},
+		gceAlphaTargetHttpsProxies:            &GCEAlphaTargetHttpsProxies{s},
+		gceBetaTargetHttpsProxies:             &GCEBetaTargetHttpsProxies{s},
+		gceAlphaRegionTargetHttpsProxies:      &GCEAlphaRegionTargetHttpsProxies{s},
+		gceBetaRegionTargetHttpsProxies:       &GCEBetaRegionTargetHttpsProxies{s},
+		gceRegionTargetHttpsProxies:           &GCERegionTargetHttpsProxies{s},
+		gceTargetPools:                        &GCETargetPools{s},
+		gceAlphaTargetTcpProxies:              &GCEAlphaTargetTcpProxies{s},
+		gceBetaTargetTcpProxies:               &GCEBetaTargetTcpProxies{s},
+		gceTargetTcpProxies:                   &GCETargetTcpProxies{s},
+		gceAlphaUrlMaps:                       &GCEAlphaUrlMaps{s},
+		gceBetaUrlMaps:                        &GCEBetaUrlMaps{s},
+		gceUrlMaps:                            &GCEUrlMaps{s},
+		gceAlphaRegionUrlMaps:                 &GCEAlphaRegionUrlMaps{s},
+		gceBetaRegionUrlMaps:                  &GCEBetaRegionUrlMaps{s},
+		gceRegionUrlMaps:                      &GCERegionUrlMaps{s},
+		gceZones:                              &GCEZones{s},
 	}
 	return g
 }
@@ -226,93 +228,94 @@ var _ Cloud = (*GCE)(nil)
 
 // GCE is the golang adapter for the compute APIs.
 type GCE struct {
-	gceAddresses                     *GCEAddresses
-	gceAlphaAddresses                *GCEAlphaAddresses
-	gceBetaAddresses                 *GCEBetaAddresses
-	gceAlphaGlobalAddresses          *GCEAlphaGlobalAddresses
-	gceBetaGlobalAddresses           *GCEBetaGlobalAddresses
-	gceGlobalAddresses               *GCEGlobalAddresses
-	gceBackendServices               *GCEBackendServices
-	gceBetaBackendServices           *GCEBetaBackendServices
-	gceAlphaBackendServices          *GCEAlphaBackendServices
-	gceRegionBackendServices         *GCERegionBackendServices
-	gceAlphaRegionBackendServices    *GCEAlphaRegionBackendServices
-	gceBetaRegionBackendServices     *GCEBetaRegionBackendServices
-	gceDisks                         *GCEDisks
-	gceRegionDisks                   *GCERegionDisks
-	gceAlphaFirewalls                *GCEAlphaFirewalls
-	gceBetaFirewalls                 *GCEBetaFirewalls
-	gceFirewalls                     *GCEFirewalls
-	gceAlphaNetworkFirewallPolicies  *GCEAlphaNetworkFirewallPolicies
-	gceForwardingRules               *GCEForwardingRules
-	gceAlphaForwardingRules          *GCEAlphaForwardingRules
-	gceBetaForwardingRules           *GCEBetaForwardingRules
-	gceAlphaGlobalForwardingRules    *GCEAlphaGlobalForwardingRules
-	gceBetaGlobalForwardingRules     *GCEBetaGlobalForwardingRules
-	gceGlobalForwardingRules         *GCEGlobalForwardingRules
-	gceHealthChecks                  *GCEHealthChecks
-	gceAlphaHealthChecks             *GCEAlphaHealthChecks
-	gceBetaHealthChecks              *GCEBetaHealthChecks
-	gceAlphaRegionHealthChecks       *GCEAlphaRegionHealthChecks
-	gceBetaRegionHealthChecks        *GCEBetaRegionHealthChecks
-	gceRegionHealthChecks            *GCERegionHealthChecks
-	gceHttpHealthChecks              *GCEHttpHealthChecks
-	gceHttpsHealthChecks             *GCEHttpsHealthChecks
-	gceInstanceGroups                *GCEInstanceGroups
-	gceInstances                     *GCEInstances
-	gceBetaInstances                 *GCEBetaInstances
-	gceAlphaInstances                *GCEAlphaInstances
-	gceImages                        *GCEImages
-	gceBetaImages                    *GCEBetaImages
-	gceAlphaImages                   *GCEAlphaImages
-	gceAlphaNetworks                 *GCEAlphaNetworks
-	gceBetaNetworks                  *GCEBetaNetworks
-	gceNetworks                      *GCENetworks
-	gceAlphaNetworkEndpointGroups    *GCEAlphaNetworkEndpointGroups
-	gceBetaNetworkEndpointGroups     *GCEBetaNetworkEndpointGroups
-	gceNetworkEndpointGroups         *GCENetworkEndpointGroups
-	gceProjects                      *GCEProjects
-	gceRegions                       *GCERegions
-	gceAlphaRouters                  *GCEAlphaRouters
-	gceBetaRouters                   *GCEBetaRouters
-	gceRouters                       *GCERouters
-	gceRoutes                        *GCERoutes
-	gceBetaSecurityPolicies          *GCEBetaSecurityPolicies
-	gceBetaServiceAttachments        *GCEBetaServiceAttachments
-	gceAlphaServiceAttachments       *GCEAlphaServiceAttachments
-	gceSslCertificates               *GCESslCertificates
-	gceBetaSslCertificates           *GCEBetaSslCertificates
-	gceAlphaSslCertificates          *GCEAlphaSslCertificates
-	gceAlphaRegionSslCertificates    *GCEAlphaRegionSslCertificates
-	gceBetaRegionSslCertificates     *GCEBetaRegionSslCertificates
-	gceRegionSslCertificates         *GCERegionSslCertificates
-	gceSslPolicies                   *GCESslPolicies
-	gceAlphaSubnetworks              *GCEAlphaSubnetworks
-	gceBetaSubnetworks               *GCEBetaSubnetworks
-	gceSubnetworks                   *GCESubnetworks
-	gceAlphaTargetHttpProxies        *GCEAlphaTargetHttpProxies
-	gceBetaTargetHttpProxies         *GCEBetaTargetHttpProxies
-	gceTargetHttpProxies             *GCETargetHttpProxies
-	gceAlphaRegionTargetHttpProxies  *GCEAlphaRegionTargetHttpProxies
-	gceBetaRegionTargetHttpProxies   *GCEBetaRegionTargetHttpProxies
-	gceRegionTargetHttpProxies       *GCERegionTargetHttpProxies
-	gceTargetHttpsProxies            *GCETargetHttpsProxies
-	gceAlphaTargetHttpsProxies       *GCEAlphaTargetHttpsProxies
-	gceBetaTargetHttpsProxies        *GCEBetaTargetHttpsProxies
-	gceAlphaRegionTargetHttpsProxies *GCEAlphaRegionTargetHttpsProxies
-	gceBetaRegionTargetHttpsProxies  *GCEBetaRegionTargetHttpsProxies
-	gceRegionTargetHttpsProxies      *GCERegionTargetHttpsProxies
-	gceTargetPools                   *GCETargetPools
-	gceAlphaTargetTcpProxies         *GCEAlphaTargetTcpProxies
-	gceBetaTargetTcpProxies          *GCEBetaTargetTcpProxies
-	gceTargetTcpProxies              *GCETargetTcpProxies
-	gceAlphaUrlMaps                  *GCEAlphaUrlMaps
-	gceBetaUrlMaps                   *GCEBetaUrlMaps
-	gceUrlMaps                       *GCEUrlMaps
-	gceAlphaRegionUrlMaps            *GCEAlphaRegionUrlMaps
-	gceBetaRegionUrlMaps             *GCEBetaRegionUrlMaps
-	gceRegionUrlMaps                 *GCERegionUrlMaps
-	gceZones                         *GCEZones
+	gceAddresses                          *GCEAddresses
+	gceAlphaAddresses                     *GCEAlphaAddresses
+	gceBetaAddresses                      *GCEBetaAddresses
+	gceAlphaGlobalAddresses               *GCEAlphaGlobalAddresses
+	gceBetaGlobalAddresses                *GCEBetaGlobalAddresses
+	gceGlobalAddresses                    *GCEGlobalAddresses
+	gceBackendServices                    *GCEBackendServices
+	gceBetaBackendServices                *GCEBetaBackendServices
+	gceAlphaBackendServices               *GCEAlphaBackendServices
+	gceRegionBackendServices              *GCERegionBackendServices
+	gceAlphaRegionBackendServices         *GCEAlphaRegionBackendServices
+	gceBetaRegionBackendServices          *GCEBetaRegionBackendServices
+	gceDisks                              *GCEDisks
+	gceRegionDisks                        *GCERegionDisks
+	gceAlphaFirewalls                     *GCEAlphaFirewalls
+	gceBetaFirewalls                      *GCEBetaFirewalls
+	gceFirewalls                          *GCEFirewalls
+	gceAlphaNetworkFirewallPolicies       *GCEAlphaNetworkFirewallPolicies
+	gceAlphaRegionNetworkFirewallPolicies *GCEAlphaRegionNetworkFirewallPolicies
+	gceForwardingRules                    *GCEForwardingRules
+	gceAlphaForwardingRules               *GCEAlphaForwardingRules
+	gceBetaForwardingRules                *GCEBetaForwardingRules
+	gceAlphaGlobalForwardingRules         *GCEAlphaGlobalForwardingRules
+	gceBetaGlobalForwardingRules          *GCEBetaGlobalForwardingRules
+	gceGlobalForwardingRules              *GCEGlobalForwardingRules
+	gceHealthChecks                       *GCEHealthChecks
+	gceAlphaHealthChecks                  *GCEAlphaHealthChecks
+	gceBetaHealthChecks                   *GCEBetaHealthChecks
+	gceAlphaRegionHealthChecks            *GCEAlphaRegionHealthChecks
+	gceBetaRegionHealthChecks             *GCEBetaRegionHealthChecks
+	gceRegionHealthChecks                 *GCERegionHealthChecks
+	gceHttpHealthChecks                   *GCEHttpHealthChecks
+	gceHttpsHealthChecks                  *GCEHttpsHealthChecks
+	gceInstanceGroups                     *GCEInstanceGroups
+	gceInstances                          *GCEInstances
+	gceBetaInstances                      *GCEBetaInstances
+	gceAlphaInstances                     *GCEAlphaInstances
+	gceImages                             *GCEImages
+	gceBetaImages                         *GCEBetaImages
+	gceAlphaImages                        *GCEAlphaImages
+	gceAlphaNetworks                      *GCEAlphaNetworks
+	gceBetaNetworks                       *GCEBetaNetworks
+	gceNetworks                           *GCENetworks
+	gceAlphaNetworkEndpointGroups         *GCEAlphaNetworkEndpointGroups
+	gceBetaNetworkEndpointGroups          *GCEBetaNetworkEndpointGroups
+	gceNetworkEndpointGroups              *GCENetworkEndpointGroups
+	gceProjects                           *GCEProjects
+	gceRegions                            *GCERegions
+	gceAlphaRouters                       *GCEAlphaRouters
+	gceBetaRouters                        *GCEBetaRouters
+	gceRouters                            *GCERouters
+	gceRoutes                             *GCERoutes
+	gceBetaSecurityPolicies               *GCEBetaSecurityPolicies
+	gceBetaServiceAttachments             *GCEBetaServiceAttachments
+	gceAlphaServiceAttachments            *GCEAlphaServiceAttachments
+	gceSslCertificates                    *GCESslCertificates
+	gceBetaSslCertificates                *GCEBetaSslCertificates
+	gceAlphaSslCertificates               *GCEAlphaSslCertificates
+	gceAlphaRegionSslCertificates         *GCEAlphaRegionSslCertificates
+	gceBetaRegionSslCertificates          *GCEBetaRegionSslCertificates
+	gceRegionSslCertificates              *GCERegionSslCertificates
+	gceSslPolicies                        *GCESslPolicies
+	gceAlphaSubnetworks                   *GCEAlphaSubnetworks
+	gceBetaSubnetworks                    *GCEBetaSubnetworks
+	gceSubnetworks                        *GCESubnetworks
+	gceAlphaTargetHttpProxies             *GCEAlphaTargetHttpProxies
+	gceBetaTargetHttpProxies              *GCEBetaTargetHttpProxies
+	gceTargetHttpProxies                  *GCETargetHttpProxies
+	gceAlphaRegionTargetHttpProxies       *GCEAlphaRegionTargetHttpProxies
+	gceBetaRegionTargetHttpProxies        *GCEBetaRegionTargetHttpProxies
+	gceRegionTargetHttpProxies            *GCERegionTargetHttpProxies
+	gceTargetHttpsProxies                 *GCETargetHttpsProxies
+	gceAlphaTargetHttpsProxies            *GCEAlphaTargetHttpsProxies
+	gceBetaTargetHttpsProxies             *GCEBetaTargetHttpsProxies
+	gceAlphaRegionTargetHttpsProxies      *GCEAlphaRegionTargetHttpsProxies
+	gceBetaRegionTargetHttpsProxies       *GCEBetaRegionTargetHttpsProxies
+	gceRegionTargetHttpsProxies           *GCERegionTargetHttpsProxies
+	gceTargetPools                        *GCETargetPools
+	gceAlphaTargetTcpProxies              *GCEAlphaTargetTcpProxies
+	gceBetaTargetTcpProxies               *GCEBetaTargetTcpProxies
+	gceTargetTcpProxies                   *GCETargetTcpProxies
+	gceAlphaUrlMaps                       *GCEAlphaUrlMaps
+	gceBetaUrlMaps                        *GCEBetaUrlMaps
+	gceUrlMaps                            *GCEUrlMaps
+	gceAlphaRegionUrlMaps                 *GCEAlphaRegionUrlMaps
+	gceBetaRegionUrlMaps                  *GCEBetaRegionUrlMaps
+	gceRegionUrlMaps                      *GCERegionUrlMaps
+	gceZones                              *GCEZones
 }
 
 // Addresses returns the interface for the ga Addresses.
@@ -403,6 +406,11 @@ func (gce *GCE) Firewalls() Firewalls {
 // AlphaNetworkFirewallPolicies returns the interface for the alpha NetworkFirewallPolicies.
 func (gce *GCE) AlphaNetworkFirewallPolicies() AlphaNetworkFirewallPolicies {
 	return gce.gceAlphaNetworkFirewallPolicies
+}
+
+// AlphaRegionNetworkFirewallPolicies returns the interface for the alpha RegionNetworkFirewallPolicies.
+func (gce *GCE) AlphaRegionNetworkFirewallPolicies() AlphaRegionNetworkFirewallPolicies {
+	return gce.gceAlphaRegionNetworkFirewallPolicies
 }
 
 // ForwardingRules returns the interface for the ga ForwardingRules.
@@ -772,6 +780,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 	mockRegionBackendServicesObjs := map[meta.Key]*MockRegionBackendServicesObj{}
 	mockRegionDisksObjs := map[meta.Key]*MockRegionDisksObj{}
 	mockRegionHealthChecksObjs := map[meta.Key]*MockRegionHealthChecksObj{}
+	mockRegionNetworkFirewallPoliciesObjs := map[meta.Key]*MockRegionNetworkFirewallPoliciesObj{}
 	mockRegionSslCertificatesObjs := map[meta.Key]*MockRegionSslCertificatesObj{}
 	mockRegionTargetHttpProxiesObjs := map[meta.Key]*MockRegionTargetHttpProxiesObj{}
 	mockRegionTargetHttpsProxiesObjs := map[meta.Key]*MockRegionTargetHttpsProxiesObj{}
@@ -792,93 +801,94 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 	mockZonesObjs := map[meta.Key]*MockZonesObj{}
 
 	mock := &MockGCE{
-		MockAddresses:                     NewMockAddresses(projectRouter, mockAddressesObjs),
-		MockAlphaAddresses:                NewMockAlphaAddresses(projectRouter, mockAddressesObjs),
-		MockBetaAddresses:                 NewMockBetaAddresses(projectRouter, mockAddressesObjs),
-		MockAlphaGlobalAddresses:          NewMockAlphaGlobalAddresses(projectRouter, mockGlobalAddressesObjs),
-		MockBetaGlobalAddresses:           NewMockBetaGlobalAddresses(projectRouter, mockGlobalAddressesObjs),
-		MockGlobalAddresses:               NewMockGlobalAddresses(projectRouter, mockGlobalAddressesObjs),
-		MockBackendServices:               NewMockBackendServices(projectRouter, mockBackendServicesObjs),
-		MockBetaBackendServices:           NewMockBetaBackendServices(projectRouter, mockBackendServicesObjs),
-		MockAlphaBackendServices:          NewMockAlphaBackendServices(projectRouter, mockBackendServicesObjs),
-		MockRegionBackendServices:         NewMockRegionBackendServices(projectRouter, mockRegionBackendServicesObjs),
-		MockAlphaRegionBackendServices:    NewMockAlphaRegionBackendServices(projectRouter, mockRegionBackendServicesObjs),
-		MockBetaRegionBackendServices:     NewMockBetaRegionBackendServices(projectRouter, mockRegionBackendServicesObjs),
-		MockDisks:                         NewMockDisks(projectRouter, mockDisksObjs),
-		MockRegionDisks:                   NewMockRegionDisks(projectRouter, mockRegionDisksObjs),
-		MockAlphaFirewalls:                NewMockAlphaFirewalls(projectRouter, mockFirewallsObjs),
-		MockBetaFirewalls:                 NewMockBetaFirewalls(projectRouter, mockFirewallsObjs),
-		MockFirewalls:                     NewMockFirewalls(projectRouter, mockFirewallsObjs),
-		MockAlphaNetworkFirewallPolicies:  NewMockAlphaNetworkFirewallPolicies(projectRouter, mockNetworkFirewallPoliciesObjs),
-		MockForwardingRules:               NewMockForwardingRules(projectRouter, mockForwardingRulesObjs),
-		MockAlphaForwardingRules:          NewMockAlphaForwardingRules(projectRouter, mockForwardingRulesObjs),
-		MockBetaForwardingRules:           NewMockBetaForwardingRules(projectRouter, mockForwardingRulesObjs),
-		MockAlphaGlobalForwardingRules:    NewMockAlphaGlobalForwardingRules(projectRouter, mockGlobalForwardingRulesObjs),
-		MockBetaGlobalForwardingRules:     NewMockBetaGlobalForwardingRules(projectRouter, mockGlobalForwardingRulesObjs),
-		MockGlobalForwardingRules:         NewMockGlobalForwardingRules(projectRouter, mockGlobalForwardingRulesObjs),
-		MockHealthChecks:                  NewMockHealthChecks(projectRouter, mockHealthChecksObjs),
-		MockAlphaHealthChecks:             NewMockAlphaHealthChecks(projectRouter, mockHealthChecksObjs),
-		MockBetaHealthChecks:              NewMockBetaHealthChecks(projectRouter, mockHealthChecksObjs),
-		MockAlphaRegionHealthChecks:       NewMockAlphaRegionHealthChecks(projectRouter, mockRegionHealthChecksObjs),
-		MockBetaRegionHealthChecks:        NewMockBetaRegionHealthChecks(projectRouter, mockRegionHealthChecksObjs),
-		MockRegionHealthChecks:            NewMockRegionHealthChecks(projectRouter, mockRegionHealthChecksObjs),
-		MockHttpHealthChecks:              NewMockHttpHealthChecks(projectRouter, mockHttpHealthChecksObjs),
-		MockHttpsHealthChecks:             NewMockHttpsHealthChecks(projectRouter, mockHttpsHealthChecksObjs),
-		MockInstanceGroups:                NewMockInstanceGroups(projectRouter, mockInstanceGroupsObjs),
-		MockInstances:                     NewMockInstances(projectRouter, mockInstancesObjs),
-		MockBetaInstances:                 NewMockBetaInstances(projectRouter, mockInstancesObjs),
-		MockAlphaInstances:                NewMockAlphaInstances(projectRouter, mockInstancesObjs),
-		MockImages:                        NewMockImages(projectRouter, mockImagesObjs),
-		MockBetaImages:                    NewMockBetaImages(projectRouter, mockImagesObjs),
-		MockAlphaImages:                   NewMockAlphaImages(projectRouter, mockImagesObjs),
-		MockAlphaNetworks:                 NewMockAlphaNetworks(projectRouter, mockNetworksObjs),
-		MockBetaNetworks:                  NewMockBetaNetworks(projectRouter, mockNetworksObjs),
-		MockNetworks:                      NewMockNetworks(projectRouter, mockNetworksObjs),
-		MockAlphaNetworkEndpointGroups:    NewMockAlphaNetworkEndpointGroups(projectRouter, mockNetworkEndpointGroupsObjs),
-		MockBetaNetworkEndpointGroups:     NewMockBetaNetworkEndpointGroups(projectRouter, mockNetworkEndpointGroupsObjs),
-		MockNetworkEndpointGroups:         NewMockNetworkEndpointGroups(projectRouter, mockNetworkEndpointGroupsObjs),
-		MockProjects:                      NewMockProjects(projectRouter, mockProjectsObjs),
-		MockRegions:                       NewMockRegions(projectRouter, mockRegionsObjs),
-		MockAlphaRouters:                  NewMockAlphaRouters(projectRouter, mockRoutersObjs),
-		MockBetaRouters:                   NewMockBetaRouters(projectRouter, mockRoutersObjs),
-		MockRouters:                       NewMockRouters(projectRouter, mockRoutersObjs),
-		MockRoutes:                        NewMockRoutes(projectRouter, mockRoutesObjs),
-		MockBetaSecurityPolicies:          NewMockBetaSecurityPolicies(projectRouter, mockSecurityPoliciesObjs),
-		MockBetaServiceAttachments:        NewMockBetaServiceAttachments(projectRouter, mockServiceAttachmentsObjs),
-		MockAlphaServiceAttachments:       NewMockAlphaServiceAttachments(projectRouter, mockServiceAttachmentsObjs),
-		MockSslCertificates:               NewMockSslCertificates(projectRouter, mockSslCertificatesObjs),
-		MockBetaSslCertificates:           NewMockBetaSslCertificates(projectRouter, mockSslCertificatesObjs),
-		MockAlphaSslCertificates:          NewMockAlphaSslCertificates(projectRouter, mockSslCertificatesObjs),
-		MockAlphaRegionSslCertificates:    NewMockAlphaRegionSslCertificates(projectRouter, mockRegionSslCertificatesObjs),
-		MockBetaRegionSslCertificates:     NewMockBetaRegionSslCertificates(projectRouter, mockRegionSslCertificatesObjs),
-		MockRegionSslCertificates:         NewMockRegionSslCertificates(projectRouter, mockRegionSslCertificatesObjs),
-		MockSslPolicies:                   NewMockSslPolicies(projectRouter, mockSslPoliciesObjs),
-		MockAlphaSubnetworks:              NewMockAlphaSubnetworks(projectRouter, mockSubnetworksObjs),
-		MockBetaSubnetworks:               NewMockBetaSubnetworks(projectRouter, mockSubnetworksObjs),
-		MockSubnetworks:                   NewMockSubnetworks(projectRouter, mockSubnetworksObjs),
-		MockAlphaTargetHttpProxies:        NewMockAlphaTargetHttpProxies(projectRouter, mockTargetHttpProxiesObjs),
-		MockBetaTargetHttpProxies:         NewMockBetaTargetHttpProxies(projectRouter, mockTargetHttpProxiesObjs),
-		MockTargetHttpProxies:             NewMockTargetHttpProxies(projectRouter, mockTargetHttpProxiesObjs),
-		MockAlphaRegionTargetHttpProxies:  NewMockAlphaRegionTargetHttpProxies(projectRouter, mockRegionTargetHttpProxiesObjs),
-		MockBetaRegionTargetHttpProxies:   NewMockBetaRegionTargetHttpProxies(projectRouter, mockRegionTargetHttpProxiesObjs),
-		MockRegionTargetHttpProxies:       NewMockRegionTargetHttpProxies(projectRouter, mockRegionTargetHttpProxiesObjs),
-		MockTargetHttpsProxies:            NewMockTargetHttpsProxies(projectRouter, mockTargetHttpsProxiesObjs),
-		MockAlphaTargetHttpsProxies:       NewMockAlphaTargetHttpsProxies(projectRouter, mockTargetHttpsProxiesObjs),
-		MockBetaTargetHttpsProxies:        NewMockBetaTargetHttpsProxies(projectRouter, mockTargetHttpsProxiesObjs),
-		MockAlphaRegionTargetHttpsProxies: NewMockAlphaRegionTargetHttpsProxies(projectRouter, mockRegionTargetHttpsProxiesObjs),
-		MockBetaRegionTargetHttpsProxies:  NewMockBetaRegionTargetHttpsProxies(projectRouter, mockRegionTargetHttpsProxiesObjs),
-		MockRegionTargetHttpsProxies:      NewMockRegionTargetHttpsProxies(projectRouter, mockRegionTargetHttpsProxiesObjs),
-		MockTargetPools:                   NewMockTargetPools(projectRouter, mockTargetPoolsObjs),
-		MockAlphaTargetTcpProxies:         NewMockAlphaTargetTcpProxies(projectRouter, mockTargetTcpProxiesObjs),
-		MockBetaTargetTcpProxies:          NewMockBetaTargetTcpProxies(projectRouter, mockTargetTcpProxiesObjs),
-		MockTargetTcpProxies:              NewMockTargetTcpProxies(projectRouter, mockTargetTcpProxiesObjs),
-		MockAlphaUrlMaps:                  NewMockAlphaUrlMaps(projectRouter, mockUrlMapsObjs),
-		MockBetaUrlMaps:                   NewMockBetaUrlMaps(projectRouter, mockUrlMapsObjs),
-		MockUrlMaps:                       NewMockUrlMaps(projectRouter, mockUrlMapsObjs),
-		MockAlphaRegionUrlMaps:            NewMockAlphaRegionUrlMaps(projectRouter, mockRegionUrlMapsObjs),
-		MockBetaRegionUrlMaps:             NewMockBetaRegionUrlMaps(projectRouter, mockRegionUrlMapsObjs),
-		MockRegionUrlMaps:                 NewMockRegionUrlMaps(projectRouter, mockRegionUrlMapsObjs),
-		MockZones:                         NewMockZones(projectRouter, mockZonesObjs),
+		MockAddresses:                          NewMockAddresses(projectRouter, mockAddressesObjs),
+		MockAlphaAddresses:                     NewMockAlphaAddresses(projectRouter, mockAddressesObjs),
+		MockBetaAddresses:                      NewMockBetaAddresses(projectRouter, mockAddressesObjs),
+		MockAlphaGlobalAddresses:               NewMockAlphaGlobalAddresses(projectRouter, mockGlobalAddressesObjs),
+		MockBetaGlobalAddresses:                NewMockBetaGlobalAddresses(projectRouter, mockGlobalAddressesObjs),
+		MockGlobalAddresses:                    NewMockGlobalAddresses(projectRouter, mockGlobalAddressesObjs),
+		MockBackendServices:                    NewMockBackendServices(projectRouter, mockBackendServicesObjs),
+		MockBetaBackendServices:                NewMockBetaBackendServices(projectRouter, mockBackendServicesObjs),
+		MockAlphaBackendServices:               NewMockAlphaBackendServices(projectRouter, mockBackendServicesObjs),
+		MockRegionBackendServices:              NewMockRegionBackendServices(projectRouter, mockRegionBackendServicesObjs),
+		MockAlphaRegionBackendServices:         NewMockAlphaRegionBackendServices(projectRouter, mockRegionBackendServicesObjs),
+		MockBetaRegionBackendServices:          NewMockBetaRegionBackendServices(projectRouter, mockRegionBackendServicesObjs),
+		MockDisks:                              NewMockDisks(projectRouter, mockDisksObjs),
+		MockRegionDisks:                        NewMockRegionDisks(projectRouter, mockRegionDisksObjs),
+		MockAlphaFirewalls:                     NewMockAlphaFirewalls(projectRouter, mockFirewallsObjs),
+		MockBetaFirewalls:                      NewMockBetaFirewalls(projectRouter, mockFirewallsObjs),
+		MockFirewalls:                          NewMockFirewalls(projectRouter, mockFirewallsObjs),
+		MockAlphaNetworkFirewallPolicies:       NewMockAlphaNetworkFirewallPolicies(projectRouter, mockNetworkFirewallPoliciesObjs),
+		MockAlphaRegionNetworkFirewallPolicies: NewMockAlphaRegionNetworkFirewallPolicies(projectRouter, mockRegionNetworkFirewallPoliciesObjs),
+		MockForwardingRules:                    NewMockForwardingRules(projectRouter, mockForwardingRulesObjs),
+		MockAlphaForwardingRules:               NewMockAlphaForwardingRules(projectRouter, mockForwardingRulesObjs),
+		MockBetaForwardingRules:                NewMockBetaForwardingRules(projectRouter, mockForwardingRulesObjs),
+		MockAlphaGlobalForwardingRules:         NewMockAlphaGlobalForwardingRules(projectRouter, mockGlobalForwardingRulesObjs),
+		MockBetaGlobalForwardingRules:          NewMockBetaGlobalForwardingRules(projectRouter, mockGlobalForwardingRulesObjs),
+		MockGlobalForwardingRules:              NewMockGlobalForwardingRules(projectRouter, mockGlobalForwardingRulesObjs),
+		MockHealthChecks:                       NewMockHealthChecks(projectRouter, mockHealthChecksObjs),
+		MockAlphaHealthChecks:                  NewMockAlphaHealthChecks(projectRouter, mockHealthChecksObjs),
+		MockBetaHealthChecks:                   NewMockBetaHealthChecks(projectRouter, mockHealthChecksObjs),
+		MockAlphaRegionHealthChecks:            NewMockAlphaRegionHealthChecks(projectRouter, mockRegionHealthChecksObjs),
+		MockBetaRegionHealthChecks:             NewMockBetaRegionHealthChecks(projectRouter, mockRegionHealthChecksObjs),
+		MockRegionHealthChecks:                 NewMockRegionHealthChecks(projectRouter, mockRegionHealthChecksObjs),
+		MockHttpHealthChecks:                   NewMockHttpHealthChecks(projectRouter, mockHttpHealthChecksObjs),
+		MockHttpsHealthChecks:                  NewMockHttpsHealthChecks(projectRouter, mockHttpsHealthChecksObjs),
+		MockInstanceGroups:                     NewMockInstanceGroups(projectRouter, mockInstanceGroupsObjs),
+		MockInstances:                          NewMockInstances(projectRouter, mockInstancesObjs),
+		MockBetaInstances:                      NewMockBetaInstances(projectRouter, mockInstancesObjs),
+		MockAlphaInstances:                     NewMockAlphaInstances(projectRouter, mockInstancesObjs),
+		MockImages:                             NewMockImages(projectRouter, mockImagesObjs),
+		MockBetaImages:                         NewMockBetaImages(projectRouter, mockImagesObjs),
+		MockAlphaImages:                        NewMockAlphaImages(projectRouter, mockImagesObjs),
+		MockAlphaNetworks:                      NewMockAlphaNetworks(projectRouter, mockNetworksObjs),
+		MockBetaNetworks:                       NewMockBetaNetworks(projectRouter, mockNetworksObjs),
+		MockNetworks:                           NewMockNetworks(projectRouter, mockNetworksObjs),
+		MockAlphaNetworkEndpointGroups:         NewMockAlphaNetworkEndpointGroups(projectRouter, mockNetworkEndpointGroupsObjs),
+		MockBetaNetworkEndpointGroups:          NewMockBetaNetworkEndpointGroups(projectRouter, mockNetworkEndpointGroupsObjs),
+		MockNetworkEndpointGroups:              NewMockNetworkEndpointGroups(projectRouter, mockNetworkEndpointGroupsObjs),
+		MockProjects:                           NewMockProjects(projectRouter, mockProjectsObjs),
+		MockRegions:                            NewMockRegions(projectRouter, mockRegionsObjs),
+		MockAlphaRouters:                       NewMockAlphaRouters(projectRouter, mockRoutersObjs),
+		MockBetaRouters:                        NewMockBetaRouters(projectRouter, mockRoutersObjs),
+		MockRouters:                            NewMockRouters(projectRouter, mockRoutersObjs),
+		MockRoutes:                             NewMockRoutes(projectRouter, mockRoutesObjs),
+		MockBetaSecurityPolicies:               NewMockBetaSecurityPolicies(projectRouter, mockSecurityPoliciesObjs),
+		MockBetaServiceAttachments:             NewMockBetaServiceAttachments(projectRouter, mockServiceAttachmentsObjs),
+		MockAlphaServiceAttachments:            NewMockAlphaServiceAttachments(projectRouter, mockServiceAttachmentsObjs),
+		MockSslCertificates:                    NewMockSslCertificates(projectRouter, mockSslCertificatesObjs),
+		MockBetaSslCertificates:                NewMockBetaSslCertificates(projectRouter, mockSslCertificatesObjs),
+		MockAlphaSslCertificates:               NewMockAlphaSslCertificates(projectRouter, mockSslCertificatesObjs),
+		MockAlphaRegionSslCertificates:         NewMockAlphaRegionSslCertificates(projectRouter, mockRegionSslCertificatesObjs),
+		MockBetaRegionSslCertificates:          NewMockBetaRegionSslCertificates(projectRouter, mockRegionSslCertificatesObjs),
+		MockRegionSslCertificates:              NewMockRegionSslCertificates(projectRouter, mockRegionSslCertificatesObjs),
+		MockSslPolicies:                        NewMockSslPolicies(projectRouter, mockSslPoliciesObjs),
+		MockAlphaSubnetworks:                   NewMockAlphaSubnetworks(projectRouter, mockSubnetworksObjs),
+		MockBetaSubnetworks:                    NewMockBetaSubnetworks(projectRouter, mockSubnetworksObjs),
+		MockSubnetworks:                        NewMockSubnetworks(projectRouter, mockSubnetworksObjs),
+		MockAlphaTargetHttpProxies:             NewMockAlphaTargetHttpProxies(projectRouter, mockTargetHttpProxiesObjs),
+		MockBetaTargetHttpProxies:              NewMockBetaTargetHttpProxies(projectRouter, mockTargetHttpProxiesObjs),
+		MockTargetHttpProxies:                  NewMockTargetHttpProxies(projectRouter, mockTargetHttpProxiesObjs),
+		MockAlphaRegionTargetHttpProxies:       NewMockAlphaRegionTargetHttpProxies(projectRouter, mockRegionTargetHttpProxiesObjs),
+		MockBetaRegionTargetHttpProxies:        NewMockBetaRegionTargetHttpProxies(projectRouter, mockRegionTargetHttpProxiesObjs),
+		MockRegionTargetHttpProxies:            NewMockRegionTargetHttpProxies(projectRouter, mockRegionTargetHttpProxiesObjs),
+		MockTargetHttpsProxies:                 NewMockTargetHttpsProxies(projectRouter, mockTargetHttpsProxiesObjs),
+		MockAlphaTargetHttpsProxies:            NewMockAlphaTargetHttpsProxies(projectRouter, mockTargetHttpsProxiesObjs),
+		MockBetaTargetHttpsProxies:             NewMockBetaTargetHttpsProxies(projectRouter, mockTargetHttpsProxiesObjs),
+		MockAlphaRegionTargetHttpsProxies:      NewMockAlphaRegionTargetHttpsProxies(projectRouter, mockRegionTargetHttpsProxiesObjs),
+		MockBetaRegionTargetHttpsProxies:       NewMockBetaRegionTargetHttpsProxies(projectRouter, mockRegionTargetHttpsProxiesObjs),
+		MockRegionTargetHttpsProxies:           NewMockRegionTargetHttpsProxies(projectRouter, mockRegionTargetHttpsProxiesObjs),
+		MockTargetPools:                        NewMockTargetPools(projectRouter, mockTargetPoolsObjs),
+		MockAlphaTargetTcpProxies:              NewMockAlphaTargetTcpProxies(projectRouter, mockTargetTcpProxiesObjs),
+		MockBetaTargetTcpProxies:               NewMockBetaTargetTcpProxies(projectRouter, mockTargetTcpProxiesObjs),
+		MockTargetTcpProxies:                   NewMockTargetTcpProxies(projectRouter, mockTargetTcpProxiesObjs),
+		MockAlphaUrlMaps:                       NewMockAlphaUrlMaps(projectRouter, mockUrlMapsObjs),
+		MockBetaUrlMaps:                        NewMockBetaUrlMaps(projectRouter, mockUrlMapsObjs),
+		MockUrlMaps:                            NewMockUrlMaps(projectRouter, mockUrlMapsObjs),
+		MockAlphaRegionUrlMaps:                 NewMockAlphaRegionUrlMaps(projectRouter, mockRegionUrlMapsObjs),
+		MockBetaRegionUrlMaps:                  NewMockBetaRegionUrlMaps(projectRouter, mockRegionUrlMapsObjs),
+		MockRegionUrlMaps:                      NewMockRegionUrlMaps(projectRouter, mockRegionUrlMapsObjs),
+		MockZones:                              NewMockZones(projectRouter, mockZonesObjs),
 	}
 	return mock
 }
@@ -888,93 +898,94 @@ var _ Cloud = (*MockGCE)(nil)
 
 // MockGCE is the mock for the compute API.
 type MockGCE struct {
-	MockAddresses                     *MockAddresses
-	MockAlphaAddresses                *MockAlphaAddresses
-	MockBetaAddresses                 *MockBetaAddresses
-	MockAlphaGlobalAddresses          *MockAlphaGlobalAddresses
-	MockBetaGlobalAddresses           *MockBetaGlobalAddresses
-	MockGlobalAddresses               *MockGlobalAddresses
-	MockBackendServices               *MockBackendServices
-	MockBetaBackendServices           *MockBetaBackendServices
-	MockAlphaBackendServices          *MockAlphaBackendServices
-	MockRegionBackendServices         *MockRegionBackendServices
-	MockAlphaRegionBackendServices    *MockAlphaRegionBackendServices
-	MockBetaRegionBackendServices     *MockBetaRegionBackendServices
-	MockDisks                         *MockDisks
-	MockRegionDisks                   *MockRegionDisks
-	MockAlphaFirewalls                *MockAlphaFirewalls
-	MockBetaFirewalls                 *MockBetaFirewalls
-	MockFirewalls                     *MockFirewalls
-	MockAlphaNetworkFirewallPolicies  *MockAlphaNetworkFirewallPolicies
-	MockForwardingRules               *MockForwardingRules
-	MockAlphaForwardingRules          *MockAlphaForwardingRules
-	MockBetaForwardingRules           *MockBetaForwardingRules
-	MockAlphaGlobalForwardingRules    *MockAlphaGlobalForwardingRules
-	MockBetaGlobalForwardingRules     *MockBetaGlobalForwardingRules
-	MockGlobalForwardingRules         *MockGlobalForwardingRules
-	MockHealthChecks                  *MockHealthChecks
-	MockAlphaHealthChecks             *MockAlphaHealthChecks
-	MockBetaHealthChecks              *MockBetaHealthChecks
-	MockAlphaRegionHealthChecks       *MockAlphaRegionHealthChecks
-	MockBetaRegionHealthChecks        *MockBetaRegionHealthChecks
-	MockRegionHealthChecks            *MockRegionHealthChecks
-	MockHttpHealthChecks              *MockHttpHealthChecks
-	MockHttpsHealthChecks             *MockHttpsHealthChecks
-	MockInstanceGroups                *MockInstanceGroups
-	MockInstances                     *MockInstances
-	MockBetaInstances                 *MockBetaInstances
-	MockAlphaInstances                *MockAlphaInstances
-	MockImages                        *MockImages
-	MockBetaImages                    *MockBetaImages
-	MockAlphaImages                   *MockAlphaImages
-	MockAlphaNetworks                 *MockAlphaNetworks
-	MockBetaNetworks                  *MockBetaNetworks
-	MockNetworks                      *MockNetworks
-	MockAlphaNetworkEndpointGroups    *MockAlphaNetworkEndpointGroups
-	MockBetaNetworkEndpointGroups     *MockBetaNetworkEndpointGroups
-	MockNetworkEndpointGroups         *MockNetworkEndpointGroups
-	MockProjects                      *MockProjects
-	MockRegions                       *MockRegions
-	MockAlphaRouters                  *MockAlphaRouters
-	MockBetaRouters                   *MockBetaRouters
-	MockRouters                       *MockRouters
-	MockRoutes                        *MockRoutes
-	MockBetaSecurityPolicies          *MockBetaSecurityPolicies
-	MockBetaServiceAttachments        *MockBetaServiceAttachments
-	MockAlphaServiceAttachments       *MockAlphaServiceAttachments
-	MockSslCertificates               *MockSslCertificates
-	MockBetaSslCertificates           *MockBetaSslCertificates
-	MockAlphaSslCertificates          *MockAlphaSslCertificates
-	MockAlphaRegionSslCertificates    *MockAlphaRegionSslCertificates
-	MockBetaRegionSslCertificates     *MockBetaRegionSslCertificates
-	MockRegionSslCertificates         *MockRegionSslCertificates
-	MockSslPolicies                   *MockSslPolicies
-	MockAlphaSubnetworks              *MockAlphaSubnetworks
-	MockBetaSubnetworks               *MockBetaSubnetworks
-	MockSubnetworks                   *MockSubnetworks
-	MockAlphaTargetHttpProxies        *MockAlphaTargetHttpProxies
-	MockBetaTargetHttpProxies         *MockBetaTargetHttpProxies
-	MockTargetHttpProxies             *MockTargetHttpProxies
-	MockAlphaRegionTargetHttpProxies  *MockAlphaRegionTargetHttpProxies
-	MockBetaRegionTargetHttpProxies   *MockBetaRegionTargetHttpProxies
-	MockRegionTargetHttpProxies       *MockRegionTargetHttpProxies
-	MockTargetHttpsProxies            *MockTargetHttpsProxies
-	MockAlphaTargetHttpsProxies       *MockAlphaTargetHttpsProxies
-	MockBetaTargetHttpsProxies        *MockBetaTargetHttpsProxies
-	MockAlphaRegionTargetHttpsProxies *MockAlphaRegionTargetHttpsProxies
-	MockBetaRegionTargetHttpsProxies  *MockBetaRegionTargetHttpsProxies
-	MockRegionTargetHttpsProxies      *MockRegionTargetHttpsProxies
-	MockTargetPools                   *MockTargetPools
-	MockAlphaTargetTcpProxies         *MockAlphaTargetTcpProxies
-	MockBetaTargetTcpProxies          *MockBetaTargetTcpProxies
-	MockTargetTcpProxies              *MockTargetTcpProxies
-	MockAlphaUrlMaps                  *MockAlphaUrlMaps
-	MockBetaUrlMaps                   *MockBetaUrlMaps
-	MockUrlMaps                       *MockUrlMaps
-	MockAlphaRegionUrlMaps            *MockAlphaRegionUrlMaps
-	MockBetaRegionUrlMaps             *MockBetaRegionUrlMaps
-	MockRegionUrlMaps                 *MockRegionUrlMaps
-	MockZones                         *MockZones
+	MockAddresses                          *MockAddresses
+	MockAlphaAddresses                     *MockAlphaAddresses
+	MockBetaAddresses                      *MockBetaAddresses
+	MockAlphaGlobalAddresses               *MockAlphaGlobalAddresses
+	MockBetaGlobalAddresses                *MockBetaGlobalAddresses
+	MockGlobalAddresses                    *MockGlobalAddresses
+	MockBackendServices                    *MockBackendServices
+	MockBetaBackendServices                *MockBetaBackendServices
+	MockAlphaBackendServices               *MockAlphaBackendServices
+	MockRegionBackendServices              *MockRegionBackendServices
+	MockAlphaRegionBackendServices         *MockAlphaRegionBackendServices
+	MockBetaRegionBackendServices          *MockBetaRegionBackendServices
+	MockDisks                              *MockDisks
+	MockRegionDisks                        *MockRegionDisks
+	MockAlphaFirewalls                     *MockAlphaFirewalls
+	MockBetaFirewalls                      *MockBetaFirewalls
+	MockFirewalls                          *MockFirewalls
+	MockAlphaNetworkFirewallPolicies       *MockAlphaNetworkFirewallPolicies
+	MockAlphaRegionNetworkFirewallPolicies *MockAlphaRegionNetworkFirewallPolicies
+	MockForwardingRules                    *MockForwardingRules
+	MockAlphaForwardingRules               *MockAlphaForwardingRules
+	MockBetaForwardingRules                *MockBetaForwardingRules
+	MockAlphaGlobalForwardingRules         *MockAlphaGlobalForwardingRules
+	MockBetaGlobalForwardingRules          *MockBetaGlobalForwardingRules
+	MockGlobalForwardingRules              *MockGlobalForwardingRules
+	MockHealthChecks                       *MockHealthChecks
+	MockAlphaHealthChecks                  *MockAlphaHealthChecks
+	MockBetaHealthChecks                   *MockBetaHealthChecks
+	MockAlphaRegionHealthChecks            *MockAlphaRegionHealthChecks
+	MockBetaRegionHealthChecks             *MockBetaRegionHealthChecks
+	MockRegionHealthChecks                 *MockRegionHealthChecks
+	MockHttpHealthChecks                   *MockHttpHealthChecks
+	MockHttpsHealthChecks                  *MockHttpsHealthChecks
+	MockInstanceGroups                     *MockInstanceGroups
+	MockInstances                          *MockInstances
+	MockBetaInstances                      *MockBetaInstances
+	MockAlphaInstances                     *MockAlphaInstances
+	MockImages                             *MockImages
+	MockBetaImages                         *MockBetaImages
+	MockAlphaImages                        *MockAlphaImages
+	MockAlphaNetworks                      *MockAlphaNetworks
+	MockBetaNetworks                       *MockBetaNetworks
+	MockNetworks                           *MockNetworks
+	MockAlphaNetworkEndpointGroups         *MockAlphaNetworkEndpointGroups
+	MockBetaNetworkEndpointGroups          *MockBetaNetworkEndpointGroups
+	MockNetworkEndpointGroups              *MockNetworkEndpointGroups
+	MockProjects                           *MockProjects
+	MockRegions                            *MockRegions
+	MockAlphaRouters                       *MockAlphaRouters
+	MockBetaRouters                        *MockBetaRouters
+	MockRouters                            *MockRouters
+	MockRoutes                             *MockRoutes
+	MockBetaSecurityPolicies               *MockBetaSecurityPolicies
+	MockBetaServiceAttachments             *MockBetaServiceAttachments
+	MockAlphaServiceAttachments            *MockAlphaServiceAttachments
+	MockSslCertificates                    *MockSslCertificates
+	MockBetaSslCertificates                *MockBetaSslCertificates
+	MockAlphaSslCertificates               *MockAlphaSslCertificates
+	MockAlphaRegionSslCertificates         *MockAlphaRegionSslCertificates
+	MockBetaRegionSslCertificates          *MockBetaRegionSslCertificates
+	MockRegionSslCertificates              *MockRegionSslCertificates
+	MockSslPolicies                        *MockSslPolicies
+	MockAlphaSubnetworks                   *MockAlphaSubnetworks
+	MockBetaSubnetworks                    *MockBetaSubnetworks
+	MockSubnetworks                        *MockSubnetworks
+	MockAlphaTargetHttpProxies             *MockAlphaTargetHttpProxies
+	MockBetaTargetHttpProxies              *MockBetaTargetHttpProxies
+	MockTargetHttpProxies                  *MockTargetHttpProxies
+	MockAlphaRegionTargetHttpProxies       *MockAlphaRegionTargetHttpProxies
+	MockBetaRegionTargetHttpProxies        *MockBetaRegionTargetHttpProxies
+	MockRegionTargetHttpProxies            *MockRegionTargetHttpProxies
+	MockTargetHttpsProxies                 *MockTargetHttpsProxies
+	MockAlphaTargetHttpsProxies            *MockAlphaTargetHttpsProxies
+	MockBetaTargetHttpsProxies             *MockBetaTargetHttpsProxies
+	MockAlphaRegionTargetHttpsProxies      *MockAlphaRegionTargetHttpsProxies
+	MockBetaRegionTargetHttpsProxies       *MockBetaRegionTargetHttpsProxies
+	MockRegionTargetHttpsProxies           *MockRegionTargetHttpsProxies
+	MockTargetPools                        *MockTargetPools
+	MockAlphaTargetTcpProxies              *MockAlphaTargetTcpProxies
+	MockBetaTargetTcpProxies               *MockBetaTargetTcpProxies
+	MockTargetTcpProxies                   *MockTargetTcpProxies
+	MockAlphaUrlMaps                       *MockAlphaUrlMaps
+	MockBetaUrlMaps                        *MockBetaUrlMaps
+	MockUrlMaps                            *MockUrlMaps
+	MockAlphaRegionUrlMaps                 *MockAlphaRegionUrlMaps
+	MockBetaRegionUrlMaps                  *MockBetaRegionUrlMaps
+	MockRegionUrlMaps                      *MockRegionUrlMaps
+	MockZones                              *MockZones
 }
 
 // Addresses returns the interface for the ga Addresses.
@@ -1065,6 +1076,11 @@ func (mock *MockGCE) Firewalls() Firewalls {
 // AlphaNetworkFirewallPolicies returns the interface for the alpha NetworkFirewallPolicies.
 func (mock *MockGCE) AlphaNetworkFirewallPolicies() AlphaNetworkFirewallPolicies {
 	return mock.MockAlphaNetworkFirewallPolicies
+}
+
+// AlphaRegionNetworkFirewallPolicies returns the interface for the alpha RegionNetworkFirewallPolicies.
+func (mock *MockGCE) AlphaRegionNetworkFirewallPolicies() AlphaRegionNetworkFirewallPolicies {
+	return mock.MockAlphaRegionNetworkFirewallPolicies
 }
 
 // ForwardingRules returns the interface for the ga ForwardingRules.
@@ -2146,6 +2162,26 @@ func (m *MockRegionHealthChecksObj) ToGA() *ga.HealthCheck {
 	ret := &ga.HealthCheck{}
 	if err := copyViaJSON(ret, m.Obj); err != nil {
 		klog.Errorf("Could not convert %T to *ga.HealthCheck via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// MockRegionNetworkFirewallPoliciesObj is used to store the various object versions in the shared
+// map of mocked objects. This allows for multiple API versions to co-exist and
+// share the same "view" of the objects in the backend.
+type MockRegionNetworkFirewallPoliciesObj struct {
+	Obj interface{}
+}
+
+// ToAlpha retrieves the given version of the object.
+func (m *MockRegionNetworkFirewallPoliciesObj) ToAlpha() *alpha.FirewallPolicy {
+	if ret, ok := m.Obj.(*alpha.FirewallPolicy); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &alpha.FirewallPolicy{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *alpha.FirewallPolicy via JSON: %v", m.Obj, err)
 	}
 	return ret
 }
@@ -10602,6 +10638,831 @@ func (g *GCEAlphaNetworkFirewallPolicies) TestIamPermissions(ctx context.Context
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// AlphaRegionNetworkFirewallPolicies is an interface that allows for mocking of RegionNetworkFirewallPolicies.
+type AlphaRegionNetworkFirewallPolicies interface {
+	Get(ctx context.Context, key *meta.Key) (*alpha.FirewallPolicy, error)
+	List(ctx context.Context, region string, fl *filter.F) ([]*alpha.FirewallPolicy, error)
+	Insert(ctx context.Context, key *meta.Key, obj *alpha.FirewallPolicy) error
+	Delete(ctx context.Context, key *meta.Key) error
+	AddAssociation(context.Context, *meta.Key, *alpha.FirewallPolicyAssociation) error
+	AddRule(context.Context, *meta.Key, *alpha.FirewallPolicyRule) error
+	CloneRules(context.Context, *meta.Key) error
+	GetAssociation(context.Context, *meta.Key) (*alpha.FirewallPolicyAssociation, error)
+	GetIamPolicy(context.Context, *meta.Key) (*alpha.Policy, error)
+	GetRule(context.Context, *meta.Key) (*alpha.FirewallPolicyRule, error)
+	Patch(context.Context, *meta.Key, *alpha.FirewallPolicy) error
+	PatchRule(context.Context, *meta.Key, *alpha.FirewallPolicyRule) error
+	RemoveAssociation(context.Context, *meta.Key) error
+	RemoveRule(context.Context, *meta.Key) error
+	SetIamPolicy(context.Context, *meta.Key, *alpha.RegionSetPolicyRequest) (*alpha.Policy, error)
+	TestIamPermissions(context.Context, *meta.Key, *alpha.TestPermissionsRequest) (*alpha.TestPermissionsResponse, error)
+}
+
+// NewMockAlphaRegionNetworkFirewallPolicies returns a new mock for RegionNetworkFirewallPolicies.
+func NewMockAlphaRegionNetworkFirewallPolicies(pr ProjectRouter, objs map[meta.Key]*MockRegionNetworkFirewallPoliciesObj) *MockAlphaRegionNetworkFirewallPolicies {
+	mock := &MockAlphaRegionNetworkFirewallPolicies{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockAlphaRegionNetworkFirewallPolicies is the mock for RegionNetworkFirewallPolicies.
+type MockAlphaRegionNetworkFirewallPolicies struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockRegionNetworkFirewallPoliciesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook                func(ctx context.Context, key *meta.Key, m *MockAlphaRegionNetworkFirewallPolicies) (bool, *alpha.FirewallPolicy, error)
+	ListHook               func(ctx context.Context, region string, fl *filter.F, m *MockAlphaRegionNetworkFirewallPolicies) (bool, []*alpha.FirewallPolicy, error)
+	InsertHook             func(ctx context.Context, key *meta.Key, obj *alpha.FirewallPolicy, m *MockAlphaRegionNetworkFirewallPolicies) (bool, error)
+	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockAlphaRegionNetworkFirewallPolicies) (bool, error)
+	AddAssociationHook     func(context.Context, *meta.Key, *alpha.FirewallPolicyAssociation, *MockAlphaRegionNetworkFirewallPolicies) error
+	AddRuleHook            func(context.Context, *meta.Key, *alpha.FirewallPolicyRule, *MockAlphaRegionNetworkFirewallPolicies) error
+	CloneRulesHook         func(context.Context, *meta.Key, *MockAlphaRegionNetworkFirewallPolicies) error
+	GetAssociationHook     func(context.Context, *meta.Key, *MockAlphaRegionNetworkFirewallPolicies) (*alpha.FirewallPolicyAssociation, error)
+	GetIamPolicyHook       func(context.Context, *meta.Key, *MockAlphaRegionNetworkFirewallPolicies) (*alpha.Policy, error)
+	GetRuleHook            func(context.Context, *meta.Key, *MockAlphaRegionNetworkFirewallPolicies) (*alpha.FirewallPolicyRule, error)
+	PatchHook              func(context.Context, *meta.Key, *alpha.FirewallPolicy, *MockAlphaRegionNetworkFirewallPolicies) error
+	PatchRuleHook          func(context.Context, *meta.Key, *alpha.FirewallPolicyRule, *MockAlphaRegionNetworkFirewallPolicies) error
+	RemoveAssociationHook  func(context.Context, *meta.Key, *MockAlphaRegionNetworkFirewallPolicies) error
+	RemoveRuleHook         func(context.Context, *meta.Key, *MockAlphaRegionNetworkFirewallPolicies) error
+	SetIamPolicyHook       func(context.Context, *meta.Key, *alpha.RegionSetPolicyRequest, *MockAlphaRegionNetworkFirewallPolicies) (*alpha.Policy, error)
+	TestIamPermissionsHook func(context.Context, *meta.Key, *alpha.TestPermissionsRequest, *MockAlphaRegionNetworkFirewallPolicies) (*alpha.TestPermissionsResponse, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockAlphaRegionNetworkFirewallPolicies) Get(ctx context.Context, key *meta.Key) (*alpha.FirewallPolicy, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToAlpha()
+		klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockAlphaRegionNetworkFirewallPolicies %v not found", key),
+	}
+	klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock in the given region.
+func (m *MockAlphaRegionNetworkFirewallPolicies) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.FirewallPolicy, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, region, fl, m); intercept {
+			klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.List(%v, %q, %v) = [%v items], %v", ctx, region, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.List(%v, %q, %v) = nil, %v", ctx, region, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*alpha.FirewallPolicy
+	for key, obj := range m.Objects {
+		if key.Region != region {
+			continue
+		}
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		objs = append(objs, obj.ToAlpha())
+	}
+
+	klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.List(%v, %q, %v) = [%v items], nil", ctx, region, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockAlphaRegionNetworkFirewallPolicies) Insert(ctx context.Context, key *meta.Key, obj *alpha.FirewallPolicy) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockAlphaRegionNetworkFirewallPolicies %v exists", key),
+		}
+		klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "regionNetworkFirewallPolicies")
+	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "regionNetworkFirewallPolicies", key)
+
+	m.Objects[*key] = &MockRegionNetworkFirewallPoliciesObj{obj}
+	klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockAlphaRegionNetworkFirewallPolicies) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockAlphaRegionNetworkFirewallPolicies %v not found", key),
+		}
+		klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockAlphaRegionNetworkFirewallPolicies) Obj(o *alpha.FirewallPolicy) *MockRegionNetworkFirewallPoliciesObj {
+	return &MockRegionNetworkFirewallPoliciesObj{o}
+}
+
+// AddAssociation is a mock for the corresponding method.
+func (m *MockAlphaRegionNetworkFirewallPolicies) AddAssociation(ctx context.Context, key *meta.Key, arg0 *alpha.FirewallPolicyAssociation) error {
+	if m.AddAssociationHook != nil {
+		return m.AddAssociationHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// AddRule is a mock for the corresponding method.
+func (m *MockAlphaRegionNetworkFirewallPolicies) AddRule(ctx context.Context, key *meta.Key, arg0 *alpha.FirewallPolicyRule) error {
+	if m.AddRuleHook != nil {
+		return m.AddRuleHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// CloneRules is a mock for the corresponding method.
+func (m *MockAlphaRegionNetworkFirewallPolicies) CloneRules(ctx context.Context, key *meta.Key) error {
+	if m.CloneRulesHook != nil {
+		return m.CloneRulesHook(ctx, key, m)
+	}
+	return nil
+}
+
+// GetAssociation is a mock for the corresponding method.
+func (m *MockAlphaRegionNetworkFirewallPolicies) GetAssociation(ctx context.Context, key *meta.Key) (*alpha.FirewallPolicyAssociation, error) {
+	if m.GetAssociationHook != nil {
+		return m.GetAssociationHook(ctx, key, m)
+	}
+	return nil, fmt.Errorf("GetAssociationHook must be set")
+}
+
+// GetIamPolicy is a mock for the corresponding method.
+func (m *MockAlphaRegionNetworkFirewallPolicies) GetIamPolicy(ctx context.Context, key *meta.Key) (*alpha.Policy, error) {
+	if m.GetIamPolicyHook != nil {
+		return m.GetIamPolicyHook(ctx, key, m)
+	}
+	return nil, fmt.Errorf("GetIamPolicyHook must be set")
+}
+
+// GetRule is a mock for the corresponding method.
+func (m *MockAlphaRegionNetworkFirewallPolicies) GetRule(ctx context.Context, key *meta.Key) (*alpha.FirewallPolicyRule, error) {
+	if m.GetRuleHook != nil {
+		return m.GetRuleHook(ctx, key, m)
+	}
+	return nil, fmt.Errorf("GetRuleHook must be set")
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockAlphaRegionNetworkFirewallPolicies) Patch(ctx context.Context, key *meta.Key, arg0 *alpha.FirewallPolicy) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// PatchRule is a mock for the corresponding method.
+func (m *MockAlphaRegionNetworkFirewallPolicies) PatchRule(ctx context.Context, key *meta.Key, arg0 *alpha.FirewallPolicyRule) error {
+	if m.PatchRuleHook != nil {
+		return m.PatchRuleHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// RemoveAssociation is a mock for the corresponding method.
+func (m *MockAlphaRegionNetworkFirewallPolicies) RemoveAssociation(ctx context.Context, key *meta.Key) error {
+	if m.RemoveAssociationHook != nil {
+		return m.RemoveAssociationHook(ctx, key, m)
+	}
+	return nil
+}
+
+// RemoveRule is a mock for the corresponding method.
+func (m *MockAlphaRegionNetworkFirewallPolicies) RemoveRule(ctx context.Context, key *meta.Key) error {
+	if m.RemoveRuleHook != nil {
+		return m.RemoveRuleHook(ctx, key, m)
+	}
+	return nil
+}
+
+// SetIamPolicy is a mock for the corresponding method.
+func (m *MockAlphaRegionNetworkFirewallPolicies) SetIamPolicy(ctx context.Context, key *meta.Key, arg0 *alpha.RegionSetPolicyRequest) (*alpha.Policy, error) {
+	if m.SetIamPolicyHook != nil {
+		return m.SetIamPolicyHook(ctx, key, arg0, m)
+	}
+	return nil, fmt.Errorf("SetIamPolicyHook must be set")
+}
+
+// TestIamPermissions is a mock for the corresponding method.
+func (m *MockAlphaRegionNetworkFirewallPolicies) TestIamPermissions(ctx context.Context, key *meta.Key, arg0 *alpha.TestPermissionsRequest) (*alpha.TestPermissionsResponse, error) {
+	if m.TestIamPermissionsHook != nil {
+		return m.TestIamPermissionsHook(ctx, key, arg0, m)
+	}
+	return nil, fmt.Errorf("TestIamPermissionsHook must be set")
+}
+
+// GCEAlphaRegionNetworkFirewallPolicies is a simplifying adapter for the GCE RegionNetworkFirewallPolicies.
+type GCEAlphaRegionNetworkFirewallPolicies struct {
+	s *Service
+}
+
+// Get the FirewallPolicy named by key.
+func (g *GCEAlphaRegionNetworkFirewallPolicies) Get(ctx context.Context, key *meta.Key) (*alpha.FirewallPolicy, error) {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionNetworkFirewallPolicies.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionNetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.RegionNetworkFirewallPolicies.Get(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all FirewallPolicy objects.
+func (g *GCEAlphaRegionNetworkFirewallPolicies) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.FirewallPolicy, error) {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.List(%v, %v, %v) called", ctx, region, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionNetworkFirewallPolicies",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	call := g.s.Alpha.RegionNetworkFirewallPolicies.List(projectID, region)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*alpha.FirewallPolicy
+	f := func(l *alpha.FirewallPolicyList) error {
+		klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert FirewallPolicy with key of value obj.
+func (g *GCEAlphaRegionNetworkFirewallPolicies) Insert(ctx context.Context, key *meta.Key, obj *alpha.FirewallPolicy) error {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionNetworkFirewallPolicies.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionNetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Alpha.RegionNetworkFirewallPolicies.Insert(projectID, key.Region, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the FirewallPolicy referenced by key.
+func (g *GCEAlphaRegionNetworkFirewallPolicies) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionNetworkFirewallPolicies.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionNetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.RegionNetworkFirewallPolicies.Delete(projectID, key.Region, key.Name)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// AddAssociation is a method on GCEAlphaRegionNetworkFirewallPolicies.
+func (g *GCEAlphaRegionNetworkFirewallPolicies) AddAssociation(ctx context.Context, key *meta.Key, arg0 *alpha.FirewallPolicyAssociation) error {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddAssociation(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddAssociation(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "AddAssociation",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionNetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddAssociation(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddAssociation(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.RegionNetworkFirewallPolicies.AddAssociation(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddAssociation(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddAssociation(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// AddRule is a method on GCEAlphaRegionNetworkFirewallPolicies.
+func (g *GCEAlphaRegionNetworkFirewallPolicies) AddRule(ctx context.Context, key *meta.Key, arg0 *alpha.FirewallPolicyRule) error {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddRule(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddRule(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "AddRule",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionNetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.RegionNetworkFirewallPolicies.AddRule(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddRule(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddRule(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// CloneRules is a method on GCEAlphaRegionNetworkFirewallPolicies.
+func (g *GCEAlphaRegionNetworkFirewallPolicies) CloneRules(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.CloneRules(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionNetworkFirewallPolicies.CloneRules(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "CloneRules",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionNetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.CloneRules(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.CloneRules(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.RegionNetworkFirewallPolicies.CloneRules(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.CloneRules(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.CloneRules(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// GetAssociation is a method on GCEAlphaRegionNetworkFirewallPolicies.
+func (g *GCEAlphaRegionNetworkFirewallPolicies) GetAssociation(ctx context.Context, key *meta.Key) (*alpha.FirewallPolicyAssociation, error) {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetAssociation(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetAssociation(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "GetAssociation",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionNetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetAssociation(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetAssociation(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.RegionNetworkFirewallPolicies.GetAssociation(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetAssociation(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// GetIamPolicy is a method on GCEAlphaRegionNetworkFirewallPolicies.
+func (g *GCEAlphaRegionNetworkFirewallPolicies) GetIamPolicy(ctx context.Context, key *meta.Key) (*alpha.Policy, error) {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "GetIamPolicy",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionNetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.RegionNetworkFirewallPolicies.GetIamPolicy(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// GetRule is a method on GCEAlphaRegionNetworkFirewallPolicies.
+func (g *GCEAlphaRegionNetworkFirewallPolicies) GetRule(ctx context.Context, key *meta.Key) (*alpha.FirewallPolicyRule, error) {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetRule(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetRule(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "GetRule",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionNetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.RegionNetworkFirewallPolicies.GetRule(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetRule(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// Patch is a method on GCEAlphaRegionNetworkFirewallPolicies.
+func (g *GCEAlphaRegionNetworkFirewallPolicies) Patch(ctx context.Context, key *meta.Key, arg0 *alpha.FirewallPolicy) error {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.Patch(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionNetworkFirewallPolicies.Patch(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionNetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.RegionNetworkFirewallPolicies.Patch(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Patch(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// PatchRule is a method on GCEAlphaRegionNetworkFirewallPolicies.
+func (g *GCEAlphaRegionNetworkFirewallPolicies) PatchRule(ctx context.Context, key *meta.Key, arg0 *alpha.FirewallPolicyRule) error {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.PatchRule(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionNetworkFirewallPolicies.PatchRule(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "PatchRule",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionNetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.PatchRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.PatchRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.RegionNetworkFirewallPolicies.PatchRule(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.PatchRule(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.PatchRule(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// RemoveAssociation is a method on GCEAlphaRegionNetworkFirewallPolicies.
+func (g *GCEAlphaRegionNetworkFirewallPolicies) RemoveAssociation(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "RemoveAssociation",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionNetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.RegionNetworkFirewallPolicies.RemoveAssociation(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// RemoveRule is a method on GCEAlphaRegionNetworkFirewallPolicies.
+func (g *GCEAlphaRegionNetworkFirewallPolicies) RemoveRule(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveRule(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveRule(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "RemoveRule",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionNetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.RegionNetworkFirewallPolicies.RemoveRule(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveRule(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveRule(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// SetIamPolicy is a method on GCEAlphaRegionNetworkFirewallPolicies.
+func (g *GCEAlphaRegionNetworkFirewallPolicies) SetIamPolicy(ctx context.Context, key *meta.Key, arg0 *alpha.RegionSetPolicyRequest) (*alpha.Policy, error) {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetIamPolicy",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionNetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.RegionNetworkFirewallPolicies.SetIamPolicy(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// TestIamPermissions is a method on GCEAlphaRegionNetworkFirewallPolicies.
+func (g *GCEAlphaRegionNetworkFirewallPolicies) TestIamPermissions(ctx context.Context, key *meta.Key, arg0 *alpha.TestPermissionsRequest) (*alpha.TestPermissionsResponse, error) {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "TestIamPermissions",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionNetworkFirewallPolicies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.RegionNetworkFirewallPolicies.TestIamPermissions(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
 
@@ -38347,6 +39208,12 @@ func NewRegionDisksResourceID(project, region, name string) *ResourceID {
 func NewRegionHealthChecksResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
 	return &ResourceID{project, "healthChecks", key}
+}
+
+// NewRegionNetworkFirewallPoliciesResourceID creates a ResourceID for the RegionNetworkFirewallPolicies resource.
+func NewRegionNetworkFirewallPoliciesResourceID(project, region, name string) *ResourceID {
+	key := meta.RegionalKey(name, region)
+	return &ResourceID{project, "regionNetworkFirewallPolicies", key}
 }
 
 // NewRegionSslCertificatesResourceID creates a ResourceID for the RegionSslCertificates resource.

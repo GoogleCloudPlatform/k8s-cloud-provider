@@ -254,11 +254,9 @@ var AllServices = []*ServiceInfo{
 		serviceType: reflect.TypeOf(&alpha.NetworkFirewallPoliciesService{}),
 		additionalMethods: []string{
 			"Patch",
-			"GetRule",
 			"AddRule",
 			"PatchRule",
 			"CloneRules",
-			"RemoveRule",
 			"GetAssociation",
 			"AddAssociation",
 			"RemoveAssociation",
@@ -266,6 +264,8 @@ var AllServices = []*ServiceInfo{
 			"SetIamPolicy",
 			"TestIamPermissions",
 		},
+		// Allow adding manual methods.
+		options:     CustomOps,
 	},
 	{
 		Object:      "ForwardingRule",

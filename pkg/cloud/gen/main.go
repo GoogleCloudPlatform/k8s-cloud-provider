@@ -332,8 +332,8 @@ type {{.MockWrapType}} struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*Mock{{.Service}}Obj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*Mock{{.Service}}Obj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -418,10 +418,13 @@ func (m *{{.MockWrapType}}) Get(ctx context.Context, key *meta.Key) (*{{.FQObjec
 		klog.V(5).Infof("{{.MockWrapType}}.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.To{{.VersionTitle}}()
-		klog.V(5).Infof("{{.MockWrapType}}.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Resource}}")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.To{{.VersionTitle}}()
+			klog.V(5).Infof("{{.MockWrapType}}.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -482,10 +485,12 @@ func (m *{{.MockWrapType}}) List(ctx context.Context, zone string, fl *filter.F)
 	}
 
 	var objs []*{{.FQObjectType}}
+	projectID := m.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Resource}}")
+	nMap := m.Objects[projectId]
 {{- if .KeyIsGlobal}}
-	for _, obj := range m.Objects {
+	for _, obj := range nMap {
 {{- else}}
-	for key, obj := range m.Objects {
+	for key, obj := range nMap {
 {{- end -}}
 {{- if .KeyIsRegional}}
 		if key.Region != region {
@@ -536,7 +541,13 @@ func (m *{{.MockWrapType}}) Insert(ctx context.Context, key *meta.Key, obj *{{.F
 		klog.V(5).Infof("{{.MockWrapType}}.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Resource}}")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*Mock{{.Service}}Obj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code: http.StatusConflict,
 			Message: fmt.Sprintf("{{.MockWrapType}} %v exists", key),
@@ -546,10 +557,8 @@ func (m *{{.MockWrapType}}) Insert(ctx context.Context, key *meta.Key, obj *{{.F
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Resource}}")
 	obj.SelfLink = SelfLink(meta.Version{{.VersionTitle}}, projectID, "{{.Resource}}", key)
-
-	m.Objects[*key] = &Mock{{.Service}}Obj{obj}
+	nMap[*key] = &Mock{{.Service}}Obj{obj}
 	klog.V(5).Infof("{{.MockWrapType}}.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -575,7 +584,8 @@ func (m *{{.MockWrapType}}) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("{{.MockWrapType}}.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code: http.StatusNotFound,
 			Message: fmt.Sprintf("{{.MockWrapType}} %v not found", key),
@@ -584,7 +594,16 @@ func (m *{{.MockWrapType}}) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Resource}}")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+	  return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("{{.MockWrapType}}.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -610,7 +629,8 @@ func (m *{{.MockWrapType}}) AggregatedList(ctx context.Context, fl *filter.F) (m
 	}
 
 	objs := map[string][]*{{.FQObjectType}}{}
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Resource}}")
+	for _, obj := range m.Objects[projectID] {
 		res, err := ParseResourceURL(obj.To{{.VersionTitle}}().SelfLink)
 		if err != nil {
 			klog.V(5).Infof("{{.MockWrapType}}.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)

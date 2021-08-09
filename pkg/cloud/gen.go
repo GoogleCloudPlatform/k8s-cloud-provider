@@ -2873,8 +2873,8 @@ type MockAddresses struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockAddressesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockAddressesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -2918,10 +2918,13 @@ func (m *MockAddresses) Get(ctx context.Context, key *meta.Key) (*ga.Address, er
 		klog.V(5).Infof("MockAddresses.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockAddresses.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "addresses")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockAddresses.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -2952,7 +2955,9 @@ func (m *MockAddresses) List(ctx context.Context, region string, fl *filter.F) (
 	}
 
 	var objs []*ga.Address
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "addresses")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -2985,7 +2990,13 @@ func (m *MockAddresses) Insert(ctx context.Context, key *meta.Key, obj *ga.Addre
 		klog.V(5).Infof("MockAddresses.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "addresses")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockAddressesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAddresses %v exists", key),
@@ -2995,10 +3006,8 @@ func (m *MockAddresses) Insert(ctx context.Context, key *meta.Key, obj *ga.Addre
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "addresses")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "addresses", key)
-
-	m.Objects[*key] = &MockAddressesObj{obj}
+	nMap[*key] = &MockAddressesObj{obj}
 	klog.V(5).Infof("MockAddresses.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -3022,7 +3031,8 @@ func (m *MockAddresses) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockAddresses.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAddresses %v not found", key),
@@ -3031,7 +3041,16 @@ func (m *MockAddresses) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "addresses")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAddresses.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -3055,7 +3074,8 @@ func (m *MockAddresses) AggregatedList(ctx context.Context, fl *filter.F) (map[s
 	}
 
 	objs := map[string][]*ga.Address{}
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "addresses")
+	for _, obj := range m.Objects[projectID] {
 		res, err := ParseResourceURL(obj.ToGA().SelfLink)
 		if err != nil {
 			klog.V(5).Infof("MockAddresses.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
@@ -3293,8 +3313,8 @@ type MockAlphaAddresses struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockAddressesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockAddressesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -3338,10 +3358,13 @@ func (m *MockAlphaAddresses) Get(ctx context.Context, key *meta.Key) (*alpha.Add
 		klog.V(5).Infof("MockAlphaAddresses.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaAddresses.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "addresses")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaAddresses.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -3372,7 +3395,9 @@ func (m *MockAlphaAddresses) List(ctx context.Context, region string, fl *filter
 	}
 
 	var objs []*alpha.Address
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "addresses")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -3405,7 +3430,13 @@ func (m *MockAlphaAddresses) Insert(ctx context.Context, key *meta.Key, obj *alp
 		klog.V(5).Infof("MockAlphaAddresses.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "addresses")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockAddressesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaAddresses %v exists", key),
@@ -3415,10 +3446,8 @@ func (m *MockAlphaAddresses) Insert(ctx context.Context, key *meta.Key, obj *alp
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "addresses")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "addresses", key)
-
-	m.Objects[*key] = &MockAddressesObj{obj}
+	nMap[*key] = &MockAddressesObj{obj}
 	klog.V(5).Infof("MockAlphaAddresses.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -3442,7 +3471,8 @@ func (m *MockAlphaAddresses) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockAlphaAddresses.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaAddresses %v not found", key),
@@ -3451,7 +3481,16 @@ func (m *MockAlphaAddresses) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "addresses")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaAddresses.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -3475,7 +3514,8 @@ func (m *MockAlphaAddresses) AggregatedList(ctx context.Context, fl *filter.F) (
 	}
 
 	objs := map[string][]*alpha.Address{}
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "addresses")
+	for _, obj := range m.Objects[projectID] {
 		res, err := ParseResourceURL(obj.ToAlpha().SelfLink)
 		if err != nil {
 			klog.V(5).Infof("MockAlphaAddresses.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
@@ -3713,8 +3753,8 @@ type MockBetaAddresses struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockAddressesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockAddressesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -3758,10 +3798,13 @@ func (m *MockBetaAddresses) Get(ctx context.Context, key *meta.Key) (*beta.Addre
 		klog.V(5).Infof("MockBetaAddresses.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaAddresses.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "addresses")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaAddresses.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -3792,7 +3835,9 @@ func (m *MockBetaAddresses) List(ctx context.Context, region string, fl *filter.
 	}
 
 	var objs []*beta.Address
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "addresses")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -3825,7 +3870,13 @@ func (m *MockBetaAddresses) Insert(ctx context.Context, key *meta.Key, obj *beta
 		klog.V(5).Infof("MockBetaAddresses.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "addresses")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockAddressesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaAddresses %v exists", key),
@@ -3835,10 +3886,8 @@ func (m *MockBetaAddresses) Insert(ctx context.Context, key *meta.Key, obj *beta
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "addresses")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "addresses", key)
-
-	m.Objects[*key] = &MockAddressesObj{obj}
+	nMap[*key] = &MockAddressesObj{obj}
 	klog.V(5).Infof("MockBetaAddresses.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -3862,7 +3911,8 @@ func (m *MockBetaAddresses) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockBetaAddresses.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaAddresses %v not found", key),
@@ -3871,7 +3921,16 @@ func (m *MockBetaAddresses) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "addresses")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaAddresses.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -3895,7 +3954,8 @@ func (m *MockBetaAddresses) AggregatedList(ctx context.Context, fl *filter.F) (m
 	}
 
 	objs := map[string][]*beta.Address{}
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "addresses")
+	for _, obj := range m.Objects[projectID] {
 		res, err := ParseResourceURL(obj.ToBeta().SelfLink)
 		if err != nil {
 			klog.V(5).Infof("MockBetaAddresses.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
@@ -4132,8 +4192,8 @@ type MockAlphaGlobalAddresses struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockGlobalAddressesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockGlobalAddressesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -4175,10 +4235,13 @@ func (m *MockAlphaGlobalAddresses) Get(ctx context.Context, key *meta.Key) (*alp
 		klog.V(5).Infof("MockAlphaGlobalAddresses.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaGlobalAddresses.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "addresses")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaGlobalAddresses.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -4209,7 +4272,9 @@ func (m *MockAlphaGlobalAddresses) List(ctx context.Context, fl *filter.F) ([]*a
 	}
 
 	var objs []*alpha.Address
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "addresses")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToAlpha()) {
 			continue
 		}
@@ -4239,7 +4304,13 @@ func (m *MockAlphaGlobalAddresses) Insert(ctx context.Context, key *meta.Key, ob
 		klog.V(5).Infof("MockAlphaGlobalAddresses.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "addresses")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockGlobalAddressesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaGlobalAddresses %v exists", key),
@@ -4249,10 +4320,8 @@ func (m *MockAlphaGlobalAddresses) Insert(ctx context.Context, key *meta.Key, ob
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "addresses")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "addresses", key)
-
-	m.Objects[*key] = &MockGlobalAddressesObj{obj}
+	nMap[*key] = &MockGlobalAddressesObj{obj}
 	klog.V(5).Infof("MockAlphaGlobalAddresses.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -4276,7 +4345,8 @@ func (m *MockAlphaGlobalAddresses) Delete(ctx context.Context, key *meta.Key) er
 		klog.V(5).Infof("MockAlphaGlobalAddresses.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaGlobalAddresses %v not found", key),
@@ -4285,7 +4355,16 @@ func (m *MockAlphaGlobalAddresses) Delete(ctx context.Context, key *meta.Key) er
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "addresses")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaGlobalAddresses.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -4464,8 +4543,8 @@ type MockBetaGlobalAddresses struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockGlobalAddressesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockGlobalAddressesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -4507,10 +4586,13 @@ func (m *MockBetaGlobalAddresses) Get(ctx context.Context, key *meta.Key) (*beta
 		klog.V(5).Infof("MockBetaGlobalAddresses.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaGlobalAddresses.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "addresses")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaGlobalAddresses.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -4541,7 +4623,9 @@ func (m *MockBetaGlobalAddresses) List(ctx context.Context, fl *filter.F) ([]*be
 	}
 
 	var objs []*beta.Address
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "addresses")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToBeta()) {
 			continue
 		}
@@ -4571,7 +4655,13 @@ func (m *MockBetaGlobalAddresses) Insert(ctx context.Context, key *meta.Key, obj
 		klog.V(5).Infof("MockBetaGlobalAddresses.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "addresses")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockGlobalAddressesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaGlobalAddresses %v exists", key),
@@ -4581,10 +4671,8 @@ func (m *MockBetaGlobalAddresses) Insert(ctx context.Context, key *meta.Key, obj
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "addresses")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "addresses", key)
-
-	m.Objects[*key] = &MockGlobalAddressesObj{obj}
+	nMap[*key] = &MockGlobalAddressesObj{obj}
 	klog.V(5).Infof("MockBetaGlobalAddresses.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -4608,7 +4696,8 @@ func (m *MockBetaGlobalAddresses) Delete(ctx context.Context, key *meta.Key) err
 		klog.V(5).Infof("MockBetaGlobalAddresses.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaGlobalAddresses %v not found", key),
@@ -4617,7 +4706,16 @@ func (m *MockBetaGlobalAddresses) Delete(ctx context.Context, key *meta.Key) err
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "addresses")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaGlobalAddresses.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -4796,8 +4894,8 @@ type MockGlobalAddresses struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockGlobalAddressesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockGlobalAddressesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -4839,10 +4937,13 @@ func (m *MockGlobalAddresses) Get(ctx context.Context, key *meta.Key) (*ga.Addre
 		klog.V(5).Infof("MockGlobalAddresses.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockGlobalAddresses.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "addresses")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockGlobalAddresses.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -4873,7 +4974,9 @@ func (m *MockGlobalAddresses) List(ctx context.Context, fl *filter.F) ([]*ga.Add
 	}
 
 	var objs []*ga.Address
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "addresses")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
@@ -4903,7 +5006,13 @@ func (m *MockGlobalAddresses) Insert(ctx context.Context, key *meta.Key, obj *ga
 		klog.V(5).Infof("MockGlobalAddresses.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "addresses")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockGlobalAddressesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockGlobalAddresses %v exists", key),
@@ -4913,10 +5022,8 @@ func (m *MockGlobalAddresses) Insert(ctx context.Context, key *meta.Key, obj *ga
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "addresses")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "addresses", key)
-
-	m.Objects[*key] = &MockGlobalAddressesObj{obj}
+	nMap[*key] = &MockGlobalAddressesObj{obj}
 	klog.V(5).Infof("MockGlobalAddresses.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -4940,7 +5047,8 @@ func (m *MockGlobalAddresses) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockGlobalAddresses.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockGlobalAddresses %v not found", key),
@@ -4949,7 +5057,16 @@ func (m *MockGlobalAddresses) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "addresses")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockGlobalAddresses.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -5133,8 +5250,8 @@ type MockBackendServices struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockBackendServicesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockBackendServicesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -5182,10 +5299,13 @@ func (m *MockBackendServices) Get(ctx context.Context, key *meta.Key) (*ga.Backe
 		klog.V(5).Infof("MockBackendServices.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockBackendServices.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "backendServices")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockBackendServices.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -5216,7 +5336,9 @@ func (m *MockBackendServices) List(ctx context.Context, fl *filter.F) ([]*ga.Bac
 	}
 
 	var objs []*ga.BackendService
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "backendServices")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
@@ -5246,7 +5368,13 @@ func (m *MockBackendServices) Insert(ctx context.Context, key *meta.Key, obj *ga
 		klog.V(5).Infof("MockBackendServices.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "backendServices")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockBackendServicesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBackendServices %v exists", key),
@@ -5256,10 +5384,8 @@ func (m *MockBackendServices) Insert(ctx context.Context, key *meta.Key, obj *ga
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "backendServices")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "backendServices", key)
-
-	m.Objects[*key] = &MockBackendServicesObj{obj}
+	nMap[*key] = &MockBackendServicesObj{obj}
 	klog.V(5).Infof("MockBackendServices.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -5283,7 +5409,8 @@ func (m *MockBackendServices) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockBackendServices.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBackendServices %v not found", key),
@@ -5292,7 +5419,16 @@ func (m *MockBackendServices) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "backendServices")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBackendServices.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -5316,7 +5452,8 @@ func (m *MockBackendServices) AggregatedList(ctx context.Context, fl *filter.F) 
 	}
 
 	objs := map[string][]*ga.BackendService{}
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "backendServices")
+	for _, obj := range m.Objects[projectID] {
 		res, err := ParseResourceURL(obj.ToGA().SelfLink)
 		if err != nil {
 			klog.V(5).Infof("MockBackendServices.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
@@ -5716,8 +5853,8 @@ type MockBetaBackendServices struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockBackendServicesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockBackendServicesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -5763,10 +5900,13 @@ func (m *MockBetaBackendServices) Get(ctx context.Context, key *meta.Key) (*beta
 		klog.V(5).Infof("MockBetaBackendServices.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaBackendServices.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "backendServices")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaBackendServices.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -5797,7 +5937,9 @@ func (m *MockBetaBackendServices) List(ctx context.Context, fl *filter.F) ([]*be
 	}
 
 	var objs []*beta.BackendService
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "backendServices")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToBeta()) {
 			continue
 		}
@@ -5827,7 +5969,13 @@ func (m *MockBetaBackendServices) Insert(ctx context.Context, key *meta.Key, obj
 		klog.V(5).Infof("MockBetaBackendServices.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "backendServices")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockBackendServicesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaBackendServices %v exists", key),
@@ -5837,10 +5985,8 @@ func (m *MockBetaBackendServices) Insert(ctx context.Context, key *meta.Key, obj
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "backendServices")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "backendServices", key)
-
-	m.Objects[*key] = &MockBackendServicesObj{obj}
+	nMap[*key] = &MockBackendServicesObj{obj}
 	klog.V(5).Infof("MockBetaBackendServices.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -5864,7 +6010,8 @@ func (m *MockBetaBackendServices) Delete(ctx context.Context, key *meta.Key) err
 		klog.V(5).Infof("MockBetaBackendServices.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaBackendServices %v not found", key),
@@ -5873,7 +6020,16 @@ func (m *MockBetaBackendServices) Delete(ctx context.Context, key *meta.Key) err
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "backendServices")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaBackendServices.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -5897,7 +6053,8 @@ func (m *MockBetaBackendServices) AggregatedList(ctx context.Context, fl *filter
 	}
 
 	objs := map[string][]*beta.BackendService{}
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "backendServices")
+	for _, obj := range m.Objects[projectID] {
 		res, err := ParseResourceURL(obj.ToBeta().SelfLink)
 		if err != nil {
 			klog.V(5).Infof("MockBetaBackendServices.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
@@ -6220,8 +6377,8 @@ type MockAlphaBackendServices struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockBackendServicesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockBackendServicesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -6267,10 +6424,13 @@ func (m *MockAlphaBackendServices) Get(ctx context.Context, key *meta.Key) (*alp
 		klog.V(5).Infof("MockAlphaBackendServices.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaBackendServices.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "backendServices")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaBackendServices.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -6301,7 +6461,9 @@ func (m *MockAlphaBackendServices) List(ctx context.Context, fl *filter.F) ([]*a
 	}
 
 	var objs []*alpha.BackendService
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "backendServices")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToAlpha()) {
 			continue
 		}
@@ -6331,7 +6493,13 @@ func (m *MockAlphaBackendServices) Insert(ctx context.Context, key *meta.Key, ob
 		klog.V(5).Infof("MockAlphaBackendServices.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "backendServices")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockBackendServicesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaBackendServices %v exists", key),
@@ -6341,10 +6509,8 @@ func (m *MockAlphaBackendServices) Insert(ctx context.Context, key *meta.Key, ob
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "backendServices")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "backendServices", key)
-
-	m.Objects[*key] = &MockBackendServicesObj{obj}
+	nMap[*key] = &MockBackendServicesObj{obj}
 	klog.V(5).Infof("MockAlphaBackendServices.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -6368,7 +6534,8 @@ func (m *MockAlphaBackendServices) Delete(ctx context.Context, key *meta.Key) er
 		klog.V(5).Infof("MockAlphaBackendServices.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaBackendServices %v not found", key),
@@ -6377,7 +6544,16 @@ func (m *MockAlphaBackendServices) Delete(ctx context.Context, key *meta.Key) er
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "backendServices")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaBackendServices.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -6401,7 +6577,8 @@ func (m *MockAlphaBackendServices) AggregatedList(ctx context.Context, fl *filte
 	}
 
 	objs := map[string][]*alpha.BackendService{}
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "backendServices")
+	for _, obj := range m.Objects[projectID] {
 		res, err := ParseResourceURL(obj.ToAlpha().SelfLink)
 		if err != nil {
 			klog.V(5).Infof("MockAlphaBackendServices.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
@@ -6723,8 +6900,8 @@ type MockRegionBackendServices struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionBackendServicesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionBackendServicesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -6768,10 +6945,13 @@ func (m *MockRegionBackendServices) Get(ctx context.Context, key *meta.Key) (*ga
 		klog.V(5).Infof("MockRegionBackendServices.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockRegionBackendServices.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "backendServices")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockRegionBackendServices.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -6802,7 +6982,9 @@ func (m *MockRegionBackendServices) List(ctx context.Context, region string, fl 
 	}
 
 	var objs []*ga.BackendService
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "backendServices")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -6835,7 +7017,13 @@ func (m *MockRegionBackendServices) Insert(ctx context.Context, key *meta.Key, o
 		klog.V(5).Infof("MockRegionBackendServices.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "backendServices")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionBackendServicesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockRegionBackendServices %v exists", key),
@@ -6845,10 +7033,8 @@ func (m *MockRegionBackendServices) Insert(ctx context.Context, key *meta.Key, o
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "backendServices")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "backendServices", key)
-
-	m.Objects[*key] = &MockRegionBackendServicesObj{obj}
+	nMap[*key] = &MockRegionBackendServicesObj{obj}
 	klog.V(5).Infof("MockRegionBackendServices.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -6872,7 +7058,8 @@ func (m *MockRegionBackendServices) Delete(ctx context.Context, key *meta.Key) e
 		klog.V(5).Infof("MockRegionBackendServices.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockRegionBackendServices %v not found", key),
@@ -6881,7 +7068,16 @@ func (m *MockRegionBackendServices) Delete(ctx context.Context, key *meta.Key) e
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "backendServices")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockRegionBackendServices.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -7138,8 +7334,8 @@ type MockAlphaRegionBackendServices struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionBackendServicesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionBackendServicesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -7183,10 +7379,13 @@ func (m *MockAlphaRegionBackendServices) Get(ctx context.Context, key *meta.Key)
 		klog.V(5).Infof("MockAlphaRegionBackendServices.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaRegionBackendServices.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "backendServices")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaRegionBackendServices.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -7217,7 +7416,9 @@ func (m *MockAlphaRegionBackendServices) List(ctx context.Context, region string
 	}
 
 	var objs []*alpha.BackendService
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "backendServices")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -7250,7 +7451,13 @@ func (m *MockAlphaRegionBackendServices) Insert(ctx context.Context, key *meta.K
 		klog.V(5).Infof("MockAlphaRegionBackendServices.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "backendServices")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionBackendServicesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaRegionBackendServices %v exists", key),
@@ -7260,10 +7467,8 @@ func (m *MockAlphaRegionBackendServices) Insert(ctx context.Context, key *meta.K
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "backendServices")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "backendServices", key)
-
-	m.Objects[*key] = &MockRegionBackendServicesObj{obj}
+	nMap[*key] = &MockRegionBackendServicesObj{obj}
 	klog.V(5).Infof("MockAlphaRegionBackendServices.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -7287,7 +7492,8 @@ func (m *MockAlphaRegionBackendServices) Delete(ctx context.Context, key *meta.K
 		klog.V(5).Infof("MockAlphaRegionBackendServices.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaRegionBackendServices %v not found", key),
@@ -7296,7 +7502,16 @@ func (m *MockAlphaRegionBackendServices) Delete(ctx context.Context, key *meta.K
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "backendServices")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaRegionBackendServices.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -7553,8 +7768,8 @@ type MockBetaRegionBackendServices struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionBackendServicesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionBackendServicesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -7598,10 +7813,13 @@ func (m *MockBetaRegionBackendServices) Get(ctx context.Context, key *meta.Key) 
 		klog.V(5).Infof("MockBetaRegionBackendServices.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaRegionBackendServices.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "backendServices")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaRegionBackendServices.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -7632,7 +7850,9 @@ func (m *MockBetaRegionBackendServices) List(ctx context.Context, region string,
 	}
 
 	var objs []*beta.BackendService
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "backendServices")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -7665,7 +7885,13 @@ func (m *MockBetaRegionBackendServices) Insert(ctx context.Context, key *meta.Ke
 		klog.V(5).Infof("MockBetaRegionBackendServices.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "backendServices")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionBackendServicesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaRegionBackendServices %v exists", key),
@@ -7675,10 +7901,8 @@ func (m *MockBetaRegionBackendServices) Insert(ctx context.Context, key *meta.Ke
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "backendServices")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "backendServices", key)
-
-	m.Objects[*key] = &MockRegionBackendServicesObj{obj}
+	nMap[*key] = &MockRegionBackendServicesObj{obj}
 	klog.V(5).Infof("MockBetaRegionBackendServices.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -7702,7 +7926,8 @@ func (m *MockBetaRegionBackendServices) Delete(ctx context.Context, key *meta.Ke
 		klog.V(5).Infof("MockBetaRegionBackendServices.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaRegionBackendServices %v not found", key),
@@ -7711,7 +7936,16 @@ func (m *MockBetaRegionBackendServices) Delete(ctx context.Context, key *meta.Ke
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "backendServices")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaRegionBackendServices.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -7967,8 +8201,8 @@ type MockDisks struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockDisksObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockDisksObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -8011,10 +8245,13 @@ func (m *MockDisks) Get(ctx context.Context, key *meta.Key) (*ga.Disk, error) {
 		klog.V(5).Infof("MockDisks.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockDisks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "disks")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockDisks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -8045,7 +8282,9 @@ func (m *MockDisks) List(ctx context.Context, zone string, fl *filter.F) ([]*ga.
 	}
 
 	var objs []*ga.Disk
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "disks")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Zone != zone {
 			continue
 		}
@@ -8078,7 +8317,13 @@ func (m *MockDisks) Insert(ctx context.Context, key *meta.Key, obj *ga.Disk) err
 		klog.V(5).Infof("MockDisks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "disks")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockDisksObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockDisks %v exists", key),
@@ -8088,10 +8333,8 @@ func (m *MockDisks) Insert(ctx context.Context, key *meta.Key, obj *ga.Disk) err
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "disks")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "disks", key)
-
-	m.Objects[*key] = &MockDisksObj{obj}
+	nMap[*key] = &MockDisksObj{obj}
 	klog.V(5).Infof("MockDisks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -8115,7 +8358,8 @@ func (m *MockDisks) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockDisks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockDisks %v not found", key),
@@ -8124,7 +8368,16 @@ func (m *MockDisks) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "disks")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockDisks.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -8344,8 +8597,8 @@ type MockRegionDisks struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionDisksObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionDisksObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -8388,10 +8641,13 @@ func (m *MockRegionDisks) Get(ctx context.Context, key *meta.Key) (*ga.Disk, err
 		klog.V(5).Infof("MockRegionDisks.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockRegionDisks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "disks")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockRegionDisks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -8422,7 +8678,9 @@ func (m *MockRegionDisks) List(ctx context.Context, region string, fl *filter.F)
 	}
 
 	var objs []*ga.Disk
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "disks")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -8455,7 +8713,13 @@ func (m *MockRegionDisks) Insert(ctx context.Context, key *meta.Key, obj *ga.Dis
 		klog.V(5).Infof("MockRegionDisks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "disks")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionDisksObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockRegionDisks %v exists", key),
@@ -8465,10 +8729,8 @@ func (m *MockRegionDisks) Insert(ctx context.Context, key *meta.Key, obj *ga.Dis
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "disks")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "disks", key)
-
-	m.Objects[*key] = &MockRegionDisksObj{obj}
+	nMap[*key] = &MockRegionDisksObj{obj}
 	klog.V(5).Infof("MockRegionDisks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -8492,7 +8754,8 @@ func (m *MockRegionDisks) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockRegionDisks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockRegionDisks %v not found", key),
@@ -8501,7 +8764,16 @@ func (m *MockRegionDisks) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "disks")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockRegionDisks.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -8721,8 +8993,8 @@ type MockAlphaFirewalls struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockFirewallsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockFirewallsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -8765,10 +9037,13 @@ func (m *MockAlphaFirewalls) Get(ctx context.Context, key *meta.Key) (*alpha.Fir
 		klog.V(5).Infof("MockAlphaFirewalls.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaFirewalls.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "firewalls")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaFirewalls.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -8799,7 +9074,9 @@ func (m *MockAlphaFirewalls) List(ctx context.Context, fl *filter.F) ([]*alpha.F
 	}
 
 	var objs []*alpha.Firewall
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "firewalls")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToAlpha()) {
 			continue
 		}
@@ -8829,7 +9106,13 @@ func (m *MockAlphaFirewalls) Insert(ctx context.Context, key *meta.Key, obj *alp
 		klog.V(5).Infof("MockAlphaFirewalls.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "firewalls")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockFirewallsObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaFirewalls %v exists", key),
@@ -8839,10 +9122,8 @@ func (m *MockAlphaFirewalls) Insert(ctx context.Context, key *meta.Key, obj *alp
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "firewalls")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "firewalls", key)
-
-	m.Objects[*key] = &MockFirewallsObj{obj}
+	nMap[*key] = &MockFirewallsObj{obj}
 	klog.V(5).Infof("MockAlphaFirewalls.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -8866,7 +9147,8 @@ func (m *MockAlphaFirewalls) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockAlphaFirewalls.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaFirewalls %v not found", key),
@@ -8875,7 +9157,16 @@ func (m *MockAlphaFirewalls) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "firewalls")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaFirewalls.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -9096,8 +9387,8 @@ type MockBetaFirewalls struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockFirewallsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockFirewallsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -9140,10 +9431,13 @@ func (m *MockBetaFirewalls) Get(ctx context.Context, key *meta.Key) (*beta.Firew
 		klog.V(5).Infof("MockBetaFirewalls.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaFirewalls.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "firewalls")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaFirewalls.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -9174,7 +9468,9 @@ func (m *MockBetaFirewalls) List(ctx context.Context, fl *filter.F) ([]*beta.Fir
 	}
 
 	var objs []*beta.Firewall
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "firewalls")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToBeta()) {
 			continue
 		}
@@ -9204,7 +9500,13 @@ func (m *MockBetaFirewalls) Insert(ctx context.Context, key *meta.Key, obj *beta
 		klog.V(5).Infof("MockBetaFirewalls.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "firewalls")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockFirewallsObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaFirewalls %v exists", key),
@@ -9214,10 +9516,8 @@ func (m *MockBetaFirewalls) Insert(ctx context.Context, key *meta.Key, obj *beta
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "firewalls")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "firewalls", key)
-
-	m.Objects[*key] = &MockFirewallsObj{obj}
+	nMap[*key] = &MockFirewallsObj{obj}
 	klog.V(5).Infof("MockBetaFirewalls.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -9241,7 +9541,8 @@ func (m *MockBetaFirewalls) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockBetaFirewalls.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaFirewalls %v not found", key),
@@ -9250,7 +9551,16 @@ func (m *MockBetaFirewalls) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "firewalls")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaFirewalls.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -9471,8 +9781,8 @@ type MockFirewalls struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockFirewallsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockFirewallsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -9515,10 +9825,13 @@ func (m *MockFirewalls) Get(ctx context.Context, key *meta.Key) (*ga.Firewall, e
 		klog.V(5).Infof("MockFirewalls.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockFirewalls.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "firewalls")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockFirewalls.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -9549,7 +9862,9 @@ func (m *MockFirewalls) List(ctx context.Context, fl *filter.F) ([]*ga.Firewall,
 	}
 
 	var objs []*ga.Firewall
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "firewalls")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
@@ -9579,7 +9894,13 @@ func (m *MockFirewalls) Insert(ctx context.Context, key *meta.Key, obj *ga.Firew
 		klog.V(5).Infof("MockFirewalls.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "firewalls")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockFirewallsObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockFirewalls %v exists", key),
@@ -9589,10 +9910,8 @@ func (m *MockFirewalls) Insert(ctx context.Context, key *meta.Key, obj *ga.Firew
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "firewalls")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "firewalls", key)
-
-	m.Objects[*key] = &MockFirewallsObj{obj}
+	nMap[*key] = &MockFirewallsObj{obj}
 	klog.V(5).Infof("MockFirewalls.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -9616,7 +9935,8 @@ func (m *MockFirewalls) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockFirewalls.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockFirewalls %v not found", key),
@@ -9625,7 +9945,16 @@ func (m *MockFirewalls) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "firewalls")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockFirewalls.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -9857,8 +10186,8 @@ type MockAlphaNetworkFirewallPolicies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockNetworkFirewallPoliciesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockNetworkFirewallPoliciesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -9912,10 +10241,13 @@ func (m *MockAlphaNetworkFirewallPolicies) Get(ctx context.Context, key *meta.Ke
 		klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networkFirewallPolicies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -9946,7 +10278,9 @@ func (m *MockAlphaNetworkFirewallPolicies) List(ctx context.Context, fl *filter.
 	}
 
 	var objs []*alpha.FirewallPolicy
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networkFirewallPolicies")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToAlpha()) {
 			continue
 		}
@@ -9976,7 +10310,13 @@ func (m *MockAlphaNetworkFirewallPolicies) Insert(ctx context.Context, key *meta
 		klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networkFirewallPolicies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockNetworkFirewallPoliciesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaNetworkFirewallPolicies %v exists", key),
@@ -9986,10 +10326,8 @@ func (m *MockAlphaNetworkFirewallPolicies) Insert(ctx context.Context, key *meta
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networkFirewallPolicies")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "networkFirewallPolicies", key)
-
-	m.Objects[*key] = &MockNetworkFirewallPoliciesObj{obj}
+	nMap[*key] = &MockNetworkFirewallPoliciesObj{obj}
 	klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -10013,7 +10351,8 @@ func (m *MockAlphaNetworkFirewallPolicies) Delete(ctx context.Context, key *meta
 		klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaNetworkFirewallPolicies %v not found", key),
@@ -10022,7 +10361,16 @@ func (m *MockAlphaNetworkFirewallPolicies) Delete(ctx context.Context, key *meta
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networkFirewallPolicies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -10680,8 +11028,8 @@ type MockAlphaRegionNetworkFirewallPolicies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionNetworkFirewallPoliciesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionNetworkFirewallPoliciesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -10735,10 +11083,13 @@ func (m *MockAlphaRegionNetworkFirewallPolicies) Get(ctx context.Context, key *m
 		klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "regionNetworkFirewallPolicies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -10769,7 +11120,9 @@ func (m *MockAlphaRegionNetworkFirewallPolicies) List(ctx context.Context, regio
 	}
 
 	var objs []*alpha.FirewallPolicy
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "regionNetworkFirewallPolicies")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -10802,7 +11155,13 @@ func (m *MockAlphaRegionNetworkFirewallPolicies) Insert(ctx context.Context, key
 		klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "regionNetworkFirewallPolicies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionNetworkFirewallPoliciesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaRegionNetworkFirewallPolicies %v exists", key),
@@ -10812,10 +11171,8 @@ func (m *MockAlphaRegionNetworkFirewallPolicies) Insert(ctx context.Context, key
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "regionNetworkFirewallPolicies")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "regionNetworkFirewallPolicies", key)
-
-	m.Objects[*key] = &MockRegionNetworkFirewallPoliciesObj{obj}
+	nMap[*key] = &MockRegionNetworkFirewallPoliciesObj{obj}
 	klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -10839,7 +11196,8 @@ func (m *MockAlphaRegionNetworkFirewallPolicies) Delete(ctx context.Context, key
 		klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaRegionNetworkFirewallPolicies %v not found", key),
@@ -10848,7 +11206,16 @@ func (m *MockAlphaRegionNetworkFirewallPolicies) Delete(ctx context.Context, key
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "regionNetworkFirewallPolicies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -11494,8 +11861,8 @@ type MockForwardingRules struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockForwardingRulesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockForwardingRulesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -11538,10 +11905,13 @@ func (m *MockForwardingRules) Get(ctx context.Context, key *meta.Key) (*ga.Forwa
 		klog.V(5).Infof("MockForwardingRules.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockForwardingRules.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "forwardingRules")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockForwardingRules.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -11572,7 +11942,9 @@ func (m *MockForwardingRules) List(ctx context.Context, region string, fl *filte
 	}
 
 	var objs []*ga.ForwardingRule
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "forwardingRules")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -11605,7 +11977,13 @@ func (m *MockForwardingRules) Insert(ctx context.Context, key *meta.Key, obj *ga
 		klog.V(5).Infof("MockForwardingRules.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "forwardingRules")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockForwardingRulesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockForwardingRules %v exists", key),
@@ -11615,10 +11993,8 @@ func (m *MockForwardingRules) Insert(ctx context.Context, key *meta.Key, obj *ga
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "forwardingRules")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "forwardingRules", key)
-
-	m.Objects[*key] = &MockForwardingRulesObj{obj}
+	nMap[*key] = &MockForwardingRulesObj{obj}
 	klog.V(5).Infof("MockForwardingRules.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -11642,7 +12018,8 @@ func (m *MockForwardingRules) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockForwardingRules %v not found", key),
@@ -11651,7 +12028,16 @@ func (m *MockForwardingRules) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "forwardingRules")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockForwardingRules.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -11871,8 +12257,8 @@ type MockAlphaForwardingRules struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockForwardingRulesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockForwardingRulesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -11915,10 +12301,13 @@ func (m *MockAlphaForwardingRules) Get(ctx context.Context, key *meta.Key) (*alp
 		klog.V(5).Infof("MockAlphaForwardingRules.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaForwardingRules.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "forwardingRules")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaForwardingRules.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -11949,7 +12338,9 @@ func (m *MockAlphaForwardingRules) List(ctx context.Context, region string, fl *
 	}
 
 	var objs []*alpha.ForwardingRule
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "forwardingRules")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -11982,7 +12373,13 @@ func (m *MockAlphaForwardingRules) Insert(ctx context.Context, key *meta.Key, ob
 		klog.V(5).Infof("MockAlphaForwardingRules.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "forwardingRules")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockForwardingRulesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaForwardingRules %v exists", key),
@@ -11992,10 +12389,8 @@ func (m *MockAlphaForwardingRules) Insert(ctx context.Context, key *meta.Key, ob
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "forwardingRules")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "forwardingRules", key)
-
-	m.Objects[*key] = &MockForwardingRulesObj{obj}
+	nMap[*key] = &MockForwardingRulesObj{obj}
 	klog.V(5).Infof("MockAlphaForwardingRules.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -12019,7 +12414,8 @@ func (m *MockAlphaForwardingRules) Delete(ctx context.Context, key *meta.Key) er
 		klog.V(5).Infof("MockAlphaForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaForwardingRules %v not found", key),
@@ -12028,7 +12424,16 @@ func (m *MockAlphaForwardingRules) Delete(ctx context.Context, key *meta.Key) er
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "forwardingRules")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaForwardingRules.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -12248,8 +12653,8 @@ type MockBetaForwardingRules struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockForwardingRulesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockForwardingRulesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -12292,10 +12697,13 @@ func (m *MockBetaForwardingRules) Get(ctx context.Context, key *meta.Key) (*beta
 		klog.V(5).Infof("MockBetaForwardingRules.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaForwardingRules.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "forwardingRules")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaForwardingRules.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -12326,7 +12734,9 @@ func (m *MockBetaForwardingRules) List(ctx context.Context, region string, fl *f
 	}
 
 	var objs []*beta.ForwardingRule
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "forwardingRules")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -12359,7 +12769,13 @@ func (m *MockBetaForwardingRules) Insert(ctx context.Context, key *meta.Key, obj
 		klog.V(5).Infof("MockBetaForwardingRules.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "forwardingRules")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockForwardingRulesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaForwardingRules %v exists", key),
@@ -12369,10 +12785,8 @@ func (m *MockBetaForwardingRules) Insert(ctx context.Context, key *meta.Key, obj
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "forwardingRules")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "forwardingRules", key)
-
-	m.Objects[*key] = &MockForwardingRulesObj{obj}
+	nMap[*key] = &MockForwardingRulesObj{obj}
 	klog.V(5).Infof("MockBetaForwardingRules.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -12396,7 +12810,8 @@ func (m *MockBetaForwardingRules) Delete(ctx context.Context, key *meta.Key) err
 		klog.V(5).Infof("MockBetaForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaForwardingRules %v not found", key),
@@ -12405,7 +12820,16 @@ func (m *MockBetaForwardingRules) Delete(ctx context.Context, key *meta.Key) err
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "forwardingRules")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaForwardingRules.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -12625,8 +13049,8 @@ type MockAlphaGlobalForwardingRules struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockGlobalForwardingRulesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockGlobalForwardingRulesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -12669,10 +13093,13 @@ func (m *MockAlphaGlobalForwardingRules) Get(ctx context.Context, key *meta.Key)
 		klog.V(5).Infof("MockAlphaGlobalForwardingRules.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaGlobalForwardingRules.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "forwardingRules")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaGlobalForwardingRules.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -12703,7 +13130,9 @@ func (m *MockAlphaGlobalForwardingRules) List(ctx context.Context, fl *filter.F)
 	}
 
 	var objs []*alpha.ForwardingRule
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "forwardingRules")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToAlpha()) {
 			continue
 		}
@@ -12733,7 +13162,13 @@ func (m *MockAlphaGlobalForwardingRules) Insert(ctx context.Context, key *meta.K
 		klog.V(5).Infof("MockAlphaGlobalForwardingRules.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "forwardingRules")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockGlobalForwardingRulesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaGlobalForwardingRules %v exists", key),
@@ -12743,10 +13178,8 @@ func (m *MockAlphaGlobalForwardingRules) Insert(ctx context.Context, key *meta.K
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "forwardingRules")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "forwardingRules", key)
-
-	m.Objects[*key] = &MockGlobalForwardingRulesObj{obj}
+	nMap[*key] = &MockGlobalForwardingRulesObj{obj}
 	klog.V(5).Infof("MockAlphaGlobalForwardingRules.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -12770,7 +13203,8 @@ func (m *MockAlphaGlobalForwardingRules) Delete(ctx context.Context, key *meta.K
 		klog.V(5).Infof("MockAlphaGlobalForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaGlobalForwardingRules %v not found", key),
@@ -12779,7 +13213,16 @@ func (m *MockAlphaGlobalForwardingRules) Delete(ctx context.Context, key *meta.K
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "forwardingRules")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaGlobalForwardingRules.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -13000,8 +13443,8 @@ type MockBetaGlobalForwardingRules struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockGlobalForwardingRulesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockGlobalForwardingRulesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -13044,10 +13487,13 @@ func (m *MockBetaGlobalForwardingRules) Get(ctx context.Context, key *meta.Key) 
 		klog.V(5).Infof("MockBetaGlobalForwardingRules.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaGlobalForwardingRules.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "forwardingRules")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaGlobalForwardingRules.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -13078,7 +13524,9 @@ func (m *MockBetaGlobalForwardingRules) List(ctx context.Context, fl *filter.F) 
 	}
 
 	var objs []*beta.ForwardingRule
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "forwardingRules")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToBeta()) {
 			continue
 		}
@@ -13108,7 +13556,13 @@ func (m *MockBetaGlobalForwardingRules) Insert(ctx context.Context, key *meta.Ke
 		klog.V(5).Infof("MockBetaGlobalForwardingRules.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "forwardingRules")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockGlobalForwardingRulesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaGlobalForwardingRules %v exists", key),
@@ -13118,10 +13572,8 @@ func (m *MockBetaGlobalForwardingRules) Insert(ctx context.Context, key *meta.Ke
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "forwardingRules")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "forwardingRules", key)
-
-	m.Objects[*key] = &MockGlobalForwardingRulesObj{obj}
+	nMap[*key] = &MockGlobalForwardingRulesObj{obj}
 	klog.V(5).Infof("MockBetaGlobalForwardingRules.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -13145,7 +13597,8 @@ func (m *MockBetaGlobalForwardingRules) Delete(ctx context.Context, key *meta.Ke
 		klog.V(5).Infof("MockBetaGlobalForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaGlobalForwardingRules %v not found", key),
@@ -13154,7 +13607,16 @@ func (m *MockBetaGlobalForwardingRules) Delete(ctx context.Context, key *meta.Ke
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "forwardingRules")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaGlobalForwardingRules.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -13375,8 +13837,8 @@ type MockGlobalForwardingRules struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockGlobalForwardingRulesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockGlobalForwardingRulesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -13419,10 +13881,13 @@ func (m *MockGlobalForwardingRules) Get(ctx context.Context, key *meta.Key) (*ga
 		klog.V(5).Infof("MockGlobalForwardingRules.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockGlobalForwardingRules.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "forwardingRules")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockGlobalForwardingRules.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -13453,7 +13918,9 @@ func (m *MockGlobalForwardingRules) List(ctx context.Context, fl *filter.F) ([]*
 	}
 
 	var objs []*ga.ForwardingRule
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "forwardingRules")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
@@ -13483,7 +13950,13 @@ func (m *MockGlobalForwardingRules) Insert(ctx context.Context, key *meta.Key, o
 		klog.V(5).Infof("MockGlobalForwardingRules.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "forwardingRules")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockGlobalForwardingRulesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockGlobalForwardingRules %v exists", key),
@@ -13493,10 +13966,8 @@ func (m *MockGlobalForwardingRules) Insert(ctx context.Context, key *meta.Key, o
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "forwardingRules")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "forwardingRules", key)
-
-	m.Objects[*key] = &MockGlobalForwardingRulesObj{obj}
+	nMap[*key] = &MockGlobalForwardingRulesObj{obj}
 	klog.V(5).Infof("MockGlobalForwardingRules.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -13520,7 +13991,8 @@ func (m *MockGlobalForwardingRules) Delete(ctx context.Context, key *meta.Key) e
 		klog.V(5).Infof("MockGlobalForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockGlobalForwardingRules %v not found", key),
@@ -13529,7 +14001,16 @@ func (m *MockGlobalForwardingRules) Delete(ctx context.Context, key *meta.Key) e
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "forwardingRules")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockGlobalForwardingRules.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -13750,8 +14231,8 @@ type MockHealthChecks struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockHealthChecksObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockHealthChecksObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -13794,10 +14275,13 @@ func (m *MockHealthChecks) Get(ctx context.Context, key *meta.Key) (*ga.HealthCh
 		klog.V(5).Infof("MockHealthChecks.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "healthChecks")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -13828,7 +14312,9 @@ func (m *MockHealthChecks) List(ctx context.Context, fl *filter.F) ([]*ga.Health
 	}
 
 	var objs []*ga.HealthCheck
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "healthChecks")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
@@ -13858,7 +14344,13 @@ func (m *MockHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *ga.He
 		klog.V(5).Infof("MockHealthChecks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "healthChecks")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockHealthChecksObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockHealthChecks %v exists", key),
@@ -13868,10 +14360,8 @@ func (m *MockHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *ga.He
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "healthChecks")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "healthChecks", key)
-
-	m.Objects[*key] = &MockHealthChecksObj{obj}
+	nMap[*key] = &MockHealthChecksObj{obj}
 	klog.V(5).Infof("MockHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -13895,7 +14385,8 @@ func (m *MockHealthChecks) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockHealthChecks %v not found", key),
@@ -13904,7 +14395,16 @@ func (m *MockHealthChecks) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "healthChecks")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockHealthChecks.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -14125,8 +14625,8 @@ type MockAlphaHealthChecks struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockHealthChecksObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockHealthChecksObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -14169,10 +14669,13 @@ func (m *MockAlphaHealthChecks) Get(ctx context.Context, key *meta.Key) (*alpha.
 		klog.V(5).Infof("MockAlphaHealthChecks.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "healthChecks")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -14203,7 +14706,9 @@ func (m *MockAlphaHealthChecks) List(ctx context.Context, fl *filter.F) ([]*alph
 	}
 
 	var objs []*alpha.HealthCheck
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "healthChecks")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToAlpha()) {
 			continue
 		}
@@ -14233,7 +14738,13 @@ func (m *MockAlphaHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *
 		klog.V(5).Infof("MockAlphaHealthChecks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "healthChecks")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockHealthChecksObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaHealthChecks %v exists", key),
@@ -14243,10 +14754,8 @@ func (m *MockAlphaHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "healthChecks")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "healthChecks", key)
-
-	m.Objects[*key] = &MockHealthChecksObj{obj}
+	nMap[*key] = &MockHealthChecksObj{obj}
 	klog.V(5).Infof("MockAlphaHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -14270,7 +14779,8 @@ func (m *MockAlphaHealthChecks) Delete(ctx context.Context, key *meta.Key) error
 		klog.V(5).Infof("MockAlphaHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaHealthChecks %v not found", key),
@@ -14279,7 +14789,16 @@ func (m *MockAlphaHealthChecks) Delete(ctx context.Context, key *meta.Key) error
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "healthChecks")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaHealthChecks.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -14500,8 +15019,8 @@ type MockBetaHealthChecks struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockHealthChecksObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockHealthChecksObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -14544,10 +15063,13 @@ func (m *MockBetaHealthChecks) Get(ctx context.Context, key *meta.Key) (*beta.He
 		klog.V(5).Infof("MockBetaHealthChecks.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "healthChecks")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -14578,7 +15100,9 @@ func (m *MockBetaHealthChecks) List(ctx context.Context, fl *filter.F) ([]*beta.
 	}
 
 	var objs []*beta.HealthCheck
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "healthChecks")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToBeta()) {
 			continue
 		}
@@ -14608,7 +15132,13 @@ func (m *MockBetaHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *b
 		klog.V(5).Infof("MockBetaHealthChecks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "healthChecks")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockHealthChecksObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaHealthChecks %v exists", key),
@@ -14618,10 +15148,8 @@ func (m *MockBetaHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *b
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "healthChecks")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "healthChecks", key)
-
-	m.Objects[*key] = &MockHealthChecksObj{obj}
+	nMap[*key] = &MockHealthChecksObj{obj}
 	klog.V(5).Infof("MockBetaHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -14645,7 +15173,8 @@ func (m *MockBetaHealthChecks) Delete(ctx context.Context, key *meta.Key) error 
 		klog.V(5).Infof("MockBetaHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaHealthChecks %v not found", key),
@@ -14654,7 +15183,16 @@ func (m *MockBetaHealthChecks) Delete(ctx context.Context, key *meta.Key) error 
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "healthChecks")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaHealthChecks.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -14875,8 +15413,8 @@ type MockAlphaRegionHealthChecks struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionHealthChecksObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionHealthChecksObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -14919,10 +15457,13 @@ func (m *MockAlphaRegionHealthChecks) Get(ctx context.Context, key *meta.Key) (*
 		klog.V(5).Infof("MockAlphaRegionHealthChecks.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaRegionHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "healthChecks")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaRegionHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -14953,7 +15494,9 @@ func (m *MockAlphaRegionHealthChecks) List(ctx context.Context, region string, f
 	}
 
 	var objs []*alpha.HealthCheck
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "healthChecks")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -14986,7 +15529,13 @@ func (m *MockAlphaRegionHealthChecks) Insert(ctx context.Context, key *meta.Key,
 		klog.V(5).Infof("MockAlphaRegionHealthChecks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "healthChecks")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionHealthChecksObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaRegionHealthChecks %v exists", key),
@@ -14996,10 +15545,8 @@ func (m *MockAlphaRegionHealthChecks) Insert(ctx context.Context, key *meta.Key,
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "healthChecks")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "healthChecks", key)
-
-	m.Objects[*key] = &MockRegionHealthChecksObj{obj}
+	nMap[*key] = &MockRegionHealthChecksObj{obj}
 	klog.V(5).Infof("MockAlphaRegionHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -15023,7 +15570,8 @@ func (m *MockAlphaRegionHealthChecks) Delete(ctx context.Context, key *meta.Key)
 		klog.V(5).Infof("MockAlphaRegionHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaRegionHealthChecks %v not found", key),
@@ -15032,7 +15580,16 @@ func (m *MockAlphaRegionHealthChecks) Delete(ctx context.Context, key *meta.Key)
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "healthChecks")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaRegionHealthChecks.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -15252,8 +15809,8 @@ type MockBetaRegionHealthChecks struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionHealthChecksObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionHealthChecksObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -15296,10 +15853,13 @@ func (m *MockBetaRegionHealthChecks) Get(ctx context.Context, key *meta.Key) (*b
 		klog.V(5).Infof("MockBetaRegionHealthChecks.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaRegionHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "healthChecks")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaRegionHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -15330,7 +15890,9 @@ func (m *MockBetaRegionHealthChecks) List(ctx context.Context, region string, fl
 	}
 
 	var objs []*beta.HealthCheck
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "healthChecks")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -15363,7 +15925,13 @@ func (m *MockBetaRegionHealthChecks) Insert(ctx context.Context, key *meta.Key, 
 		klog.V(5).Infof("MockBetaRegionHealthChecks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "healthChecks")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionHealthChecksObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaRegionHealthChecks %v exists", key),
@@ -15373,10 +15941,8 @@ func (m *MockBetaRegionHealthChecks) Insert(ctx context.Context, key *meta.Key, 
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "healthChecks")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "healthChecks", key)
-
-	m.Objects[*key] = &MockRegionHealthChecksObj{obj}
+	nMap[*key] = &MockRegionHealthChecksObj{obj}
 	klog.V(5).Infof("MockBetaRegionHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -15400,7 +15966,8 @@ func (m *MockBetaRegionHealthChecks) Delete(ctx context.Context, key *meta.Key) 
 		klog.V(5).Infof("MockBetaRegionHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaRegionHealthChecks %v not found", key),
@@ -15409,7 +15976,16 @@ func (m *MockBetaRegionHealthChecks) Delete(ctx context.Context, key *meta.Key) 
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "healthChecks")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaRegionHealthChecks.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -15629,8 +16205,8 @@ type MockRegionHealthChecks struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionHealthChecksObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionHealthChecksObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -15673,10 +16249,13 @@ func (m *MockRegionHealthChecks) Get(ctx context.Context, key *meta.Key) (*ga.He
 		klog.V(5).Infof("MockRegionHealthChecks.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockRegionHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "healthChecks")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockRegionHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -15707,7 +16286,9 @@ func (m *MockRegionHealthChecks) List(ctx context.Context, region string, fl *fi
 	}
 
 	var objs []*ga.HealthCheck
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "healthChecks")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -15740,7 +16321,13 @@ func (m *MockRegionHealthChecks) Insert(ctx context.Context, key *meta.Key, obj 
 		klog.V(5).Infof("MockRegionHealthChecks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "healthChecks")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionHealthChecksObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockRegionHealthChecks %v exists", key),
@@ -15750,10 +16337,8 @@ func (m *MockRegionHealthChecks) Insert(ctx context.Context, key *meta.Key, obj 
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "healthChecks")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "healthChecks", key)
-
-	m.Objects[*key] = &MockRegionHealthChecksObj{obj}
+	nMap[*key] = &MockRegionHealthChecksObj{obj}
 	klog.V(5).Infof("MockRegionHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -15777,7 +16362,8 @@ func (m *MockRegionHealthChecks) Delete(ctx context.Context, key *meta.Key) erro
 		klog.V(5).Infof("MockRegionHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockRegionHealthChecks %v not found", key),
@@ -15786,7 +16372,16 @@ func (m *MockRegionHealthChecks) Delete(ctx context.Context, key *meta.Key) erro
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "healthChecks")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockRegionHealthChecks.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -16006,8 +16601,8 @@ type MockHttpHealthChecks struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockHttpHealthChecksObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockHttpHealthChecksObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -16050,10 +16645,13 @@ func (m *MockHttpHealthChecks) Get(ctx context.Context, key *meta.Key) (*ga.Http
 		klog.V(5).Infof("MockHttpHealthChecks.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockHttpHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "httpHealthChecks")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockHttpHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -16084,7 +16682,9 @@ func (m *MockHttpHealthChecks) List(ctx context.Context, fl *filter.F) ([]*ga.Ht
 	}
 
 	var objs []*ga.HttpHealthCheck
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "httpHealthChecks")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
@@ -16114,7 +16714,13 @@ func (m *MockHttpHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *g
 		klog.V(5).Infof("MockHttpHealthChecks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "httpHealthChecks")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockHttpHealthChecksObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockHttpHealthChecks %v exists", key),
@@ -16124,10 +16730,8 @@ func (m *MockHttpHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *g
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "httpHealthChecks")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "httpHealthChecks", key)
-
-	m.Objects[*key] = &MockHttpHealthChecksObj{obj}
+	nMap[*key] = &MockHttpHealthChecksObj{obj}
 	klog.V(5).Infof("MockHttpHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -16151,7 +16755,8 @@ func (m *MockHttpHealthChecks) Delete(ctx context.Context, key *meta.Key) error 
 		klog.V(5).Infof("MockHttpHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockHttpHealthChecks %v not found", key),
@@ -16160,7 +16765,16 @@ func (m *MockHttpHealthChecks) Delete(ctx context.Context, key *meta.Key) error 
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "httpHealthChecks")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockHttpHealthChecks.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -16381,8 +16995,8 @@ type MockHttpsHealthChecks struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockHttpsHealthChecksObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockHttpsHealthChecksObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -16425,10 +17039,13 @@ func (m *MockHttpsHealthChecks) Get(ctx context.Context, key *meta.Key) (*ga.Htt
 		klog.V(5).Infof("MockHttpsHealthChecks.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockHttpsHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "httpsHealthChecks")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockHttpsHealthChecks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -16459,7 +17076,9 @@ func (m *MockHttpsHealthChecks) List(ctx context.Context, fl *filter.F) ([]*ga.H
 	}
 
 	var objs []*ga.HttpsHealthCheck
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "httpsHealthChecks")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
@@ -16489,7 +17108,13 @@ func (m *MockHttpsHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *
 		klog.V(5).Infof("MockHttpsHealthChecks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "httpsHealthChecks")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockHttpsHealthChecksObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockHttpsHealthChecks %v exists", key),
@@ -16499,10 +17124,8 @@ func (m *MockHttpsHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "httpsHealthChecks")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "httpsHealthChecks", key)
-
-	m.Objects[*key] = &MockHttpsHealthChecksObj{obj}
+	nMap[*key] = &MockHttpsHealthChecksObj{obj}
 	klog.V(5).Infof("MockHttpsHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -16526,7 +17149,8 @@ func (m *MockHttpsHealthChecks) Delete(ctx context.Context, key *meta.Key) error
 		klog.V(5).Infof("MockHttpsHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockHttpsHealthChecks %v not found", key),
@@ -16535,7 +17159,16 @@ func (m *MockHttpsHealthChecks) Delete(ctx context.Context, key *meta.Key) error
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "httpsHealthChecks")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockHttpsHealthChecks.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -16759,8 +17392,8 @@ type MockInstanceGroups struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockInstanceGroupsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockInstanceGroupsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -16806,10 +17439,13 @@ func (m *MockInstanceGroups) Get(ctx context.Context, key *meta.Key) (*ga.Instan
 		klog.V(5).Infof("MockInstanceGroups.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockInstanceGroups.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "instanceGroups")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockInstanceGroups.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -16840,7 +17476,9 @@ func (m *MockInstanceGroups) List(ctx context.Context, zone string, fl *filter.F
 	}
 
 	var objs []*ga.InstanceGroup
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "instanceGroups")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Zone != zone {
 			continue
 		}
@@ -16873,7 +17511,13 @@ func (m *MockInstanceGroups) Insert(ctx context.Context, key *meta.Key, obj *ga.
 		klog.V(5).Infof("MockInstanceGroups.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "instanceGroups")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockInstanceGroupsObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockInstanceGroups %v exists", key),
@@ -16883,10 +17527,8 @@ func (m *MockInstanceGroups) Insert(ctx context.Context, key *meta.Key, obj *ga.
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "instanceGroups")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "instanceGroups", key)
-
-	m.Objects[*key] = &MockInstanceGroupsObj{obj}
+	nMap[*key] = &MockInstanceGroupsObj{obj}
 	klog.V(5).Infof("MockInstanceGroups.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -16910,7 +17552,8 @@ func (m *MockInstanceGroups) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockInstanceGroups.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockInstanceGroups %v not found", key),
@@ -16919,7 +17562,16 @@ func (m *MockInstanceGroups) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "instanceGroups")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockInstanceGroups.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -17274,8 +17926,8 @@ type MockInstances struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockInstancesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockInstancesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -17319,10 +17971,13 @@ func (m *MockInstances) Get(ctx context.Context, key *meta.Key) (*ga.Instance, e
 		klog.V(5).Infof("MockInstances.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockInstances.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "instances")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockInstances.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -17353,7 +18008,9 @@ func (m *MockInstances) List(ctx context.Context, zone string, fl *filter.F) ([]
 	}
 
 	var objs []*ga.Instance
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "instances")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Zone != zone {
 			continue
 		}
@@ -17386,7 +18043,13 @@ func (m *MockInstances) Insert(ctx context.Context, key *meta.Key, obj *ga.Insta
 		klog.V(5).Infof("MockInstances.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "instances")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockInstancesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockInstances %v exists", key),
@@ -17396,10 +18059,8 @@ func (m *MockInstances) Insert(ctx context.Context, key *meta.Key, obj *ga.Insta
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "instances")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "instances", key)
-
-	m.Objects[*key] = &MockInstancesObj{obj}
+	nMap[*key] = &MockInstancesObj{obj}
 	klog.V(5).Infof("MockInstances.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -17423,7 +18084,8 @@ func (m *MockInstances) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockInstances.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockInstances %v not found", key),
@@ -17432,7 +18094,16 @@ func (m *MockInstances) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "instances")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockInstances.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -17695,8 +18366,8 @@ type MockBetaInstances struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockInstancesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockInstancesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -17741,10 +18412,13 @@ func (m *MockBetaInstances) Get(ctx context.Context, key *meta.Key) (*beta.Insta
 		klog.V(5).Infof("MockBetaInstances.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaInstances.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "instances")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaInstances.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -17775,7 +18449,9 @@ func (m *MockBetaInstances) List(ctx context.Context, zone string, fl *filter.F)
 	}
 
 	var objs []*beta.Instance
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "instances")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Zone != zone {
 			continue
 		}
@@ -17808,7 +18484,13 @@ func (m *MockBetaInstances) Insert(ctx context.Context, key *meta.Key, obj *beta
 		klog.V(5).Infof("MockBetaInstances.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "instances")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockInstancesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaInstances %v exists", key),
@@ -17818,10 +18500,8 @@ func (m *MockBetaInstances) Insert(ctx context.Context, key *meta.Key, obj *beta
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "instances")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "instances", key)
-
-	m.Objects[*key] = &MockInstancesObj{obj}
+	nMap[*key] = &MockInstancesObj{obj}
 	klog.V(5).Infof("MockBetaInstances.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -17845,7 +18525,8 @@ func (m *MockBetaInstances) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockBetaInstances.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaInstances %v not found", key),
@@ -17854,7 +18535,16 @@ func (m *MockBetaInstances) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "instances")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaInstances.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -18158,8 +18848,8 @@ type MockAlphaInstances struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockInstancesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockInstancesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -18204,10 +18894,13 @@ func (m *MockAlphaInstances) Get(ctx context.Context, key *meta.Key) (*alpha.Ins
 		klog.V(5).Infof("MockAlphaInstances.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaInstances.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "instances")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaInstances.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -18238,7 +18931,9 @@ func (m *MockAlphaInstances) List(ctx context.Context, zone string, fl *filter.F
 	}
 
 	var objs []*alpha.Instance
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "instances")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Zone != zone {
 			continue
 		}
@@ -18271,7 +18966,13 @@ func (m *MockAlphaInstances) Insert(ctx context.Context, key *meta.Key, obj *alp
 		klog.V(5).Infof("MockAlphaInstances.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "instances")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockInstancesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaInstances %v exists", key),
@@ -18281,10 +18982,8 @@ func (m *MockAlphaInstances) Insert(ctx context.Context, key *meta.Key, obj *alp
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "instances")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "instances", key)
-
-	m.Objects[*key] = &MockInstancesObj{obj}
+	nMap[*key] = &MockInstancesObj{obj}
 	klog.V(5).Infof("MockAlphaInstances.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -18308,7 +19007,8 @@ func (m *MockAlphaInstances) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockAlphaInstances.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaInstances %v not found", key),
@@ -18317,7 +19017,16 @@ func (m *MockAlphaInstances) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "instances")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaInstances.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -18624,8 +19333,8 @@ type MockImages struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockImagesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockImagesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -18673,10 +19382,13 @@ func (m *MockImages) Get(ctx context.Context, key *meta.Key) (*ga.Image, error) 
 		klog.V(5).Infof("MockImages.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockImages.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "Images")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockImages.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -18707,7 +19419,9 @@ func (m *MockImages) List(ctx context.Context, fl *filter.F) ([]*ga.Image, error
 	}
 
 	var objs []*ga.Image
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "Images")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
@@ -18737,7 +19451,13 @@ func (m *MockImages) Insert(ctx context.Context, key *meta.Key, obj *ga.Image) e
 		klog.V(5).Infof("MockImages.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "Images")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockImagesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockImages %v exists", key),
@@ -18747,10 +19467,8 @@ func (m *MockImages) Insert(ctx context.Context, key *meta.Key, obj *ga.Image) e
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "Images")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "Images", key)
-
-	m.Objects[*key] = &MockImagesObj{obj}
+	nMap[*key] = &MockImagesObj{obj}
 	klog.V(5).Infof("MockImages.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -18774,7 +19492,8 @@ func (m *MockImages) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockImages.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockImages %v not found", key),
@@ -18783,7 +19502,16 @@ func (m *MockImages) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "Images")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockImages.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -19194,8 +19922,8 @@ type MockBetaImages struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockImagesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockImagesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -19243,10 +19971,13 @@ func (m *MockBetaImages) Get(ctx context.Context, key *meta.Key) (*beta.Image, e
 		klog.V(5).Infof("MockBetaImages.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaImages.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "Images")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaImages.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -19277,7 +20008,9 @@ func (m *MockBetaImages) List(ctx context.Context, fl *filter.F) ([]*beta.Image,
 	}
 
 	var objs []*beta.Image
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "Images")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToBeta()) {
 			continue
 		}
@@ -19307,7 +20040,13 @@ func (m *MockBetaImages) Insert(ctx context.Context, key *meta.Key, obj *beta.Im
 		klog.V(5).Infof("MockBetaImages.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "Images")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockImagesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaImages %v exists", key),
@@ -19317,10 +20056,8 @@ func (m *MockBetaImages) Insert(ctx context.Context, key *meta.Key, obj *beta.Im
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "Images")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "Images", key)
-
-	m.Objects[*key] = &MockImagesObj{obj}
+	nMap[*key] = &MockImagesObj{obj}
 	klog.V(5).Infof("MockBetaImages.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -19344,7 +20081,8 @@ func (m *MockBetaImages) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockBetaImages.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaImages %v not found", key),
@@ -19353,7 +20091,16 @@ func (m *MockBetaImages) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "Images")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaImages.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -19764,8 +20511,8 @@ type MockAlphaImages struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockImagesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockImagesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -19813,10 +20560,13 @@ func (m *MockAlphaImages) Get(ctx context.Context, key *meta.Key) (*alpha.Image,
 		klog.V(5).Infof("MockAlphaImages.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaImages.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "Images")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaImages.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -19847,7 +20597,9 @@ func (m *MockAlphaImages) List(ctx context.Context, fl *filter.F) ([]*alpha.Imag
 	}
 
 	var objs []*alpha.Image
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "Images")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToAlpha()) {
 			continue
 		}
@@ -19877,7 +20629,13 @@ func (m *MockAlphaImages) Insert(ctx context.Context, key *meta.Key, obj *alpha.
 		klog.V(5).Infof("MockAlphaImages.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "Images")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockImagesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaImages %v exists", key),
@@ -19887,10 +20645,8 @@ func (m *MockAlphaImages) Insert(ctx context.Context, key *meta.Key, obj *alpha.
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "Images")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "Images", key)
-
-	m.Objects[*key] = &MockImagesObj{obj}
+	nMap[*key] = &MockImagesObj{obj}
 	klog.V(5).Infof("MockAlphaImages.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -19914,7 +20670,8 @@ func (m *MockAlphaImages) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockAlphaImages.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaImages %v not found", key),
@@ -19923,7 +20680,16 @@ func (m *MockAlphaImages) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "Images")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaImages.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -20328,8 +21094,8 @@ type MockAlphaNetworks struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockNetworksObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockNetworksObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -20371,10 +21137,13 @@ func (m *MockAlphaNetworks) Get(ctx context.Context, key *meta.Key) (*alpha.Netw
 		klog.V(5).Infof("MockAlphaNetworks.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaNetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networks")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaNetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -20405,7 +21174,9 @@ func (m *MockAlphaNetworks) List(ctx context.Context, fl *filter.F) ([]*alpha.Ne
 	}
 
 	var objs []*alpha.Network
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networks")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToAlpha()) {
 			continue
 		}
@@ -20435,7 +21206,13 @@ func (m *MockAlphaNetworks) Insert(ctx context.Context, key *meta.Key, obj *alph
 		klog.V(5).Infof("MockAlphaNetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networks")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockNetworksObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaNetworks %v exists", key),
@@ -20445,10 +21222,8 @@ func (m *MockAlphaNetworks) Insert(ctx context.Context, key *meta.Key, obj *alph
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networks")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "networks", key)
-
-	m.Objects[*key] = &MockNetworksObj{obj}
+	nMap[*key] = &MockNetworksObj{obj}
 	klog.V(5).Infof("MockAlphaNetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -20472,7 +21247,8 @@ func (m *MockAlphaNetworks) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockAlphaNetworks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaNetworks %v not found", key),
@@ -20481,7 +21257,16 @@ func (m *MockAlphaNetworks) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networks")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaNetworks.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -20660,8 +21445,8 @@ type MockBetaNetworks struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockNetworksObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockNetworksObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -20703,10 +21488,13 @@ func (m *MockBetaNetworks) Get(ctx context.Context, key *meta.Key) (*beta.Networ
 		klog.V(5).Infof("MockBetaNetworks.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaNetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "networks")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaNetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -20737,7 +21525,9 @@ func (m *MockBetaNetworks) List(ctx context.Context, fl *filter.F) ([]*beta.Netw
 	}
 
 	var objs []*beta.Network
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "networks")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToBeta()) {
 			continue
 		}
@@ -20767,7 +21557,13 @@ func (m *MockBetaNetworks) Insert(ctx context.Context, key *meta.Key, obj *beta.
 		klog.V(5).Infof("MockBetaNetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "networks")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockNetworksObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaNetworks %v exists", key),
@@ -20777,10 +21573,8 @@ func (m *MockBetaNetworks) Insert(ctx context.Context, key *meta.Key, obj *beta.
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "networks")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "networks", key)
-
-	m.Objects[*key] = &MockNetworksObj{obj}
+	nMap[*key] = &MockNetworksObj{obj}
 	klog.V(5).Infof("MockBetaNetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -20804,7 +21598,8 @@ func (m *MockBetaNetworks) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockBetaNetworks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaNetworks %v not found", key),
@@ -20813,7 +21608,16 @@ func (m *MockBetaNetworks) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "networks")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaNetworks.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -20992,8 +21796,8 @@ type MockNetworks struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockNetworksObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockNetworksObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -21035,10 +21839,13 @@ func (m *MockNetworks) Get(ctx context.Context, key *meta.Key) (*ga.Network, err
 		klog.V(5).Infof("MockNetworks.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockNetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "networks")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockNetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -21069,7 +21876,9 @@ func (m *MockNetworks) List(ctx context.Context, fl *filter.F) ([]*ga.Network, e
 	}
 
 	var objs []*ga.Network
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "networks")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
@@ -21099,7 +21908,13 @@ func (m *MockNetworks) Insert(ctx context.Context, key *meta.Key, obj *ga.Networ
 		klog.V(5).Infof("MockNetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "networks")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockNetworksObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockNetworks %v exists", key),
@@ -21109,10 +21924,8 @@ func (m *MockNetworks) Insert(ctx context.Context, key *meta.Key, obj *ga.Networ
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "networks")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "networks", key)
-
-	m.Objects[*key] = &MockNetworksObj{obj}
+	nMap[*key] = &MockNetworksObj{obj}
 	klog.V(5).Infof("MockNetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -21136,7 +21949,8 @@ func (m *MockNetworks) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockNetworks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockNetworks %v not found", key),
@@ -21145,7 +21959,16 @@ func (m *MockNetworks) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "networks")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockNetworks.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -21328,8 +22151,8 @@ type MockAlphaNetworkEndpointGroups struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockNetworkEndpointGroupsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockNetworkEndpointGroupsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -21376,10 +22199,13 @@ func (m *MockAlphaNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key)
 		klog.V(5).Infof("MockAlphaNetworkEndpointGroups.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaNetworkEndpointGroups.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networkEndpointGroups")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaNetworkEndpointGroups.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -21410,7 +22236,9 @@ func (m *MockAlphaNetworkEndpointGroups) List(ctx context.Context, zone string, 
 	}
 
 	var objs []*alpha.NetworkEndpointGroup
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networkEndpointGroups")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Zone != zone {
 			continue
 		}
@@ -21443,7 +22271,13 @@ func (m *MockAlphaNetworkEndpointGroups) Insert(ctx context.Context, key *meta.K
 		klog.V(5).Infof("MockAlphaNetworkEndpointGroups.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networkEndpointGroups")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockNetworkEndpointGroupsObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaNetworkEndpointGroups %v exists", key),
@@ -21453,10 +22287,8 @@ func (m *MockAlphaNetworkEndpointGroups) Insert(ctx context.Context, key *meta.K
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networkEndpointGroups")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "networkEndpointGroups", key)
-
-	m.Objects[*key] = &MockNetworkEndpointGroupsObj{obj}
+	nMap[*key] = &MockNetworkEndpointGroupsObj{obj}
 	klog.V(5).Infof("MockAlphaNetworkEndpointGroups.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -21480,7 +22312,8 @@ func (m *MockAlphaNetworkEndpointGroups) Delete(ctx context.Context, key *meta.K
 		klog.V(5).Infof("MockAlphaNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaNetworkEndpointGroups %v not found", key),
@@ -21489,7 +22322,16 @@ func (m *MockAlphaNetworkEndpointGroups) Delete(ctx context.Context, key *meta.K
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networkEndpointGroups")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaNetworkEndpointGroups.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -21513,7 +22355,8 @@ func (m *MockAlphaNetworkEndpointGroups) AggregatedList(ctx context.Context, fl 
 	}
 
 	objs := map[string][]*alpha.NetworkEndpointGroup{}
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networkEndpointGroups")
+	for _, obj := range m.Objects[projectID] {
 		res, err := ParseResourceURL(obj.ToAlpha().SelfLink)
 		if err != nil {
 			klog.V(5).Infof("MockAlphaNetworkEndpointGroups.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
@@ -21888,8 +22731,8 @@ type MockBetaNetworkEndpointGroups struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockNetworkEndpointGroupsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockNetworkEndpointGroupsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -21936,10 +22779,13 @@ func (m *MockBetaNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key) 
 		klog.V(5).Infof("MockBetaNetworkEndpointGroups.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaNetworkEndpointGroups.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "networkEndpointGroups")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaNetworkEndpointGroups.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -21970,7 +22816,9 @@ func (m *MockBetaNetworkEndpointGroups) List(ctx context.Context, zone string, f
 	}
 
 	var objs []*beta.NetworkEndpointGroup
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "networkEndpointGroups")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Zone != zone {
 			continue
 		}
@@ -22003,7 +22851,13 @@ func (m *MockBetaNetworkEndpointGroups) Insert(ctx context.Context, key *meta.Ke
 		klog.V(5).Infof("MockBetaNetworkEndpointGroups.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "networkEndpointGroups")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockNetworkEndpointGroupsObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaNetworkEndpointGroups %v exists", key),
@@ -22013,10 +22867,8 @@ func (m *MockBetaNetworkEndpointGroups) Insert(ctx context.Context, key *meta.Ke
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "networkEndpointGroups")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "networkEndpointGroups", key)
-
-	m.Objects[*key] = &MockNetworkEndpointGroupsObj{obj}
+	nMap[*key] = &MockNetworkEndpointGroupsObj{obj}
 	klog.V(5).Infof("MockBetaNetworkEndpointGroups.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -22040,7 +22892,8 @@ func (m *MockBetaNetworkEndpointGroups) Delete(ctx context.Context, key *meta.Ke
 		klog.V(5).Infof("MockBetaNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaNetworkEndpointGroups %v not found", key),
@@ -22049,7 +22902,16 @@ func (m *MockBetaNetworkEndpointGroups) Delete(ctx context.Context, key *meta.Ke
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "networkEndpointGroups")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaNetworkEndpointGroups.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -22073,7 +22935,8 @@ func (m *MockBetaNetworkEndpointGroups) AggregatedList(ctx context.Context, fl *
 	}
 
 	objs := map[string][]*beta.NetworkEndpointGroup{}
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "networkEndpointGroups")
+	for _, obj := range m.Objects[projectID] {
 		res, err := ParseResourceURL(obj.ToBeta().SelfLink)
 		if err != nil {
 			klog.V(5).Infof("MockBetaNetworkEndpointGroups.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
@@ -22448,8 +23311,8 @@ type MockNetworkEndpointGroups struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockNetworkEndpointGroupsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockNetworkEndpointGroupsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -22496,10 +23359,13 @@ func (m *MockNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key) (*ga
 		klog.V(5).Infof("MockNetworkEndpointGroups.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockNetworkEndpointGroups.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "networkEndpointGroups")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockNetworkEndpointGroups.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -22530,7 +23396,9 @@ func (m *MockNetworkEndpointGroups) List(ctx context.Context, zone string, fl *f
 	}
 
 	var objs []*ga.NetworkEndpointGroup
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "networkEndpointGroups")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Zone != zone {
 			continue
 		}
@@ -22563,7 +23431,13 @@ func (m *MockNetworkEndpointGroups) Insert(ctx context.Context, key *meta.Key, o
 		klog.V(5).Infof("MockNetworkEndpointGroups.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "networkEndpointGroups")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockNetworkEndpointGroupsObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockNetworkEndpointGroups %v exists", key),
@@ -22573,10 +23447,8 @@ func (m *MockNetworkEndpointGroups) Insert(ctx context.Context, key *meta.Key, o
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "networkEndpointGroups")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "networkEndpointGroups", key)
-
-	m.Objects[*key] = &MockNetworkEndpointGroupsObj{obj}
+	nMap[*key] = &MockNetworkEndpointGroupsObj{obj}
 	klog.V(5).Infof("MockNetworkEndpointGroups.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -22600,7 +23472,8 @@ func (m *MockNetworkEndpointGroups) Delete(ctx context.Context, key *meta.Key) e
 		klog.V(5).Infof("MockNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockNetworkEndpointGroups %v not found", key),
@@ -22609,7 +23482,16 @@ func (m *MockNetworkEndpointGroups) Delete(ctx context.Context, key *meta.Key) e
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "networkEndpointGroups")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockNetworkEndpointGroups.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -22633,7 +23515,8 @@ func (m *MockNetworkEndpointGroups) AggregatedList(ctx context.Context, fl *filt
 	}
 
 	objs := map[string][]*ga.NetworkEndpointGroup{}
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "networkEndpointGroups")
+	for _, obj := range m.Objects[projectID] {
 		res, err := ParseResourceURL(obj.ToGA().SelfLink)
 		if err != nil {
 			klog.V(5).Infof("MockNetworkEndpointGroups.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
@@ -23000,8 +23883,8 @@ type MockProjects struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockProjectsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockProjectsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -23049,8 +23932,8 @@ type MockRegions struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -23088,10 +23971,13 @@ func (m *MockRegions) Get(ctx context.Context, key *meta.Key) (*ga.Region, error
 		klog.V(5).Infof("MockRegions.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockRegions.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "regions")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockRegions.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -23122,7 +24008,9 @@ func (m *MockRegions) List(ctx context.Context, fl *filter.F) ([]*ga.Region, err
 	}
 
 	var objs []*ga.Region
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "regions")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
@@ -23244,8 +24132,8 @@ type MockAlphaRouters struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRoutersObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRoutersObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -23293,10 +24181,13 @@ func (m *MockAlphaRouters) Get(ctx context.Context, key *meta.Key) (*alpha.Route
 		klog.V(5).Infof("MockAlphaRouters.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaRouters.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "routers")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaRouters.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -23327,7 +24218,9 @@ func (m *MockAlphaRouters) List(ctx context.Context, region string, fl *filter.F
 	}
 
 	var objs []*alpha.Router
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "routers")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -23360,7 +24253,13 @@ func (m *MockAlphaRouters) Insert(ctx context.Context, key *meta.Key, obj *alpha
 		klog.V(5).Infof("MockAlphaRouters.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "routers")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRoutersObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaRouters %v exists", key),
@@ -23370,10 +24269,8 @@ func (m *MockAlphaRouters) Insert(ctx context.Context, key *meta.Key, obj *alpha
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "routers")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "routers", key)
-
-	m.Objects[*key] = &MockRoutersObj{obj}
+	nMap[*key] = &MockRoutersObj{obj}
 	klog.V(5).Infof("MockAlphaRouters.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -23397,7 +24294,8 @@ func (m *MockAlphaRouters) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockAlphaRouters.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaRouters %v not found", key),
@@ -23406,7 +24304,16 @@ func (m *MockAlphaRouters) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "routers")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaRouters.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -23430,7 +24337,8 @@ func (m *MockAlphaRouters) AggregatedList(ctx context.Context, fl *filter.F) (ma
 	}
 
 	objs := map[string][]*alpha.Router{}
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "routers")
+	for _, obj := range m.Objects[projectID] {
 		res, err := ParseResourceURL(obj.ToAlpha().SelfLink)
 		if err != nil {
 			klog.V(5).Infof("MockAlphaRouters.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
@@ -23821,8 +24729,8 @@ type MockBetaRouters struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRoutersObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRoutersObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -23870,10 +24778,13 @@ func (m *MockBetaRouters) Get(ctx context.Context, key *meta.Key) (*beta.Router,
 		klog.V(5).Infof("MockBetaRouters.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaRouters.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "routers")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaRouters.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -23904,7 +24815,9 @@ func (m *MockBetaRouters) List(ctx context.Context, region string, fl *filter.F)
 	}
 
 	var objs []*beta.Router
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "routers")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -23937,7 +24850,13 @@ func (m *MockBetaRouters) Insert(ctx context.Context, key *meta.Key, obj *beta.R
 		klog.V(5).Infof("MockBetaRouters.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "routers")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRoutersObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaRouters %v exists", key),
@@ -23947,10 +24866,8 @@ func (m *MockBetaRouters) Insert(ctx context.Context, key *meta.Key, obj *beta.R
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "routers")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "routers", key)
-
-	m.Objects[*key] = &MockRoutersObj{obj}
+	nMap[*key] = &MockRoutersObj{obj}
 	klog.V(5).Infof("MockBetaRouters.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -23974,7 +24891,8 @@ func (m *MockBetaRouters) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockBetaRouters.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaRouters %v not found", key),
@@ -23983,7 +24901,16 @@ func (m *MockBetaRouters) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "routers")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaRouters.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -24007,7 +24934,8 @@ func (m *MockBetaRouters) AggregatedList(ctx context.Context, fl *filter.F) (map
 	}
 
 	objs := map[string][]*beta.Router{}
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "routers")
+	for _, obj := range m.Objects[projectID] {
 		res, err := ParseResourceURL(obj.ToBeta().SelfLink)
 		if err != nil {
 			klog.V(5).Infof("MockBetaRouters.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
@@ -24397,8 +25325,8 @@ type MockRouters struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRoutersObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRoutersObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -24445,10 +25373,13 @@ func (m *MockRouters) Get(ctx context.Context, key *meta.Key) (*ga.Router, error
 		klog.V(5).Infof("MockRouters.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockRouters.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "routers")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockRouters.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -24479,7 +25410,9 @@ func (m *MockRouters) List(ctx context.Context, region string, fl *filter.F) ([]
 	}
 
 	var objs []*ga.Router
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "routers")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -24512,7 +25445,13 @@ func (m *MockRouters) Insert(ctx context.Context, key *meta.Key, obj *ga.Router)
 		klog.V(5).Infof("MockRouters.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "routers")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRoutersObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockRouters %v exists", key),
@@ -24522,10 +25461,8 @@ func (m *MockRouters) Insert(ctx context.Context, key *meta.Key, obj *ga.Router)
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "routers")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "routers", key)
-
-	m.Objects[*key] = &MockRoutersObj{obj}
+	nMap[*key] = &MockRoutersObj{obj}
 	klog.V(5).Infof("MockRouters.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -24549,7 +25486,8 @@ func (m *MockRouters) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockRouters.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockRouters %v not found", key),
@@ -24558,7 +25496,16 @@ func (m *MockRouters) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "routers")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockRouters.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -24582,7 +25529,8 @@ func (m *MockRouters) AggregatedList(ctx context.Context, fl *filter.F) (map[str
 	}
 
 	objs := map[string][]*ga.Router{}
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "routers")
+	for _, obj := range m.Objects[projectID] {
 		res, err := ParseResourceURL(obj.ToGA().SelfLink)
 		if err != nil {
 			klog.V(5).Infof("MockRouters.AggregatedList(%v, %v) = nil, %v", ctx, fl, err)
@@ -24932,8 +25880,8 @@ type MockRoutes struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRoutesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRoutesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -24975,10 +25923,13 @@ func (m *MockRoutes) Get(ctx context.Context, key *meta.Key) (*ga.Route, error) 
 		klog.V(5).Infof("MockRoutes.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockRoutes.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "routes")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockRoutes.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -25009,7 +25960,9 @@ func (m *MockRoutes) List(ctx context.Context, fl *filter.F) ([]*ga.Route, error
 	}
 
 	var objs []*ga.Route
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "routes")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
@@ -25039,7 +25992,13 @@ func (m *MockRoutes) Insert(ctx context.Context, key *meta.Key, obj *ga.Route) e
 		klog.V(5).Infof("MockRoutes.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "routes")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRoutesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockRoutes %v exists", key),
@@ -25049,10 +26008,8 @@ func (m *MockRoutes) Insert(ctx context.Context, key *meta.Key, obj *ga.Route) e
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "routes")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "routes", key)
-
-	m.Objects[*key] = &MockRoutesObj{obj}
+	nMap[*key] = &MockRoutesObj{obj}
 	klog.V(5).Infof("MockRoutes.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -25076,7 +26033,8 @@ func (m *MockRoutes) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockRoutes.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockRoutes %v not found", key),
@@ -25085,7 +26043,16 @@ func (m *MockRoutes) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "routes")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockRoutes.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -25269,8 +26236,8 @@ type MockBetaSecurityPolicies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockSecurityPoliciesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockSecurityPoliciesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -25317,10 +26284,13 @@ func (m *MockBetaSecurityPolicies) Get(ctx context.Context, key *meta.Key) (*bet
 		klog.V(5).Infof("MockBetaSecurityPolicies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaSecurityPolicies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "securityPolicies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaSecurityPolicies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -25351,7 +26321,9 @@ func (m *MockBetaSecurityPolicies) List(ctx context.Context, fl *filter.F) ([]*b
 	}
 
 	var objs []*beta.SecurityPolicy
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "securityPolicies")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToBeta()) {
 			continue
 		}
@@ -25381,7 +26353,13 @@ func (m *MockBetaSecurityPolicies) Insert(ctx context.Context, key *meta.Key, ob
 		klog.V(5).Infof("MockBetaSecurityPolicies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "securityPolicies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockSecurityPoliciesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaSecurityPolicies %v exists", key),
@@ -25391,10 +26369,8 @@ func (m *MockBetaSecurityPolicies) Insert(ctx context.Context, key *meta.Key, ob
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "securityPolicies")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "securityPolicies", key)
-
-	m.Objects[*key] = &MockSecurityPoliciesObj{obj}
+	nMap[*key] = &MockSecurityPoliciesObj{obj}
 	klog.V(5).Infof("MockBetaSecurityPolicies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -25418,7 +26394,8 @@ func (m *MockBetaSecurityPolicies) Delete(ctx context.Context, key *meta.Key) er
 		klog.V(5).Infof("MockBetaSecurityPolicies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaSecurityPolicies %v not found", key),
@@ -25427,7 +26404,16 @@ func (m *MockBetaSecurityPolicies) Delete(ctx context.Context, key *meta.Key) er
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "securityPolicies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaSecurityPolicies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -25807,8 +26793,8 @@ type MockBetaServiceAttachments struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockServiceAttachmentsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockServiceAttachmentsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -25851,10 +26837,13 @@ func (m *MockBetaServiceAttachments) Get(ctx context.Context, key *meta.Key) (*b
 		klog.V(5).Infof("MockBetaServiceAttachments.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaServiceAttachments.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "serviceAttachments")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaServiceAttachments.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -25885,7 +26874,9 @@ func (m *MockBetaServiceAttachments) List(ctx context.Context, region string, fl
 	}
 
 	var objs []*beta.ServiceAttachment
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "serviceAttachments")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -25918,7 +26909,13 @@ func (m *MockBetaServiceAttachments) Insert(ctx context.Context, key *meta.Key, 
 		klog.V(5).Infof("MockBetaServiceAttachments.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "serviceAttachments")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockServiceAttachmentsObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaServiceAttachments %v exists", key),
@@ -25928,10 +26925,8 @@ func (m *MockBetaServiceAttachments) Insert(ctx context.Context, key *meta.Key, 
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "serviceAttachments")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "serviceAttachments", key)
-
-	m.Objects[*key] = &MockServiceAttachmentsObj{obj}
+	nMap[*key] = &MockServiceAttachmentsObj{obj}
 	klog.V(5).Infof("MockBetaServiceAttachments.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -25955,7 +26950,8 @@ func (m *MockBetaServiceAttachments) Delete(ctx context.Context, key *meta.Key) 
 		klog.V(5).Infof("MockBetaServiceAttachments.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaServiceAttachments %v not found", key),
@@ -25964,7 +26960,16 @@ func (m *MockBetaServiceAttachments) Delete(ctx context.Context, key *meta.Key) 
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "serviceAttachments")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaServiceAttachments.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -26184,8 +27189,8 @@ type MockAlphaServiceAttachments struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockServiceAttachmentsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockServiceAttachmentsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -26228,10 +27233,13 @@ func (m *MockAlphaServiceAttachments) Get(ctx context.Context, key *meta.Key) (*
 		klog.V(5).Infof("MockAlphaServiceAttachments.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaServiceAttachments.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "serviceAttachments")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaServiceAttachments.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -26262,7 +27270,9 @@ func (m *MockAlphaServiceAttachments) List(ctx context.Context, region string, f
 	}
 
 	var objs []*alpha.ServiceAttachment
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "serviceAttachments")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -26295,7 +27305,13 @@ func (m *MockAlphaServiceAttachments) Insert(ctx context.Context, key *meta.Key,
 		klog.V(5).Infof("MockAlphaServiceAttachments.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "serviceAttachments")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockServiceAttachmentsObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaServiceAttachments %v exists", key),
@@ -26305,10 +27321,8 @@ func (m *MockAlphaServiceAttachments) Insert(ctx context.Context, key *meta.Key,
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "serviceAttachments")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "serviceAttachments", key)
-
-	m.Objects[*key] = &MockServiceAttachmentsObj{obj}
+	nMap[*key] = &MockServiceAttachmentsObj{obj}
 	klog.V(5).Infof("MockAlphaServiceAttachments.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -26332,7 +27346,8 @@ func (m *MockAlphaServiceAttachments) Delete(ctx context.Context, key *meta.Key)
 		klog.V(5).Infof("MockAlphaServiceAttachments.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaServiceAttachments %v not found", key),
@@ -26341,7 +27356,16 @@ func (m *MockAlphaServiceAttachments) Delete(ctx context.Context, key *meta.Key)
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "serviceAttachments")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaServiceAttachments.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -26560,8 +27584,8 @@ type MockSslCertificates struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockSslCertificatesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockSslCertificatesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -26603,10 +27627,13 @@ func (m *MockSslCertificates) Get(ctx context.Context, key *meta.Key) (*ga.SslCe
 		klog.V(5).Infof("MockSslCertificates.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockSslCertificates.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslCertificates")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockSslCertificates.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -26637,7 +27664,9 @@ func (m *MockSslCertificates) List(ctx context.Context, fl *filter.F) ([]*ga.Ssl
 	}
 
 	var objs []*ga.SslCertificate
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslCertificates")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
@@ -26667,7 +27696,13 @@ func (m *MockSslCertificates) Insert(ctx context.Context, key *meta.Key, obj *ga
 		klog.V(5).Infof("MockSslCertificates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslCertificates")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockSslCertificatesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockSslCertificates %v exists", key),
@@ -26677,10 +27712,8 @@ func (m *MockSslCertificates) Insert(ctx context.Context, key *meta.Key, obj *ga
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslCertificates")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "sslCertificates", key)
-
-	m.Objects[*key] = &MockSslCertificatesObj{obj}
+	nMap[*key] = &MockSslCertificatesObj{obj}
 	klog.V(5).Infof("MockSslCertificates.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -26704,7 +27737,8 @@ func (m *MockSslCertificates) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockSslCertificates %v not found", key),
@@ -26713,7 +27747,16 @@ func (m *MockSslCertificates) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslCertificates")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockSslCertificates.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -26892,8 +27935,8 @@ type MockBetaSslCertificates struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockSslCertificatesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockSslCertificatesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -26935,10 +27978,13 @@ func (m *MockBetaSslCertificates) Get(ctx context.Context, key *meta.Key) (*beta
 		klog.V(5).Infof("MockBetaSslCertificates.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaSslCertificates.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "sslCertificates")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaSslCertificates.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -26969,7 +28015,9 @@ func (m *MockBetaSslCertificates) List(ctx context.Context, fl *filter.F) ([]*be
 	}
 
 	var objs []*beta.SslCertificate
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "sslCertificates")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToBeta()) {
 			continue
 		}
@@ -26999,7 +28047,13 @@ func (m *MockBetaSslCertificates) Insert(ctx context.Context, key *meta.Key, obj
 		klog.V(5).Infof("MockBetaSslCertificates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "sslCertificates")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockSslCertificatesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaSslCertificates %v exists", key),
@@ -27009,10 +28063,8 @@ func (m *MockBetaSslCertificates) Insert(ctx context.Context, key *meta.Key, obj
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "sslCertificates")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "sslCertificates", key)
-
-	m.Objects[*key] = &MockSslCertificatesObj{obj}
+	nMap[*key] = &MockSslCertificatesObj{obj}
 	klog.V(5).Infof("MockBetaSslCertificates.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -27036,7 +28088,8 @@ func (m *MockBetaSslCertificates) Delete(ctx context.Context, key *meta.Key) err
 		klog.V(5).Infof("MockBetaSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaSslCertificates %v not found", key),
@@ -27045,7 +28098,16 @@ func (m *MockBetaSslCertificates) Delete(ctx context.Context, key *meta.Key) err
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "sslCertificates")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaSslCertificates.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -27224,8 +28286,8 @@ type MockAlphaSslCertificates struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockSslCertificatesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockSslCertificatesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -27267,10 +28329,13 @@ func (m *MockAlphaSslCertificates) Get(ctx context.Context, key *meta.Key) (*alp
 		klog.V(5).Infof("MockAlphaSslCertificates.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaSslCertificates.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "sslCertificates")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaSslCertificates.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -27301,7 +28366,9 @@ func (m *MockAlphaSslCertificates) List(ctx context.Context, fl *filter.F) ([]*a
 	}
 
 	var objs []*alpha.SslCertificate
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "sslCertificates")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToAlpha()) {
 			continue
 		}
@@ -27331,7 +28398,13 @@ func (m *MockAlphaSslCertificates) Insert(ctx context.Context, key *meta.Key, ob
 		klog.V(5).Infof("MockAlphaSslCertificates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "sslCertificates")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockSslCertificatesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaSslCertificates %v exists", key),
@@ -27341,10 +28414,8 @@ func (m *MockAlphaSslCertificates) Insert(ctx context.Context, key *meta.Key, ob
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "sslCertificates")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "sslCertificates", key)
-
-	m.Objects[*key] = &MockSslCertificatesObj{obj}
+	nMap[*key] = &MockSslCertificatesObj{obj}
 	klog.V(5).Infof("MockAlphaSslCertificates.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -27368,7 +28439,8 @@ func (m *MockAlphaSslCertificates) Delete(ctx context.Context, key *meta.Key) er
 		klog.V(5).Infof("MockAlphaSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaSslCertificates %v not found", key),
@@ -27377,7 +28449,16 @@ func (m *MockAlphaSslCertificates) Delete(ctx context.Context, key *meta.Key) er
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "sslCertificates")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaSslCertificates.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -27556,8 +28637,8 @@ type MockAlphaRegionSslCertificates struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionSslCertificatesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionSslCertificatesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -27599,10 +28680,13 @@ func (m *MockAlphaRegionSslCertificates) Get(ctx context.Context, key *meta.Key)
 		klog.V(5).Infof("MockAlphaRegionSslCertificates.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaRegionSslCertificates.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "sslCertificates")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaRegionSslCertificates.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -27633,7 +28717,9 @@ func (m *MockAlphaRegionSslCertificates) List(ctx context.Context, region string
 	}
 
 	var objs []*alpha.SslCertificate
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "sslCertificates")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -27666,7 +28752,13 @@ func (m *MockAlphaRegionSslCertificates) Insert(ctx context.Context, key *meta.K
 		klog.V(5).Infof("MockAlphaRegionSslCertificates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "sslCertificates")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionSslCertificatesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaRegionSslCertificates %v exists", key),
@@ -27676,10 +28768,8 @@ func (m *MockAlphaRegionSslCertificates) Insert(ctx context.Context, key *meta.K
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "sslCertificates")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "sslCertificates", key)
-
-	m.Objects[*key] = &MockRegionSslCertificatesObj{obj}
+	nMap[*key] = &MockRegionSslCertificatesObj{obj}
 	klog.V(5).Infof("MockAlphaRegionSslCertificates.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -27703,7 +28793,8 @@ func (m *MockAlphaRegionSslCertificates) Delete(ctx context.Context, key *meta.K
 		klog.V(5).Infof("MockAlphaRegionSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaRegionSslCertificates %v not found", key),
@@ -27712,7 +28803,16 @@ func (m *MockAlphaRegionSslCertificates) Delete(ctx context.Context, key *meta.K
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "sslCertificates")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaRegionSslCertificates.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -27890,8 +28990,8 @@ type MockBetaRegionSslCertificates struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionSslCertificatesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionSslCertificatesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -27933,10 +29033,13 @@ func (m *MockBetaRegionSslCertificates) Get(ctx context.Context, key *meta.Key) 
 		klog.V(5).Infof("MockBetaRegionSslCertificates.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaRegionSslCertificates.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "sslCertificates")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaRegionSslCertificates.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -27967,7 +29070,9 @@ func (m *MockBetaRegionSslCertificates) List(ctx context.Context, region string,
 	}
 
 	var objs []*beta.SslCertificate
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "sslCertificates")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -28000,7 +29105,13 @@ func (m *MockBetaRegionSslCertificates) Insert(ctx context.Context, key *meta.Ke
 		klog.V(5).Infof("MockBetaRegionSslCertificates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "sslCertificates")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionSslCertificatesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaRegionSslCertificates %v exists", key),
@@ -28010,10 +29121,8 @@ func (m *MockBetaRegionSslCertificates) Insert(ctx context.Context, key *meta.Ke
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "sslCertificates")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "sslCertificates", key)
-
-	m.Objects[*key] = &MockRegionSslCertificatesObj{obj}
+	nMap[*key] = &MockRegionSslCertificatesObj{obj}
 	klog.V(5).Infof("MockBetaRegionSslCertificates.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -28037,7 +29146,8 @@ func (m *MockBetaRegionSslCertificates) Delete(ctx context.Context, key *meta.Ke
 		klog.V(5).Infof("MockBetaRegionSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaRegionSslCertificates %v not found", key),
@@ -28046,7 +29156,16 @@ func (m *MockBetaRegionSslCertificates) Delete(ctx context.Context, key *meta.Ke
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "sslCertificates")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaRegionSslCertificates.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -28224,8 +29343,8 @@ type MockRegionSslCertificates struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionSslCertificatesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionSslCertificatesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -28267,10 +29386,13 @@ func (m *MockRegionSslCertificates) Get(ctx context.Context, key *meta.Key) (*ga
 		klog.V(5).Infof("MockRegionSslCertificates.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockRegionSslCertificates.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslCertificates")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockRegionSslCertificates.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -28301,7 +29423,9 @@ func (m *MockRegionSslCertificates) List(ctx context.Context, region string, fl 
 	}
 
 	var objs []*ga.SslCertificate
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslCertificates")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -28334,7 +29458,13 @@ func (m *MockRegionSslCertificates) Insert(ctx context.Context, key *meta.Key, o
 		klog.V(5).Infof("MockRegionSslCertificates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslCertificates")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionSslCertificatesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockRegionSslCertificates %v exists", key),
@@ -28344,10 +29474,8 @@ func (m *MockRegionSslCertificates) Insert(ctx context.Context, key *meta.Key, o
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslCertificates")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "sslCertificates", key)
-
-	m.Objects[*key] = &MockRegionSslCertificatesObj{obj}
+	nMap[*key] = &MockRegionSslCertificatesObj{obj}
 	klog.V(5).Infof("MockRegionSslCertificates.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -28371,7 +29499,8 @@ func (m *MockRegionSslCertificates) Delete(ctx context.Context, key *meta.Key) e
 		klog.V(5).Infof("MockRegionSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockRegionSslCertificates %v not found", key),
@@ -28380,7 +29509,16 @@ func (m *MockRegionSslCertificates) Delete(ctx context.Context, key *meta.Key) e
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslCertificates")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockRegionSslCertificates.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -28557,8 +29695,8 @@ type MockSslPolicies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockSslPoliciesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockSslPoliciesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -28598,10 +29736,13 @@ func (m *MockSslPolicies) Get(ctx context.Context, key *meta.Key) (*ga.SslPolicy
 		klog.V(5).Infof("MockSslPolicies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockSslPolicies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslPolicies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockSslPolicies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -28631,7 +29772,13 @@ func (m *MockSslPolicies) Insert(ctx context.Context, key *meta.Key, obj *ga.Ssl
 		klog.V(5).Infof("MockSslPolicies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslPolicies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockSslPoliciesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockSslPolicies %v exists", key),
@@ -28641,10 +29788,8 @@ func (m *MockSslPolicies) Insert(ctx context.Context, key *meta.Key, obj *ga.Ssl
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslPolicies")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "sslPolicies", key)
-
-	m.Objects[*key] = &MockSslPoliciesObj{obj}
+	nMap[*key] = &MockSslPoliciesObj{obj}
 	klog.V(5).Infof("MockSslPolicies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -28668,7 +29813,8 @@ func (m *MockSslPolicies) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockSslPolicies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockSslPolicies %v not found", key),
@@ -28677,7 +29823,16 @@ func (m *MockSslPolicies) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslPolicies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockSslPolicies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -28816,8 +29971,8 @@ type MockAlphaSubnetworks struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockSubnetworksObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockSubnetworksObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -28862,10 +30017,13 @@ func (m *MockAlphaSubnetworks) Get(ctx context.Context, key *meta.Key) (*alpha.S
 		klog.V(5).Infof("MockAlphaSubnetworks.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaSubnetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "subnetworks")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaSubnetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -28896,7 +30054,9 @@ func (m *MockAlphaSubnetworks) List(ctx context.Context, region string, fl *filt
 	}
 
 	var objs []*alpha.Subnetwork
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "subnetworks")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -28929,7 +30089,13 @@ func (m *MockAlphaSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *a
 		klog.V(5).Infof("MockAlphaSubnetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "subnetworks")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockSubnetworksObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaSubnetworks %v exists", key),
@@ -28939,10 +30105,8 @@ func (m *MockAlphaSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *a
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "subnetworks")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "subnetworks", key)
-
-	m.Objects[*key] = &MockSubnetworksObj{obj}
+	nMap[*key] = &MockSubnetworksObj{obj}
 	klog.V(5).Infof("MockAlphaSubnetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -28966,7 +30130,8 @@ func (m *MockAlphaSubnetworks) Delete(ctx context.Context, key *meta.Key) error 
 		klog.V(5).Infof("MockAlphaSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaSubnetworks %v not found", key),
@@ -28975,7 +30140,16 @@ func (m *MockAlphaSubnetworks) Delete(ctx context.Context, key *meta.Key) error 
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "subnetworks")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaSubnetworks.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -29274,8 +30448,8 @@ type MockBetaSubnetworks struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockSubnetworksObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockSubnetworksObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -29320,10 +30494,13 @@ func (m *MockBetaSubnetworks) Get(ctx context.Context, key *meta.Key) (*beta.Sub
 		klog.V(5).Infof("MockBetaSubnetworks.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaSubnetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "subnetworks")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaSubnetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -29354,7 +30531,9 @@ func (m *MockBetaSubnetworks) List(ctx context.Context, region string, fl *filte
 	}
 
 	var objs []*beta.Subnetwork
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "subnetworks")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -29387,7 +30566,13 @@ func (m *MockBetaSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *be
 		klog.V(5).Infof("MockBetaSubnetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "subnetworks")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockSubnetworksObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaSubnetworks %v exists", key),
@@ -29397,10 +30582,8 @@ func (m *MockBetaSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *be
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "subnetworks")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "subnetworks", key)
-
-	m.Objects[*key] = &MockSubnetworksObj{obj}
+	nMap[*key] = &MockSubnetworksObj{obj}
 	klog.V(5).Infof("MockBetaSubnetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -29424,7 +30607,8 @@ func (m *MockBetaSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockBetaSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaSubnetworks %v not found", key),
@@ -29433,7 +30617,16 @@ func (m *MockBetaSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "subnetworks")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaSubnetworks.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -29732,8 +30925,8 @@ type MockSubnetworks struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockSubnetworksObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockSubnetworksObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -29778,10 +30971,13 @@ func (m *MockSubnetworks) Get(ctx context.Context, key *meta.Key) (*ga.Subnetwor
 		klog.V(5).Infof("MockSubnetworks.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockSubnetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "subnetworks")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockSubnetworks.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -29812,7 +31008,9 @@ func (m *MockSubnetworks) List(ctx context.Context, region string, fl *filter.F)
 	}
 
 	var objs []*ga.Subnetwork
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "subnetworks")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -29845,7 +31043,13 @@ func (m *MockSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *ga.Sub
 		klog.V(5).Infof("MockSubnetworks.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "subnetworks")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockSubnetworksObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockSubnetworks %v exists", key),
@@ -29855,10 +31059,8 @@ func (m *MockSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *ga.Sub
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "subnetworks")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "subnetworks", key)
-
-	m.Objects[*key] = &MockSubnetworksObj{obj}
+	nMap[*key] = &MockSubnetworksObj{obj}
 	klog.V(5).Infof("MockSubnetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -29882,7 +31084,8 @@ func (m *MockSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockSubnetworks %v not found", key),
@@ -29891,7 +31094,16 @@ func (m *MockSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "subnetworks")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockSubnetworks.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -30189,8 +31401,8 @@ type MockAlphaTargetHttpProxies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockTargetHttpProxiesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockTargetHttpProxiesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -30233,10 +31445,13 @@ func (m *MockAlphaTargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*a
 		klog.V(5).Infof("MockAlphaTargetHttpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaTargetHttpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpProxies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaTargetHttpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -30267,7 +31482,9 @@ func (m *MockAlphaTargetHttpProxies) List(ctx context.Context, fl *filter.F) ([]
 	}
 
 	var objs []*alpha.TargetHttpProxy
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpProxies")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToAlpha()) {
 			continue
 		}
@@ -30297,7 +31514,13 @@ func (m *MockAlphaTargetHttpProxies) Insert(ctx context.Context, key *meta.Key, 
 		klog.V(5).Infof("MockAlphaTargetHttpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpProxies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockTargetHttpProxiesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaTargetHttpProxies %v exists", key),
@@ -30307,10 +31530,8 @@ func (m *MockAlphaTargetHttpProxies) Insert(ctx context.Context, key *meta.Key, 
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpProxies")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "targetHttpProxies", key)
-
-	m.Objects[*key] = &MockTargetHttpProxiesObj{obj}
+	nMap[*key] = &MockTargetHttpProxiesObj{obj}
 	klog.V(5).Infof("MockAlphaTargetHttpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -30334,7 +31555,8 @@ func (m *MockAlphaTargetHttpProxies) Delete(ctx context.Context, key *meta.Key) 
 		klog.V(5).Infof("MockAlphaTargetHttpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaTargetHttpProxies %v not found", key),
@@ -30343,7 +31565,16 @@ func (m *MockAlphaTargetHttpProxies) Delete(ctx context.Context, key *meta.Key) 
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpProxies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaTargetHttpProxies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -30564,8 +31795,8 @@ type MockBetaTargetHttpProxies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockTargetHttpProxiesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockTargetHttpProxiesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -30608,10 +31839,13 @@ func (m *MockBetaTargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*be
 		klog.V(5).Infof("MockBetaTargetHttpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaTargetHttpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpProxies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaTargetHttpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -30642,7 +31876,9 @@ func (m *MockBetaTargetHttpProxies) List(ctx context.Context, fl *filter.F) ([]*
 	}
 
 	var objs []*beta.TargetHttpProxy
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpProxies")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToBeta()) {
 			continue
 		}
@@ -30672,7 +31908,13 @@ func (m *MockBetaTargetHttpProxies) Insert(ctx context.Context, key *meta.Key, o
 		klog.V(5).Infof("MockBetaTargetHttpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpProxies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockTargetHttpProxiesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaTargetHttpProxies %v exists", key),
@@ -30682,10 +31924,8 @@ func (m *MockBetaTargetHttpProxies) Insert(ctx context.Context, key *meta.Key, o
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpProxies")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "targetHttpProxies", key)
-
-	m.Objects[*key] = &MockTargetHttpProxiesObj{obj}
+	nMap[*key] = &MockTargetHttpProxiesObj{obj}
 	klog.V(5).Infof("MockBetaTargetHttpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -30709,7 +31949,8 @@ func (m *MockBetaTargetHttpProxies) Delete(ctx context.Context, key *meta.Key) e
 		klog.V(5).Infof("MockBetaTargetHttpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaTargetHttpProxies %v not found", key),
@@ -30718,7 +31959,16 @@ func (m *MockBetaTargetHttpProxies) Delete(ctx context.Context, key *meta.Key) e
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpProxies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaTargetHttpProxies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -30939,8 +32189,8 @@ type MockTargetHttpProxies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockTargetHttpProxiesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockTargetHttpProxiesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -30983,10 +32233,13 @@ func (m *MockTargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*ga.Tar
 		klog.V(5).Infof("MockTargetHttpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockTargetHttpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpProxies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockTargetHttpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -31017,7 +32270,9 @@ func (m *MockTargetHttpProxies) List(ctx context.Context, fl *filter.F) ([]*ga.T
 	}
 
 	var objs []*ga.TargetHttpProxy
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpProxies")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
@@ -31047,7 +32302,13 @@ func (m *MockTargetHttpProxies) Insert(ctx context.Context, key *meta.Key, obj *
 		klog.V(5).Infof("MockTargetHttpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpProxies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockTargetHttpProxiesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockTargetHttpProxies %v exists", key),
@@ -31057,10 +32318,8 @@ func (m *MockTargetHttpProxies) Insert(ctx context.Context, key *meta.Key, obj *
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpProxies")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "targetHttpProxies", key)
-
-	m.Objects[*key] = &MockTargetHttpProxiesObj{obj}
+	nMap[*key] = &MockTargetHttpProxiesObj{obj}
 	klog.V(5).Infof("MockTargetHttpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -31084,7 +32343,8 @@ func (m *MockTargetHttpProxies) Delete(ctx context.Context, key *meta.Key) error
 		klog.V(5).Infof("MockTargetHttpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockTargetHttpProxies %v not found", key),
@@ -31093,7 +32353,16 @@ func (m *MockTargetHttpProxies) Delete(ctx context.Context, key *meta.Key) error
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpProxies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockTargetHttpProxies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -31314,8 +32583,8 @@ type MockAlphaRegionTargetHttpProxies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionTargetHttpProxiesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionTargetHttpProxiesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -31358,10 +32627,13 @@ func (m *MockAlphaRegionTargetHttpProxies) Get(ctx context.Context, key *meta.Ke
 		klog.V(5).Infof("MockAlphaRegionTargetHttpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaRegionTargetHttpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpProxies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaRegionTargetHttpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -31392,7 +32664,9 @@ func (m *MockAlphaRegionTargetHttpProxies) List(ctx context.Context, region stri
 	}
 
 	var objs []*alpha.TargetHttpProxy
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpProxies")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -31425,7 +32699,13 @@ func (m *MockAlphaRegionTargetHttpProxies) Insert(ctx context.Context, key *meta
 		klog.V(5).Infof("MockAlphaRegionTargetHttpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpProxies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionTargetHttpProxiesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaRegionTargetHttpProxies %v exists", key),
@@ -31435,10 +32715,8 @@ func (m *MockAlphaRegionTargetHttpProxies) Insert(ctx context.Context, key *meta
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpProxies")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "targetHttpProxies", key)
-
-	m.Objects[*key] = &MockRegionTargetHttpProxiesObj{obj}
+	nMap[*key] = &MockRegionTargetHttpProxiesObj{obj}
 	klog.V(5).Infof("MockAlphaRegionTargetHttpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -31462,7 +32740,8 @@ func (m *MockAlphaRegionTargetHttpProxies) Delete(ctx context.Context, key *meta
 		klog.V(5).Infof("MockAlphaRegionTargetHttpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaRegionTargetHttpProxies %v not found", key),
@@ -31471,7 +32750,16 @@ func (m *MockAlphaRegionTargetHttpProxies) Delete(ctx context.Context, key *meta
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpProxies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaRegionTargetHttpProxies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -31691,8 +32979,8 @@ type MockBetaRegionTargetHttpProxies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionTargetHttpProxiesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionTargetHttpProxiesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -31735,10 +33023,13 @@ func (m *MockBetaRegionTargetHttpProxies) Get(ctx context.Context, key *meta.Key
 		klog.V(5).Infof("MockBetaRegionTargetHttpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaRegionTargetHttpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpProxies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaRegionTargetHttpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -31769,7 +33060,9 @@ func (m *MockBetaRegionTargetHttpProxies) List(ctx context.Context, region strin
 	}
 
 	var objs []*beta.TargetHttpProxy
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpProxies")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -31802,7 +33095,13 @@ func (m *MockBetaRegionTargetHttpProxies) Insert(ctx context.Context, key *meta.
 		klog.V(5).Infof("MockBetaRegionTargetHttpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpProxies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionTargetHttpProxiesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaRegionTargetHttpProxies %v exists", key),
@@ -31812,10 +33111,8 @@ func (m *MockBetaRegionTargetHttpProxies) Insert(ctx context.Context, key *meta.
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpProxies")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "targetHttpProxies", key)
-
-	m.Objects[*key] = &MockRegionTargetHttpProxiesObj{obj}
+	nMap[*key] = &MockRegionTargetHttpProxiesObj{obj}
 	klog.V(5).Infof("MockBetaRegionTargetHttpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -31839,7 +33136,8 @@ func (m *MockBetaRegionTargetHttpProxies) Delete(ctx context.Context, key *meta.
 		klog.V(5).Infof("MockBetaRegionTargetHttpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaRegionTargetHttpProxies %v not found", key),
@@ -31848,7 +33146,16 @@ func (m *MockBetaRegionTargetHttpProxies) Delete(ctx context.Context, key *meta.
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpProxies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaRegionTargetHttpProxies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -32068,8 +33375,8 @@ type MockRegionTargetHttpProxies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionTargetHttpProxiesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionTargetHttpProxiesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -32112,10 +33419,13 @@ func (m *MockRegionTargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*
 		klog.V(5).Infof("MockRegionTargetHttpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockRegionTargetHttpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpProxies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockRegionTargetHttpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -32146,7 +33456,9 @@ func (m *MockRegionTargetHttpProxies) List(ctx context.Context, region string, f
 	}
 
 	var objs []*ga.TargetHttpProxy
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpProxies")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -32179,7 +33491,13 @@ func (m *MockRegionTargetHttpProxies) Insert(ctx context.Context, key *meta.Key,
 		klog.V(5).Infof("MockRegionTargetHttpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpProxies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionTargetHttpProxiesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockRegionTargetHttpProxies %v exists", key),
@@ -32189,10 +33507,8 @@ func (m *MockRegionTargetHttpProxies) Insert(ctx context.Context, key *meta.Key,
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpProxies")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "targetHttpProxies", key)
-
-	m.Objects[*key] = &MockRegionTargetHttpProxiesObj{obj}
+	nMap[*key] = &MockRegionTargetHttpProxiesObj{obj}
 	klog.V(5).Infof("MockRegionTargetHttpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -32216,7 +33532,8 @@ func (m *MockRegionTargetHttpProxies) Delete(ctx context.Context, key *meta.Key)
 		klog.V(5).Infof("MockRegionTargetHttpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockRegionTargetHttpProxies %v not found", key),
@@ -32225,7 +33542,16 @@ func (m *MockRegionTargetHttpProxies) Delete(ctx context.Context, key *meta.Key)
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpProxies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockRegionTargetHttpProxies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -32447,8 +33773,8 @@ type MockTargetHttpsProxies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockTargetHttpsProxiesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockTargetHttpsProxiesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -32493,10 +33819,13 @@ func (m *MockTargetHttpsProxies) Get(ctx context.Context, key *meta.Key) (*ga.Ta
 		klog.V(5).Infof("MockTargetHttpsProxies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockTargetHttpsProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpsProxies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockTargetHttpsProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -32527,7 +33856,9 @@ func (m *MockTargetHttpsProxies) List(ctx context.Context, fl *filter.F) ([]*ga.
 	}
 
 	var objs []*ga.TargetHttpsProxy
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpsProxies")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
@@ -32557,7 +33888,13 @@ func (m *MockTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key, obj 
 		klog.V(5).Infof("MockTargetHttpsProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpsProxies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockTargetHttpsProxiesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockTargetHttpsProxies %v exists", key),
@@ -32567,10 +33904,8 @@ func (m *MockTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key, obj 
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpsProxies")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "targetHttpsProxies", key)
-
-	m.Objects[*key] = &MockTargetHttpsProxiesObj{obj}
+	nMap[*key] = &MockTargetHttpsProxiesObj{obj}
 	klog.V(5).Infof("MockTargetHttpsProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -32594,7 +33929,8 @@ func (m *MockTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) erro
 		klog.V(5).Infof("MockTargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockTargetHttpsProxies %v not found", key),
@@ -32603,7 +33939,16 @@ func (m *MockTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) erro
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpsProxies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockTargetHttpsProxies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -32909,8 +34254,8 @@ type MockAlphaTargetHttpsProxies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockTargetHttpsProxiesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockTargetHttpsProxiesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -32956,10 +34301,13 @@ func (m *MockAlphaTargetHttpsProxies) Get(ctx context.Context, key *meta.Key) (*
 		klog.V(5).Infof("MockAlphaTargetHttpsProxies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaTargetHttpsProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpsProxies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaTargetHttpsProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -32990,7 +34338,9 @@ func (m *MockAlphaTargetHttpsProxies) List(ctx context.Context, fl *filter.F) ([
 	}
 
 	var objs []*alpha.TargetHttpsProxy
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpsProxies")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToAlpha()) {
 			continue
 		}
@@ -33020,7 +34370,13 @@ func (m *MockAlphaTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key,
 		klog.V(5).Infof("MockAlphaTargetHttpsProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpsProxies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockTargetHttpsProxiesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaTargetHttpsProxies %v exists", key),
@@ -33030,10 +34386,8 @@ func (m *MockAlphaTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key,
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpsProxies")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "targetHttpsProxies", key)
-
-	m.Objects[*key] = &MockTargetHttpsProxiesObj{obj}
+	nMap[*key] = &MockTargetHttpsProxiesObj{obj}
 	klog.V(5).Infof("MockAlphaTargetHttpsProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -33057,7 +34411,8 @@ func (m *MockAlphaTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key)
 		klog.V(5).Infof("MockAlphaTargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaTargetHttpsProxies %v not found", key),
@@ -33066,7 +34421,16 @@ func (m *MockAlphaTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key)
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpsProxies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaTargetHttpsProxies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -33412,8 +34776,8 @@ type MockBetaTargetHttpsProxies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockTargetHttpsProxiesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockTargetHttpsProxiesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -33458,10 +34822,13 @@ func (m *MockBetaTargetHttpsProxies) Get(ctx context.Context, key *meta.Key) (*b
 		klog.V(5).Infof("MockBetaTargetHttpsProxies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaTargetHttpsProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpsProxies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaTargetHttpsProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -33492,7 +34859,9 @@ func (m *MockBetaTargetHttpsProxies) List(ctx context.Context, fl *filter.F) ([]
 	}
 
 	var objs []*beta.TargetHttpsProxy
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpsProxies")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToBeta()) {
 			continue
 		}
@@ -33522,7 +34891,13 @@ func (m *MockBetaTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key, 
 		klog.V(5).Infof("MockBetaTargetHttpsProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpsProxies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockTargetHttpsProxiesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaTargetHttpsProxies %v exists", key),
@@ -33532,10 +34907,8 @@ func (m *MockBetaTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key, 
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpsProxies")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "targetHttpsProxies", key)
-
-	m.Objects[*key] = &MockTargetHttpsProxiesObj{obj}
+	nMap[*key] = &MockTargetHttpsProxiesObj{obj}
 	klog.V(5).Infof("MockBetaTargetHttpsProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -33559,7 +34932,8 @@ func (m *MockBetaTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) 
 		klog.V(5).Infof("MockBetaTargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaTargetHttpsProxies %v not found", key),
@@ -33568,7 +34942,16 @@ func (m *MockBetaTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) 
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpsProxies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaTargetHttpsProxies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -33872,8 +35255,8 @@ type MockAlphaRegionTargetHttpsProxies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionTargetHttpsProxiesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionTargetHttpsProxiesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -33917,10 +35300,13 @@ func (m *MockAlphaRegionTargetHttpsProxies) Get(ctx context.Context, key *meta.K
 		klog.V(5).Infof("MockAlphaRegionTargetHttpsProxies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaRegionTargetHttpsProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpsProxies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaRegionTargetHttpsProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -33951,7 +35337,9 @@ func (m *MockAlphaRegionTargetHttpsProxies) List(ctx context.Context, region str
 	}
 
 	var objs []*alpha.TargetHttpsProxy
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpsProxies")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -33984,7 +35372,13 @@ func (m *MockAlphaRegionTargetHttpsProxies) Insert(ctx context.Context, key *met
 		klog.V(5).Infof("MockAlphaRegionTargetHttpsProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpsProxies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionTargetHttpsProxiesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaRegionTargetHttpsProxies %v exists", key),
@@ -33994,10 +35388,8 @@ func (m *MockAlphaRegionTargetHttpsProxies) Insert(ctx context.Context, key *met
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpsProxies")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "targetHttpsProxies", key)
-
-	m.Objects[*key] = &MockRegionTargetHttpsProxiesObj{obj}
+	nMap[*key] = &MockRegionTargetHttpsProxiesObj{obj}
 	klog.V(5).Infof("MockAlphaRegionTargetHttpsProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -34021,7 +35413,8 @@ func (m *MockAlphaRegionTargetHttpsProxies) Delete(ctx context.Context, key *met
 		klog.V(5).Infof("MockAlphaRegionTargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaRegionTargetHttpsProxies %v not found", key),
@@ -34030,7 +35423,16 @@ func (m *MockAlphaRegionTargetHttpsProxies) Delete(ctx context.Context, key *met
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpsProxies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaRegionTargetHttpsProxies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -34292,8 +35694,8 @@ type MockBetaRegionTargetHttpsProxies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionTargetHttpsProxiesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionTargetHttpsProxiesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -34337,10 +35739,13 @@ func (m *MockBetaRegionTargetHttpsProxies) Get(ctx context.Context, key *meta.Ke
 		klog.V(5).Infof("MockBetaRegionTargetHttpsProxies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaRegionTargetHttpsProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpsProxies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaRegionTargetHttpsProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -34371,7 +35776,9 @@ func (m *MockBetaRegionTargetHttpsProxies) List(ctx context.Context, region stri
 	}
 
 	var objs []*beta.TargetHttpsProxy
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpsProxies")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -34404,7 +35811,13 @@ func (m *MockBetaRegionTargetHttpsProxies) Insert(ctx context.Context, key *meta
 		klog.V(5).Infof("MockBetaRegionTargetHttpsProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpsProxies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionTargetHttpsProxiesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaRegionTargetHttpsProxies %v exists", key),
@@ -34414,10 +35827,8 @@ func (m *MockBetaRegionTargetHttpsProxies) Insert(ctx context.Context, key *meta
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpsProxies")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "targetHttpsProxies", key)
-
-	m.Objects[*key] = &MockRegionTargetHttpsProxiesObj{obj}
+	nMap[*key] = &MockRegionTargetHttpsProxiesObj{obj}
 	klog.V(5).Infof("MockBetaRegionTargetHttpsProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -34441,7 +35852,8 @@ func (m *MockBetaRegionTargetHttpsProxies) Delete(ctx context.Context, key *meta
 		klog.V(5).Infof("MockBetaRegionTargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaRegionTargetHttpsProxies %v not found", key),
@@ -34450,7 +35862,16 @@ func (m *MockBetaRegionTargetHttpsProxies) Delete(ctx context.Context, key *meta
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpsProxies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaRegionTargetHttpsProxies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -34712,8 +36133,8 @@ type MockRegionTargetHttpsProxies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionTargetHttpsProxiesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionTargetHttpsProxiesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -34757,10 +36178,13 @@ func (m *MockRegionTargetHttpsProxies) Get(ctx context.Context, key *meta.Key) (
 		klog.V(5).Infof("MockRegionTargetHttpsProxies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockRegionTargetHttpsProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpsProxies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockRegionTargetHttpsProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -34791,7 +36215,9 @@ func (m *MockRegionTargetHttpsProxies) List(ctx context.Context, region string, 
 	}
 
 	var objs []*ga.TargetHttpsProxy
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpsProxies")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -34824,7 +36250,13 @@ func (m *MockRegionTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key
 		klog.V(5).Infof("MockRegionTargetHttpsProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpsProxies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionTargetHttpsProxiesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockRegionTargetHttpsProxies %v exists", key),
@@ -34834,10 +36266,8 @@ func (m *MockRegionTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpsProxies")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "targetHttpsProxies", key)
-
-	m.Objects[*key] = &MockRegionTargetHttpsProxiesObj{obj}
+	nMap[*key] = &MockRegionTargetHttpsProxiesObj{obj}
 	klog.V(5).Infof("MockRegionTargetHttpsProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -34861,7 +36291,8 @@ func (m *MockRegionTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key
 		klog.V(5).Infof("MockRegionTargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockRegionTargetHttpsProxies %v not found", key),
@@ -34870,7 +36301,16 @@ func (m *MockRegionTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpsProxies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockRegionTargetHttpsProxies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -35132,8 +36572,8 @@ type MockTargetPools struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockTargetPoolsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockTargetPoolsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -35177,10 +36617,13 @@ func (m *MockTargetPools) Get(ctx context.Context, key *meta.Key) (*ga.TargetPoo
 		klog.V(5).Infof("MockTargetPools.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockTargetPools.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetPools")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockTargetPools.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -35211,7 +36654,9 @@ func (m *MockTargetPools) List(ctx context.Context, region string, fl *filter.F)
 	}
 
 	var objs []*ga.TargetPool
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetPools")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -35244,7 +36689,13 @@ func (m *MockTargetPools) Insert(ctx context.Context, key *meta.Key, obj *ga.Tar
 		klog.V(5).Infof("MockTargetPools.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetPools")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockTargetPoolsObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockTargetPools %v exists", key),
@@ -35254,10 +36705,8 @@ func (m *MockTargetPools) Insert(ctx context.Context, key *meta.Key, obj *ga.Tar
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetPools")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "targetPools", key)
-
-	m.Objects[*key] = &MockTargetPoolsObj{obj}
+	nMap[*key] = &MockTargetPoolsObj{obj}
 	klog.V(5).Infof("MockTargetPools.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -35281,7 +36730,8 @@ func (m *MockTargetPools) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockTargetPools.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockTargetPools %v not found", key),
@@ -35290,7 +36740,16 @@ func (m *MockTargetPools) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetPools")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockTargetPools.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -35551,8 +37010,8 @@ type MockAlphaTargetTcpProxies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockTargetTcpProxiesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockTargetTcpProxiesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -35595,10 +37054,13 @@ func (m *MockAlphaTargetTcpProxies) Get(ctx context.Context, key *meta.Key) (*al
 		klog.V(5).Infof("MockAlphaTargetTcpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaTargetTcpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetTcpProxies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaTargetTcpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -35629,7 +37091,9 @@ func (m *MockAlphaTargetTcpProxies) List(ctx context.Context, fl *filter.F) ([]*
 	}
 
 	var objs []*alpha.TargetTcpProxy
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetTcpProxies")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToAlpha()) {
 			continue
 		}
@@ -35659,7 +37123,13 @@ func (m *MockAlphaTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, o
 		klog.V(5).Infof("MockAlphaTargetTcpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetTcpProxies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockTargetTcpProxiesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaTargetTcpProxies %v exists", key),
@@ -35669,10 +37139,8 @@ func (m *MockAlphaTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, o
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetTcpProxies")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "targetTcpProxies", key)
-
-	m.Objects[*key] = &MockTargetTcpProxiesObj{obj}
+	nMap[*key] = &MockTargetTcpProxiesObj{obj}
 	klog.V(5).Infof("MockAlphaTargetTcpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -35696,7 +37164,8 @@ func (m *MockAlphaTargetTcpProxies) Delete(ctx context.Context, key *meta.Key) e
 		klog.V(5).Infof("MockAlphaTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaTargetTcpProxies %v not found", key),
@@ -35705,7 +37174,16 @@ func (m *MockAlphaTargetTcpProxies) Delete(ctx context.Context, key *meta.Key) e
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetTcpProxies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaTargetTcpProxies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -35926,8 +37404,8 @@ type MockBetaTargetTcpProxies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockTargetTcpProxiesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockTargetTcpProxiesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -35970,10 +37448,13 @@ func (m *MockBetaTargetTcpProxies) Get(ctx context.Context, key *meta.Key) (*bet
 		klog.V(5).Infof("MockBetaTargetTcpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaTargetTcpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetTcpProxies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaTargetTcpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -36004,7 +37485,9 @@ func (m *MockBetaTargetTcpProxies) List(ctx context.Context, fl *filter.F) ([]*b
 	}
 
 	var objs []*beta.TargetTcpProxy
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetTcpProxies")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToBeta()) {
 			continue
 		}
@@ -36034,7 +37517,13 @@ func (m *MockBetaTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, ob
 		klog.V(5).Infof("MockBetaTargetTcpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetTcpProxies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockTargetTcpProxiesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaTargetTcpProxies %v exists", key),
@@ -36044,10 +37533,8 @@ func (m *MockBetaTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, ob
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetTcpProxies")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "targetTcpProxies", key)
-
-	m.Objects[*key] = &MockTargetTcpProxiesObj{obj}
+	nMap[*key] = &MockTargetTcpProxiesObj{obj}
 	klog.V(5).Infof("MockBetaTargetTcpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -36071,7 +37558,8 @@ func (m *MockBetaTargetTcpProxies) Delete(ctx context.Context, key *meta.Key) er
 		klog.V(5).Infof("MockBetaTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaTargetTcpProxies %v not found", key),
@@ -36080,7 +37568,16 @@ func (m *MockBetaTargetTcpProxies) Delete(ctx context.Context, key *meta.Key) er
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetTcpProxies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaTargetTcpProxies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -36301,8 +37798,8 @@ type MockTargetTcpProxies struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockTargetTcpProxiesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockTargetTcpProxiesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -36345,10 +37842,13 @@ func (m *MockTargetTcpProxies) Get(ctx context.Context, key *meta.Key) (*ga.Targ
 		klog.V(5).Infof("MockTargetTcpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockTargetTcpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetTcpProxies")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockTargetTcpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -36379,7 +37879,9 @@ func (m *MockTargetTcpProxies) List(ctx context.Context, fl *filter.F) ([]*ga.Ta
 	}
 
 	var objs []*ga.TargetTcpProxy
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetTcpProxies")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
@@ -36409,7 +37911,13 @@ func (m *MockTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, obj *g
 		klog.V(5).Infof("MockTargetTcpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetTcpProxies")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockTargetTcpProxiesObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockTargetTcpProxies %v exists", key),
@@ -36419,10 +37927,8 @@ func (m *MockTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, obj *g
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetTcpProxies")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "targetTcpProxies", key)
-
-	m.Objects[*key] = &MockTargetTcpProxiesObj{obj}
+	nMap[*key] = &MockTargetTcpProxiesObj{obj}
 	klog.V(5).Infof("MockTargetTcpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -36446,7 +37952,8 @@ func (m *MockTargetTcpProxies) Delete(ctx context.Context, key *meta.Key) error 
 		klog.V(5).Infof("MockTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockTargetTcpProxies %v not found", key),
@@ -36455,7 +37962,16 @@ func (m *MockTargetTcpProxies) Delete(ctx context.Context, key *meta.Key) error 
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetTcpProxies")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockTargetTcpProxies.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -36676,8 +38192,8 @@ type MockAlphaUrlMaps struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockUrlMapsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockUrlMapsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -36720,10 +38236,13 @@ func (m *MockAlphaUrlMaps) Get(ctx context.Context, key *meta.Key) (*alpha.UrlMa
 		klog.V(5).Infof("MockAlphaUrlMaps.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaUrlMaps.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "urlMaps")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaUrlMaps.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -36754,7 +38273,9 @@ func (m *MockAlphaUrlMaps) List(ctx context.Context, fl *filter.F) ([]*alpha.Url
 	}
 
 	var objs []*alpha.UrlMap
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "urlMaps")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToAlpha()) {
 			continue
 		}
@@ -36784,7 +38305,13 @@ func (m *MockAlphaUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *alpha
 		klog.V(5).Infof("MockAlphaUrlMaps.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "urlMaps")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockUrlMapsObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaUrlMaps %v exists", key),
@@ -36794,10 +38321,8 @@ func (m *MockAlphaUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *alpha
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "urlMaps")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "urlMaps", key)
-
-	m.Objects[*key] = &MockUrlMapsObj{obj}
+	nMap[*key] = &MockUrlMapsObj{obj}
 	klog.V(5).Infof("MockAlphaUrlMaps.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -36821,7 +38346,8 @@ func (m *MockAlphaUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockAlphaUrlMaps.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaUrlMaps %v not found", key),
@@ -36830,7 +38356,16 @@ func (m *MockAlphaUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "urlMaps")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaUrlMaps.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -37051,8 +38586,8 @@ type MockBetaUrlMaps struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockUrlMapsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockUrlMapsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -37095,10 +38630,13 @@ func (m *MockBetaUrlMaps) Get(ctx context.Context, key *meta.Key) (*beta.UrlMap,
 		klog.V(5).Infof("MockBetaUrlMaps.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaUrlMaps.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "urlMaps")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaUrlMaps.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -37129,7 +38667,9 @@ func (m *MockBetaUrlMaps) List(ctx context.Context, fl *filter.F) ([]*beta.UrlMa
 	}
 
 	var objs []*beta.UrlMap
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "urlMaps")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToBeta()) {
 			continue
 		}
@@ -37159,7 +38699,13 @@ func (m *MockBetaUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *beta.U
 		klog.V(5).Infof("MockBetaUrlMaps.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "urlMaps")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockUrlMapsObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaUrlMaps %v exists", key),
@@ -37169,10 +38715,8 @@ func (m *MockBetaUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *beta.U
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "urlMaps")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "urlMaps", key)
-
-	m.Objects[*key] = &MockUrlMapsObj{obj}
+	nMap[*key] = &MockUrlMapsObj{obj}
 	klog.V(5).Infof("MockBetaUrlMaps.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -37196,7 +38740,8 @@ func (m *MockBetaUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockBetaUrlMaps.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaUrlMaps %v not found", key),
@@ -37205,7 +38750,16 @@ func (m *MockBetaUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "urlMaps")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaUrlMaps.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -37426,8 +38980,8 @@ type MockUrlMaps struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockUrlMapsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockUrlMapsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -37470,10 +39024,13 @@ func (m *MockUrlMaps) Get(ctx context.Context, key *meta.Key) (*ga.UrlMap, error
 		klog.V(5).Infof("MockUrlMaps.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockUrlMaps.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "urlMaps")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockUrlMaps.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -37504,7 +39061,9 @@ func (m *MockUrlMaps) List(ctx context.Context, fl *filter.F) ([]*ga.UrlMap, err
 	}
 
 	var objs []*ga.UrlMap
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "urlMaps")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
@@ -37534,7 +39093,13 @@ func (m *MockUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *ga.UrlMap)
 		klog.V(5).Infof("MockUrlMaps.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "urlMaps")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockUrlMapsObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockUrlMaps %v exists", key),
@@ -37544,10 +39109,8 @@ func (m *MockUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *ga.UrlMap)
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "urlMaps")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "urlMaps", key)
-
-	m.Objects[*key] = &MockUrlMapsObj{obj}
+	nMap[*key] = &MockUrlMapsObj{obj}
 	klog.V(5).Infof("MockUrlMaps.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -37571,7 +39134,8 @@ func (m *MockUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockUrlMaps.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockUrlMaps %v not found", key),
@@ -37580,7 +39144,16 @@ func (m *MockUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "urlMaps")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockUrlMaps.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -37801,8 +39374,8 @@ type MockAlphaRegionUrlMaps struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionUrlMapsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionUrlMapsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -37845,10 +39418,13 @@ func (m *MockAlphaRegionUrlMaps) Get(ctx context.Context, key *meta.Key) (*alpha
 		klog.V(5).Infof("MockAlphaRegionUrlMaps.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToAlpha()
-		klog.V(5).Infof("MockAlphaRegionUrlMaps.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "urlMaps")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToAlpha()
+			klog.V(5).Infof("MockAlphaRegionUrlMaps.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -37879,7 +39455,9 @@ func (m *MockAlphaRegionUrlMaps) List(ctx context.Context, region string, fl *fi
 	}
 
 	var objs []*alpha.UrlMap
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "urlMaps")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -37912,7 +39490,13 @@ func (m *MockAlphaRegionUrlMaps) Insert(ctx context.Context, key *meta.Key, obj 
 		klog.V(5).Infof("MockAlphaRegionUrlMaps.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "urlMaps")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionUrlMapsObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockAlphaRegionUrlMaps %v exists", key),
@@ -37922,10 +39506,8 @@ func (m *MockAlphaRegionUrlMaps) Insert(ctx context.Context, key *meta.Key, obj 
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "urlMaps")
 	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "urlMaps", key)
-
-	m.Objects[*key] = &MockRegionUrlMapsObj{obj}
+	nMap[*key] = &MockRegionUrlMapsObj{obj}
 	klog.V(5).Infof("MockAlphaRegionUrlMaps.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -37949,7 +39531,8 @@ func (m *MockAlphaRegionUrlMaps) Delete(ctx context.Context, key *meta.Key) erro
 		klog.V(5).Infof("MockAlphaRegionUrlMaps.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockAlphaRegionUrlMaps %v not found", key),
@@ -37958,7 +39541,16 @@ func (m *MockAlphaRegionUrlMaps) Delete(ctx context.Context, key *meta.Key) erro
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "urlMaps")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockAlphaRegionUrlMaps.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -38178,8 +39770,8 @@ type MockBetaRegionUrlMaps struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionUrlMapsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionUrlMapsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -38222,10 +39814,13 @@ func (m *MockBetaRegionUrlMaps) Get(ctx context.Context, key *meta.Key) (*beta.U
 		klog.V(5).Infof("MockBetaRegionUrlMaps.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToBeta()
-		klog.V(5).Infof("MockBetaRegionUrlMaps.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "urlMaps")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToBeta()
+			klog.V(5).Infof("MockBetaRegionUrlMaps.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -38256,7 +39851,9 @@ func (m *MockBetaRegionUrlMaps) List(ctx context.Context, region string, fl *fil
 	}
 
 	var objs []*beta.UrlMap
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "urlMaps")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -38289,7 +39886,13 @@ func (m *MockBetaRegionUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *
 		klog.V(5).Infof("MockBetaRegionUrlMaps.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "urlMaps")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionUrlMapsObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockBetaRegionUrlMaps %v exists", key),
@@ -38299,10 +39902,8 @@ func (m *MockBetaRegionUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "urlMaps")
 	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "urlMaps", key)
-
-	m.Objects[*key] = &MockRegionUrlMapsObj{obj}
+	nMap[*key] = &MockRegionUrlMapsObj{obj}
 	klog.V(5).Infof("MockBetaRegionUrlMaps.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -38326,7 +39927,8 @@ func (m *MockBetaRegionUrlMaps) Delete(ctx context.Context, key *meta.Key) error
 		klog.V(5).Infof("MockBetaRegionUrlMaps.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockBetaRegionUrlMaps %v not found", key),
@@ -38335,7 +39937,16 @@ func (m *MockBetaRegionUrlMaps) Delete(ctx context.Context, key *meta.Key) error
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "urlMaps")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockBetaRegionUrlMaps.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -38555,8 +40166,8 @@ type MockRegionUrlMaps struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionUrlMapsObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockRegionUrlMapsObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -38599,10 +40210,13 @@ func (m *MockRegionUrlMaps) Get(ctx context.Context, key *meta.Key) (*ga.UrlMap,
 		klog.V(5).Infof("MockRegionUrlMaps.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockRegionUrlMaps.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "urlMaps")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockRegionUrlMaps.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -38633,7 +40247,9 @@ func (m *MockRegionUrlMaps) List(ctx context.Context, region string, fl *filter.
 	}
 
 	var objs []*ga.UrlMap
-	for key, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "urlMaps")
+	nMap := m.Objects[projectId]
+	for key, obj := range nMap {
 		if key.Region != region {
 			continue
 		}
@@ -38666,7 +40282,13 @@ func (m *MockRegionUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *ga.U
 		klog.V(5).Infof("MockRegionUrlMaps.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; ok {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "urlMaps")
+	nMap, ok := m.Objects[projectID]
+	if !ok {
+		nMap = make(map[meta.Key]*MockRegionUrlMapsObj)
+		m.Objects[projectId] = nMap
+	}
+	if _, ok := nMap[*key]; ok {
 		err := &googleapi.Error{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("MockRegionUrlMaps %v exists", key),
@@ -38676,10 +40298,8 @@ func (m *MockRegionUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *ga.U
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "urlMaps")
 	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "urlMaps", key)
-
-	m.Objects[*key] = &MockRegionUrlMapsObj{obj}
+	nMap[*key] = &MockRegionUrlMapsObj{obj}
 	klog.V(5).Infof("MockRegionUrlMaps.Insert(%v, %v, %+v) = nil", ctx, key, obj)
 	return nil
 }
@@ -38703,7 +40323,8 @@ func (m *MockRegionUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
 		klog.V(5).Infof("MockRegionUrlMaps.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
-	if _, ok := m.Objects[*key]; !ok {
+
+	returnNotFound := func(key *meta.Key) error {
 		err := &googleapi.Error{
 			Code:    http.StatusNotFound,
 			Message: fmt.Sprintf("MockRegionUrlMaps %v not found", key),
@@ -38712,7 +40333,16 @@ func (m *MockRegionUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
 		return err
 	}
 
-	delete(m.Objects, *key)
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "urlMaps")
+	nMap, ok := m.Objects[projectId]
+	if !ok {
+		return returnNotFound(key)
+	}
+	if _, ok := nMap[*key]; !ok {
+		return returnNotFound(key)
+	}
+
+	delete(nMap, *key)
 	klog.V(5).Infof("MockRegionUrlMaps.Delete(%v, %v) = nil", ctx, key)
 	return nil
 }
@@ -38927,8 +40557,8 @@ type MockZones struct {
 
 	ProjectRouter ProjectRouter
 
-	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockZonesObj
+	// Objects maintained by the mock. Nested first by project, then by key.
+	Objects map[string]map[meta.Key]*MockZonesObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -38966,10 +40596,13 @@ func (m *MockZones) Get(ctx context.Context, key *meta.Key) (*ga.Zone, error) {
 		klog.V(5).Infof("MockZones.Get(%v, %s) = nil, %v", ctx, key, err)
 		return nil, err
 	}
-	if obj, ok := m.Objects[*key]; ok {
-		typedObj := obj.ToGA()
-		klog.V(5).Infof("MockZones.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
-		return typedObj, nil
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "zones")
+	if nMap, ok := m.Objects[projectId]; ok {
+		if obj, ok := nMap[*key]; ok {
+			typedObj := obj.ToGA()
+			klog.V(5).Infof("MockZones.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+			return typedObj, nil
+		}
 	}
 
 	err := &googleapi.Error{
@@ -39000,7 +40633,9 @@ func (m *MockZones) List(ctx context.Context, fl *filter.F) ([]*ga.Zone, error) 
 	}
 
 	var objs []*ga.Zone
-	for _, obj := range m.Objects {
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "zones")
+	nMap := m.Objects[projectId]
+	for _, obj := range nMap {
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}

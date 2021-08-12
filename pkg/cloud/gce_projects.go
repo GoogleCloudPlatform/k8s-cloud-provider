@@ -32,6 +32,9 @@ type ProjectsOps interface {
 	SetCommonInstanceMetadata(ctx context.Context, projectID string, m *compute.Metadata) error
 }
 
+// MockProjectsOps specifies mock hooks for manually implemented methods.
+type MockProjectsOps struct {}
+
 // MockProjectOpsState is stored in the mock.X field.
 type MockProjectOpsState struct {
 	metadata map[string]*compute.Metadata

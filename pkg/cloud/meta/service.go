@@ -114,6 +114,11 @@ func (i *ServiceInfo) MockWrapType() string {
 	return "Mock" + i.WrapType()
 }
 
+// MockWrapTypeOps is the name of the concrete mock for this type.
+func (i *ServiceInfo) MockWrapTypeOps() string {
+	return "Mock" + i.WrapTypeOps()
+}
+
 // MockField is the name of the field in the mock struct.
 func (i *ServiceInfo) MockField() string {
 	return "Mock" + i.WrapType()

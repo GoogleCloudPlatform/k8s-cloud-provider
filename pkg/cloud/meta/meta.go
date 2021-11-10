@@ -694,6 +694,17 @@ var AllServices = []*ServiceInfo{
 		Object:      "ServiceAttachment",
 		Service:     "ServiceAttachments",
 		Resource:    "serviceAttachments",
+		version:     VersionGA,
+		keyType:     Regional,
+		serviceType: reflect.TypeOf(&ga.ServiceAttachmentsService{}),
+		additionalMethods: []string{
+			"Patch",
+		},
+	},
+	{
+		Object:      "ServiceAttachment",
+		Service:     "ServiceAttachments",
+		Resource:    "serviceAttachments",
 		version:     VersionBeta,
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&beta.ServiceAttachmentsService{}),

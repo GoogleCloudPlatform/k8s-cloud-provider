@@ -467,6 +467,19 @@ var AllServices = []*ServiceInfo{
 		},
 	},
 	{
+		Object:      "InstanceGroupManager",
+		Service:     "InstanceGroupManagers",
+		Resource:    "instanceGroupManagers",
+		keyType:     Zonal,
+		serviceType: reflect.TypeOf(&ga.InstanceGroupManagersService{}),
+		additionalMethods: []string{
+			"CreateInstances",
+			"DeleteInstances",
+			"Resize",
+			"SetInstanceTemplate",
+		},
+	},
+	{
 		Object:      "Instance",
 		Service:     "Instances",
 		Resource:    "instances",

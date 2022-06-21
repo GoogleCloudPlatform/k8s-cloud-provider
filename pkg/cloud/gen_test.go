@@ -1303,6 +1303,69 @@ func TestImagesGroup(t *testing.T) {
 	}
 }
 
+func TestInstanceGroupManagersGroup(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pr := &SingleProjectRouter{"mock-project"}
+	mock := NewMockGCE(pr)
+
+	var key *meta.Key
+	keyGA := meta.ZonalKey("key-ga", "location")
+	key = keyGA
+	// Ignore unused variables.
+	_, _, _ = ctx, mock, key
+
+	// Get not found.
+	if _, err := mock.InstanceGroupManagers().Get(ctx, key); err == nil {
+		t.Errorf("InstanceGroupManagers().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+
+	// Insert.
+	{
+		obj := &ga.InstanceGroupManager{}
+		if err := mock.InstanceGroupManagers().Insert(ctx, keyGA, obj); err != nil {
+			t.Errorf("InstanceGroupManagers().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
+		}
+	}
+
+	// Get across versions.
+	if obj, err := mock.InstanceGroupManagers().Get(ctx, key); err != nil {
+		t.Errorf("InstanceGroupManagers().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+
+	// List.
+	mock.MockInstanceGroupManagers.Objects[*keyGA] = mock.MockInstanceGroupManagers.Obj(&ga.InstanceGroupManager{Name: keyGA.Name})
+	want := map[string]bool{
+		"key-ga": true,
+	}
+	_ = want // ignore unused variables.
+	{
+		objs, err := mock.InstanceGroupManagers().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("InstanceGroupManagers().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("InstanceGroupManagers().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+
+	// Delete across versions.
+	if err := mock.InstanceGroupManagers().Delete(ctx, keyGA); err != nil {
+		t.Errorf("InstanceGroupManagers().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
+	}
+
+	// Delete not found.
+	if err := mock.InstanceGroupManagers().Delete(ctx, keyGA); err == nil {
+		t.Errorf("InstanceGroupManagers().Delete(%v, %v) = nil; want error", ctx, keyGA)
+	}
+}
+
 func TestInstanceGroupsGroup(t *testing.T) {
 	t.Parallel()
 
@@ -4230,6 +4293,7 @@ func TestResourceIDConversion(t *testing.T) {
 		NewHttpHealthChecksResourceID("some-project", "my-httpHealthChecks-resource"),
 		NewHttpsHealthChecksResourceID("some-project", "my-httpsHealthChecks-resource"),
 		NewImagesResourceID("some-project", "my-Images-resource"),
+		NewInstanceGroupManagersResourceID("some-project", "us-east1-b", "my-instanceGroupManagers-resource"),
 		NewInstanceGroupsResourceID("some-project", "us-east1-b", "my-instanceGroups-resource"),
 		NewInstancesResourceID("some-project", "us-east1-b", "my-instances-resource"),
 		NewNetworkEndpointGroupsResourceID("some-project", "us-east1-b", "my-networkEndpointGroups-resource"),

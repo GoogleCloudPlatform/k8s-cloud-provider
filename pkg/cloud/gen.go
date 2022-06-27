@@ -73,6 +73,7 @@ type Cloud interface {
 	HttpsHealthChecks() HttpsHealthChecks
 	InstanceGroups() InstanceGroups
 	InstanceGroupManagers() InstanceGroupManagers
+	InstanceTemplates() InstanceTemplates
 	Instances() Instances
 	BetaInstances() BetaInstances
 	AlphaInstances() AlphaInstances
@@ -168,6 +169,7 @@ func NewGCE(s *Service) *GCE {
 		gceHttpsHealthChecks:                  &GCEHttpsHealthChecks{s},
 		gceInstanceGroups:                     &GCEInstanceGroups{s},
 		gceInstanceGroupManagers:              &GCEInstanceGroupManagers{s},
+		gceInstanceTemplates:                  &GCEInstanceTemplates{s},
 		gceInstances:                          &GCEInstances{s},
 		gceBetaInstances:                      &GCEBetaInstances{s},
 		gceAlphaInstances:                     &GCEAlphaInstances{s},
@@ -267,6 +269,7 @@ type GCE struct {
 	gceHttpsHealthChecks                  *GCEHttpsHealthChecks
 	gceInstanceGroups                     *GCEInstanceGroups
 	gceInstanceGroupManagers              *GCEInstanceGroupManagers
+	gceInstanceTemplates                  *GCEInstanceTemplates
 	gceInstances                          *GCEInstances
 	gceBetaInstances                      *GCEBetaInstances
 	gceAlphaInstances                     *GCEAlphaInstances
@@ -497,6 +500,11 @@ func (gce *GCE) InstanceGroups() InstanceGroups {
 // InstanceGroupManagers returns the interface for the ga InstanceGroupManagers.
 func (gce *GCE) InstanceGroupManagers() InstanceGroupManagers {
 	return gce.gceInstanceGroupManagers
+}
+
+// InstanceTemplates returns the interface for the ga InstanceTemplates.
+func (gce *GCE) InstanceTemplates() InstanceTemplates {
+	return gce.gceInstanceTemplates
 }
 
 // Instances returns the interface for the ga Instances.
@@ -789,6 +797,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 	mockImagesObjs := map[meta.Key]*MockImagesObj{}
 	mockInstanceGroupManagersObjs := map[meta.Key]*MockInstanceGroupManagersObj{}
 	mockInstanceGroupsObjs := map[meta.Key]*MockInstanceGroupsObj{}
+	mockInstanceTemplatesObjs := map[meta.Key]*MockInstanceTemplatesObj{}
 	mockInstancesObjs := map[meta.Key]*MockInstancesObj{}
 	mockNetworkEndpointGroupsObjs := map[meta.Key]*MockNetworkEndpointGroupsObj{}
 	mockNetworkFirewallPoliciesObjs := map[meta.Key]*MockNetworkFirewallPoliciesObj{}
@@ -853,6 +862,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockHttpsHealthChecks:                  NewMockHttpsHealthChecks(projectRouter, mockHttpsHealthChecksObjs),
 		MockInstanceGroups:                     NewMockInstanceGroups(projectRouter, mockInstanceGroupsObjs),
 		MockInstanceGroupManagers:              NewMockInstanceGroupManagers(projectRouter, mockInstanceGroupManagersObjs),
+		MockInstanceTemplates:                  NewMockInstanceTemplates(projectRouter, mockInstanceTemplatesObjs),
 		MockInstances:                          NewMockInstances(projectRouter, mockInstancesObjs),
 		MockBetaInstances:                      NewMockBetaInstances(projectRouter, mockInstancesObjs),
 		MockAlphaInstances:                     NewMockAlphaInstances(projectRouter, mockInstancesObjs),
@@ -952,6 +962,7 @@ type MockGCE struct {
 	MockHttpsHealthChecks                  *MockHttpsHealthChecks
 	MockInstanceGroups                     *MockInstanceGroups
 	MockInstanceGroupManagers              *MockInstanceGroupManagers
+	MockInstanceTemplates                  *MockInstanceTemplates
 	MockInstances                          *MockInstances
 	MockBetaInstances                      *MockBetaInstances
 	MockAlphaInstances                     *MockAlphaInstances
@@ -1182,6 +1193,11 @@ func (mock *MockGCE) InstanceGroups() InstanceGroups {
 // InstanceGroupManagers returns the interface for the ga InstanceGroupManagers.
 func (mock *MockGCE) InstanceGroupManagers() InstanceGroupManagers {
 	return mock.MockInstanceGroupManagers
+}
+
+// InstanceTemplates returns the interface for the ga InstanceTemplates.
+func (mock *MockGCE) InstanceTemplates() InstanceTemplates {
+	return mock.MockInstanceTemplates
 }
 
 // Instances returns the interface for the ga Instances.
@@ -1923,6 +1939,26 @@ func (m *MockInstanceGroupsObj) ToGA() *ga.InstanceGroup {
 	ret := &ga.InstanceGroup{}
 	if err := copyViaJSON(ret, m.Obj); err != nil {
 		klog.Errorf("Could not convert %T to *ga.InstanceGroup via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// MockInstanceTemplatesObj is used to store the various object versions in the shared
+// map of mocked objects. This allows for multiple API versions to co-exist and
+// share the same "view" of the objects in the backend.
+type MockInstanceTemplatesObj struct {
+	Obj interface{}
+}
+
+// ToGA retrieves the given version of the object.
+func (m *MockInstanceTemplatesObj) ToGA() *ga.InstanceTemplate {
+	if ret, ok := m.Obj.(*ga.InstanceTemplate); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &ga.InstanceTemplate{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *ga.InstanceTemplate via JSON: %v", m.Obj, err)
 	}
 	return ret
 }
@@ -18457,6 +18493,338 @@ func (g *GCEInstanceGroupManagers) SetInstanceTemplate(ctx context.Context, key 
 	}
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCEInstanceGroupManagers.SetInstanceTemplate(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// InstanceTemplates is an interface that allows for mocking of InstanceTemplates.
+type InstanceTemplates interface {
+	Get(ctx context.Context, key *meta.Key) (*ga.InstanceTemplate, error)
+	List(ctx context.Context, fl *filter.F) ([]*ga.InstanceTemplate, error)
+	Insert(ctx context.Context, key *meta.Key, obj *ga.InstanceTemplate) error
+	Delete(ctx context.Context, key *meta.Key) error
+}
+
+// NewMockInstanceTemplates returns a new mock for InstanceTemplates.
+func NewMockInstanceTemplates(pr ProjectRouter, objs map[meta.Key]*MockInstanceTemplatesObj) *MockInstanceTemplates {
+	mock := &MockInstanceTemplates{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockInstanceTemplates is the mock for InstanceTemplates.
+type MockInstanceTemplates struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockInstanceTemplatesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockInstanceTemplates) (bool, *ga.InstanceTemplate, error)
+	ListHook   func(ctx context.Context, fl *filter.F, m *MockInstanceTemplates) (bool, []*ga.InstanceTemplate, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *ga.InstanceTemplate, m *MockInstanceTemplates) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockInstanceTemplates) (bool, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockInstanceTemplates) Get(ctx context.Context, key *meta.Key) (*ga.InstanceTemplate, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockInstanceTemplates.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockInstanceTemplates.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToGA()
+		klog.V(5).Infof("MockInstanceTemplates.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockInstanceTemplates %v not found", key),
+	}
+	klog.V(5).Infof("MockInstanceTemplates.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockInstanceTemplates) List(ctx context.Context, fl *filter.F) ([]*ga.InstanceTemplate, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m); intercept {
+			klog.V(5).Infof("MockInstanceTemplates.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockInstanceTemplates.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*ga.InstanceTemplate
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToGA()) {
+			continue
+		}
+		objs = append(objs, obj.ToGA())
+	}
+
+	klog.V(5).Infof("MockInstanceTemplates.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockInstanceTemplates) Insert(ctx context.Context, key *meta.Key, obj *ga.InstanceTemplate) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockInstanceTemplates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockInstanceTemplates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockInstanceTemplates %v exists", key),
+		}
+		klog.V(5).Infof("MockInstanceTemplates.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "instanceTemplates")
+	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "instanceTemplates", key)
+
+	m.Objects[*key] = &MockInstanceTemplatesObj{obj}
+	klog.V(5).Infof("MockInstanceTemplates.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockInstanceTemplates) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockInstanceTemplates.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockInstanceTemplates.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockInstanceTemplates %v not found", key),
+		}
+		klog.V(5).Infof("MockInstanceTemplates.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockInstanceTemplates.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockInstanceTemplates) Obj(o *ga.InstanceTemplate) *MockInstanceTemplatesObj {
+	return &MockInstanceTemplatesObj{o}
+}
+
+// GCEInstanceTemplates is a simplifying adapter for the GCE InstanceTemplates.
+type GCEInstanceTemplates struct {
+	s *Service
+}
+
+// Get the InstanceTemplate named by key.
+func (g *GCEInstanceTemplates) Get(ctx context.Context, key *meta.Key) (*ga.InstanceTemplate, error) {
+	klog.V(5).Infof("GCEInstanceTemplates.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEInstanceTemplates.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "InstanceTemplates")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("ga"),
+		Service:   "InstanceTemplates",
+	}
+	klog.V(5).Infof("GCEInstanceTemplates.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEInstanceTemplates.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.GA.InstanceTemplates.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEInstanceTemplates.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// List all InstanceTemplate objects.
+func (g *GCEInstanceTemplates) List(ctx context.Context, fl *filter.F) ([]*ga.InstanceTemplate, error) {
+	klog.V(5).Infof("GCEInstanceTemplates.List(%v, %v) called", ctx, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "InstanceTemplates")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("ga"),
+		Service:   "InstanceTemplates",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEInstanceTemplates.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	call := g.s.GA.InstanceTemplates.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+	var all []*ga.InstanceTemplate
+	f := func(l *ga.InstanceTemplateList) error {
+		klog.V(5).Infof("GCEInstanceTemplates.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCEInstanceTemplates.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCEInstanceTemplates.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEInstanceTemplates.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert InstanceTemplate with key of value obj.
+func (g *GCEInstanceTemplates) Insert(ctx context.Context, key *meta.Key, obj *ga.InstanceTemplate) error {
+	klog.V(5).Infof("GCEInstanceTemplates.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEInstanceTemplates.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "InstanceTemplates")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("ga"),
+		Service:   "InstanceTemplates",
+	}
+	klog.V(5).Infof("GCEInstanceTemplates.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEInstanceTemplates.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.GA.InstanceTemplates.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEInstanceTemplates.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEInstanceTemplates.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the InstanceTemplate referenced by key.
+func (g *GCEInstanceTemplates) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCEInstanceTemplates.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEInstanceTemplates.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "InstanceTemplates")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("ga"),
+		Service:   "InstanceTemplates",
+	}
+	klog.V(5).Infof("GCEInstanceTemplates.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEInstanceTemplates.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.InstanceTemplates.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEInstanceTemplates.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEInstanceTemplates.Delete(%v, %v) = %v", ctx, key, err)
 	return err
 }
 
@@ -40844,6 +41212,12 @@ func NewInstanceGroupManagersResourceID(project, zone, name string) *ResourceID 
 func NewInstanceGroupsResourceID(project, zone, name string) *ResourceID {
 	key := meta.ZonalKey(name, zone)
 	return &ResourceID{project, "instanceGroups", key}
+}
+
+// NewInstanceTemplatesResourceID creates a ResourceID for the InstanceTemplates resource.
+func NewInstanceTemplatesResourceID(project, name string) *ResourceID {
+	key := meta.GlobalKey(name)
+	return &ResourceID{project, "instanceTemplates", key}
 }
 
 // NewInstancesResourceID creates a ResourceID for the Instances resource.

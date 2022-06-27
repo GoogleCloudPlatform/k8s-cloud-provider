@@ -480,6 +480,13 @@ var AllServices = []*ServiceInfo{
 		},
 	},
 	{
+		Object:      "InstanceTemplate",
+		Service:     "InstanceTemplates",
+		Resource:    "instanceTemplates",
+		keyType:     Global,
+		serviceType: reflect.TypeOf(&ga.InstanceTemplatesService{}),
+	},
+	{
 		Object:      "Instance",
 		Service:     "Instances",
 		Resource:    "instances",

@@ -1429,6 +1429,69 @@ func TestInstanceGroupsGroup(t *testing.T) {
 	}
 }
 
+func TestInstanceTemplatesGroup(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pr := &SingleProjectRouter{"mock-project"}
+	mock := NewMockGCE(pr)
+
+	var key *meta.Key
+	keyGA := meta.GlobalKey("key-ga")
+	key = keyGA
+	// Ignore unused variables.
+	_, _, _ = ctx, mock, key
+
+	// Get not found.
+	if _, err := mock.InstanceTemplates().Get(ctx, key); err == nil {
+		t.Errorf("InstanceTemplates().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+
+	// Insert.
+	{
+		obj := &ga.InstanceTemplate{}
+		if err := mock.InstanceTemplates().Insert(ctx, keyGA, obj); err != nil {
+			t.Errorf("InstanceTemplates().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
+		}
+	}
+
+	// Get across versions.
+	if obj, err := mock.InstanceTemplates().Get(ctx, key); err != nil {
+		t.Errorf("InstanceTemplates().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+
+	// List.
+	mock.MockInstanceTemplates.Objects[*keyGA] = mock.MockInstanceTemplates.Obj(&ga.InstanceTemplate{Name: keyGA.Name})
+	want := map[string]bool{
+		"key-ga": true,
+	}
+	_ = want // ignore unused variables.
+	{
+		objs, err := mock.InstanceTemplates().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("InstanceTemplates().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("InstanceTemplates().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+
+	// Delete across versions.
+	if err := mock.InstanceTemplates().Delete(ctx, keyGA); err != nil {
+		t.Errorf("InstanceTemplates().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
+	}
+
+	// Delete not found.
+	if err := mock.InstanceTemplates().Delete(ctx, keyGA); err == nil {
+		t.Errorf("InstanceTemplates().Delete(%v, %v) = nil; want error", ctx, keyGA)
+	}
+}
+
 func TestInstancesGroup(t *testing.T) {
 	t.Parallel()
 
@@ -4295,6 +4358,7 @@ func TestResourceIDConversion(t *testing.T) {
 		NewImagesResourceID("some-project", "my-Images-resource"),
 		NewInstanceGroupManagersResourceID("some-project", "us-east1-b", "my-instanceGroupManagers-resource"),
 		NewInstanceGroupsResourceID("some-project", "us-east1-b", "my-instanceGroups-resource"),
+		NewInstanceTemplatesResourceID("some-project", "my-instanceTemplates-resource"),
 		NewInstancesResourceID("some-project", "us-east1-b", "my-instances-resource"),
 		NewNetworkEndpointGroupsResourceID("some-project", "us-east1-b", "my-networkEndpointGroups-resource"),
 		NewNetworkFirewallPoliciesResourceID("some-project", "my-networkFirewallPolicies-resource"),

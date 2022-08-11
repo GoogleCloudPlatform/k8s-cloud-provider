@@ -33215,6 +33215,7 @@ type TargetHttpsProxies interface {
 	List(ctx context.Context, fl *filter.F) ([]*ga.TargetHttpsProxy, error)
 	Insert(ctx context.Context, key *meta.Key, obj *ga.TargetHttpsProxy) error
 	Delete(ctx context.Context, key *meta.Key) error
+	SetCertificateMap(context.Context, *meta.Key, *ga.TargetHttpsProxiesSetCertificateMapRequest) error
 	SetSslCertificates(context.Context, *meta.Key, *ga.TargetHttpsProxiesSetSslCertificatesRequest) error
 	SetSslPolicy(context.Context, *meta.Key, *ga.SslPolicyReference) error
 	SetUrlMap(context.Context, *meta.Key, *ga.UrlMapReference) error
@@ -33257,6 +33258,7 @@ type MockTargetHttpsProxies struct {
 	ListHook               func(ctx context.Context, fl *filter.F, m *MockTargetHttpsProxies) (bool, []*ga.TargetHttpsProxy, error)
 	InsertHook             func(ctx context.Context, key *meta.Key, obj *ga.TargetHttpsProxy, m *MockTargetHttpsProxies) (bool, error)
 	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockTargetHttpsProxies) (bool, error)
+	SetCertificateMapHook  func(context.Context, *meta.Key, *ga.TargetHttpsProxiesSetCertificateMapRequest, *MockTargetHttpsProxies) error
 	SetSslCertificatesHook func(context.Context, *meta.Key, *ga.TargetHttpsProxiesSetSslCertificatesRequest, *MockTargetHttpsProxies) error
 	SetSslPolicyHook       func(context.Context, *meta.Key, *ga.SslPolicyReference, *MockTargetHttpsProxies) error
 	SetUrlMapHook          func(context.Context, *meta.Key, *ga.UrlMapReference, *MockTargetHttpsProxies) error
@@ -33403,6 +33405,14 @@ func (m *MockTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) erro
 // Obj wraps the object for use in the mock.
 func (m *MockTargetHttpsProxies) Obj(o *ga.TargetHttpsProxy) *MockTargetHttpsProxiesObj {
 	return &MockTargetHttpsProxiesObj{o}
+}
+
+// SetCertificateMap is a mock for the corresponding method.
+func (m *MockTargetHttpsProxies) SetCertificateMap(ctx context.Context, key *meta.Key, arg0 *ga.TargetHttpsProxiesSetCertificateMapRequest) error {
+	if m.SetCertificateMapHook != nil {
+		return m.SetCertificateMapHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetSslCertificates is a mock for the corresponding method.
@@ -33568,6 +33578,39 @@ func (g *GCETargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) error
 
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCETargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// SetCertificateMap is a method on GCETargetHttpsProxies.
+func (g *GCETargetHttpsProxies) SetCertificateMap(ctx context.Context, key *meta.Key, arg0 *ga.TargetHttpsProxiesSetCertificateMapRequest) error {
+	klog.V(5).Infof("GCETargetHttpsProxies.SetCertificateMap(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCETargetHttpsProxies.SetCertificateMap(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetHttpsProxies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetCertificateMap",
+		Version:   meta.Version("ga"),
+		Service:   "TargetHttpsProxies",
+	}
+	klog.V(5).Infof("GCETargetHttpsProxies.SetCertificateMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCETargetHttpsProxies.SetCertificateMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.TargetHttpsProxies.SetCertificateMap(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCETargetHttpsProxies.SetCertificateMap(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCETargetHttpsProxies.SetCertificateMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
 
@@ -34180,6 +34223,7 @@ type BetaTargetHttpsProxies interface {
 	List(ctx context.Context, fl *filter.F) ([]*beta.TargetHttpsProxy, error)
 	Insert(ctx context.Context, key *meta.Key, obj *beta.TargetHttpsProxy) error
 	Delete(ctx context.Context, key *meta.Key) error
+	SetCertificateMap(context.Context, *meta.Key, *beta.TargetHttpsProxiesSetCertificateMapRequest) error
 	SetSslCertificates(context.Context, *meta.Key, *beta.TargetHttpsProxiesSetSslCertificatesRequest) error
 	SetSslPolicy(context.Context, *meta.Key, *beta.SslPolicyReference) error
 	SetUrlMap(context.Context, *meta.Key, *beta.UrlMapReference) error
@@ -34222,6 +34266,7 @@ type MockBetaTargetHttpsProxies struct {
 	ListHook               func(ctx context.Context, fl *filter.F, m *MockBetaTargetHttpsProxies) (bool, []*beta.TargetHttpsProxy, error)
 	InsertHook             func(ctx context.Context, key *meta.Key, obj *beta.TargetHttpsProxy, m *MockBetaTargetHttpsProxies) (bool, error)
 	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockBetaTargetHttpsProxies) (bool, error)
+	SetCertificateMapHook  func(context.Context, *meta.Key, *beta.TargetHttpsProxiesSetCertificateMapRequest, *MockBetaTargetHttpsProxies) error
 	SetSslCertificatesHook func(context.Context, *meta.Key, *beta.TargetHttpsProxiesSetSslCertificatesRequest, *MockBetaTargetHttpsProxies) error
 	SetSslPolicyHook       func(context.Context, *meta.Key, *beta.SslPolicyReference, *MockBetaTargetHttpsProxies) error
 	SetUrlMapHook          func(context.Context, *meta.Key, *beta.UrlMapReference, *MockBetaTargetHttpsProxies) error
@@ -34368,6 +34413,14 @@ func (m *MockBetaTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) 
 // Obj wraps the object for use in the mock.
 func (m *MockBetaTargetHttpsProxies) Obj(o *beta.TargetHttpsProxy) *MockTargetHttpsProxiesObj {
 	return &MockTargetHttpsProxiesObj{o}
+}
+
+// SetCertificateMap is a mock for the corresponding method.
+func (m *MockBetaTargetHttpsProxies) SetCertificateMap(ctx context.Context, key *meta.Key, arg0 *beta.TargetHttpsProxiesSetCertificateMapRequest) error {
+	if m.SetCertificateMapHook != nil {
+		return m.SetCertificateMapHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetSslCertificates is a mock for the corresponding method.
@@ -34533,6 +34586,39 @@ func (g *GCEBetaTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) e
 
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCEBetaTargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// SetCertificateMap is a method on GCEBetaTargetHttpsProxies.
+func (g *GCEBetaTargetHttpsProxies) SetCertificateMap(ctx context.Context, key *meta.Key, arg0 *beta.TargetHttpsProxiesSetCertificateMapRequest) error {
+	klog.V(5).Infof("GCEBetaTargetHttpsProxies.SetCertificateMap(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaTargetHttpsProxies.SetCertificateMap(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetHttpsProxies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetCertificateMap",
+		Version:   meta.Version("beta"),
+		Service:   "TargetHttpsProxies",
+	}
+	klog.V(5).Infof("GCEBetaTargetHttpsProxies.SetCertificateMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetCertificateMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.TargetHttpsProxies.SetCertificateMap(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetCertificateMap(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetCertificateMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
 

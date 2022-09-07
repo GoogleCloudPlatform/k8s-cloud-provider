@@ -11959,6 +11959,7 @@ type ForwardingRules interface {
 	List(ctx context.Context, region string, fl *filter.F) ([]*ga.ForwardingRule, error)
 	Insert(ctx context.Context, key *meta.Key, obj *ga.ForwardingRule) error
 	Delete(ctx context.Context, key *meta.Key) error
+	SetLabels(context.Context, *meta.Key, *ga.RegionSetLabelsRequest) error
 	SetTarget(context.Context, *meta.Key, *ga.TargetReference) error
 }
 
@@ -11999,6 +12000,7 @@ type MockForwardingRules struct {
 	ListHook      func(ctx context.Context, region string, fl *filter.F, m *MockForwardingRules) (bool, []*ga.ForwardingRule, error)
 	InsertHook    func(ctx context.Context, key *meta.Key, obj *ga.ForwardingRule, m *MockForwardingRules) (bool, error)
 	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockForwardingRules) (bool, error)
+	SetLabelsHook func(context.Context, *meta.Key, *ga.RegionSetLabelsRequest, *MockForwardingRules) error
 	SetTargetHook func(context.Context, *meta.Key, *ga.TargetReference, *MockForwardingRules) error
 
 	// X is extra state that can be used as part of the mock. Generated code
@@ -12146,6 +12148,14 @@ func (m *MockForwardingRules) Delete(ctx context.Context, key *meta.Key) error {
 // Obj wraps the object for use in the mock.
 func (m *MockForwardingRules) Obj(o *ga.ForwardingRule) *MockForwardingRulesObj {
 	return &MockForwardingRulesObj{o}
+}
+
+// SetLabels is a mock for the corresponding method.
+func (m *MockForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 *ga.RegionSetLabelsRequest) error {
+	if m.SetLabelsHook != nil {
+		return m.SetLabelsHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetTarget is a mock for the corresponding method.
@@ -12297,6 +12307,39 @@ func (g *GCEForwardingRules) Delete(ctx context.Context, key *meta.Key) error {
 	return err
 }
 
+// SetLabels is a method on GCEForwardingRules.
+func (g *GCEForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 *ga.RegionSetLabelsRequest) error {
+	klog.V(5).Infof("GCEForwardingRules.SetLabels(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEForwardingRules.SetLabels(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "ForwardingRules")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetLabels",
+		Version:   meta.Version("ga"),
+		Service:   "ForwardingRules",
+	}
+	klog.V(5).Infof("GCEForwardingRules.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEForwardingRules.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.ForwardingRules.SetLabels(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // SetTarget is a method on GCEForwardingRules.
 func (g *GCEForwardingRules) SetTarget(ctx context.Context, key *meta.Key, arg0 *ga.TargetReference) error {
 	klog.V(5).Infof("GCEForwardingRules.SetTarget(%v, %v, ...): called", ctx, key)
@@ -12336,6 +12379,7 @@ type AlphaForwardingRules interface {
 	List(ctx context.Context, region string, fl *filter.F) ([]*alpha.ForwardingRule, error)
 	Insert(ctx context.Context, key *meta.Key, obj *alpha.ForwardingRule) error
 	Delete(ctx context.Context, key *meta.Key) error
+	SetLabels(context.Context, *meta.Key, *alpha.RegionSetLabelsRequest) error
 	SetTarget(context.Context, *meta.Key, *alpha.TargetReference) error
 }
 
@@ -12376,6 +12420,7 @@ type MockAlphaForwardingRules struct {
 	ListHook      func(ctx context.Context, region string, fl *filter.F, m *MockAlphaForwardingRules) (bool, []*alpha.ForwardingRule, error)
 	InsertHook    func(ctx context.Context, key *meta.Key, obj *alpha.ForwardingRule, m *MockAlphaForwardingRules) (bool, error)
 	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockAlphaForwardingRules) (bool, error)
+	SetLabelsHook func(context.Context, *meta.Key, *alpha.RegionSetLabelsRequest, *MockAlphaForwardingRules) error
 	SetTargetHook func(context.Context, *meta.Key, *alpha.TargetReference, *MockAlphaForwardingRules) error
 
 	// X is extra state that can be used as part of the mock. Generated code
@@ -12523,6 +12568,14 @@ func (m *MockAlphaForwardingRules) Delete(ctx context.Context, key *meta.Key) er
 // Obj wraps the object for use in the mock.
 func (m *MockAlphaForwardingRules) Obj(o *alpha.ForwardingRule) *MockForwardingRulesObj {
 	return &MockForwardingRulesObj{o}
+}
+
+// SetLabels is a mock for the corresponding method.
+func (m *MockAlphaForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 *alpha.RegionSetLabelsRequest) error {
+	if m.SetLabelsHook != nil {
+		return m.SetLabelsHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetTarget is a mock for the corresponding method.
@@ -12674,6 +12727,39 @@ func (g *GCEAlphaForwardingRules) Delete(ctx context.Context, key *meta.Key) err
 	return err
 }
 
+// SetLabels is a method on GCEAlphaForwardingRules.
+func (g *GCEAlphaForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 *alpha.RegionSetLabelsRequest) error {
+	klog.V(5).Infof("GCEAlphaForwardingRules.SetLabels(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaForwardingRules.SetLabels(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ForwardingRules")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetLabels",
+		Version:   meta.Version("alpha"),
+		Service:   "ForwardingRules",
+	}
+	klog.V(5).Infof("GCEAlphaForwardingRules.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaForwardingRules.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.ForwardingRules.SetLabels(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // SetTarget is a method on GCEAlphaForwardingRules.
 func (g *GCEAlphaForwardingRules) SetTarget(ctx context.Context, key *meta.Key, arg0 *alpha.TargetReference) error {
 	klog.V(5).Infof("GCEAlphaForwardingRules.SetTarget(%v, %v, ...): called", ctx, key)
@@ -12713,6 +12799,7 @@ type BetaForwardingRules interface {
 	List(ctx context.Context, region string, fl *filter.F) ([]*beta.ForwardingRule, error)
 	Insert(ctx context.Context, key *meta.Key, obj *beta.ForwardingRule) error
 	Delete(ctx context.Context, key *meta.Key) error
+	SetLabels(context.Context, *meta.Key, *beta.RegionSetLabelsRequest) error
 	SetTarget(context.Context, *meta.Key, *beta.TargetReference) error
 }
 
@@ -12753,6 +12840,7 @@ type MockBetaForwardingRules struct {
 	ListHook      func(ctx context.Context, region string, fl *filter.F, m *MockBetaForwardingRules) (bool, []*beta.ForwardingRule, error)
 	InsertHook    func(ctx context.Context, key *meta.Key, obj *beta.ForwardingRule, m *MockBetaForwardingRules) (bool, error)
 	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockBetaForwardingRules) (bool, error)
+	SetLabelsHook func(context.Context, *meta.Key, *beta.RegionSetLabelsRequest, *MockBetaForwardingRules) error
 	SetTargetHook func(context.Context, *meta.Key, *beta.TargetReference, *MockBetaForwardingRules) error
 
 	// X is extra state that can be used as part of the mock. Generated code
@@ -12900,6 +12988,14 @@ func (m *MockBetaForwardingRules) Delete(ctx context.Context, key *meta.Key) err
 // Obj wraps the object for use in the mock.
 func (m *MockBetaForwardingRules) Obj(o *beta.ForwardingRule) *MockForwardingRulesObj {
 	return &MockForwardingRulesObj{o}
+}
+
+// SetLabels is a mock for the corresponding method.
+func (m *MockBetaForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 *beta.RegionSetLabelsRequest) error {
+	if m.SetLabelsHook != nil {
+		return m.SetLabelsHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetTarget is a mock for the corresponding method.
@@ -13051,6 +13147,39 @@ func (g *GCEBetaForwardingRules) Delete(ctx context.Context, key *meta.Key) erro
 	return err
 }
 
+// SetLabels is a method on GCEBetaForwardingRules.
+func (g *GCEBetaForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 *beta.RegionSetLabelsRequest) error {
+	klog.V(5).Infof("GCEBetaForwardingRules.SetLabels(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaForwardingRules.SetLabels(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "ForwardingRules")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetLabels",
+		Version:   meta.Version("beta"),
+		Service:   "ForwardingRules",
+	}
+	klog.V(5).Infof("GCEBetaForwardingRules.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaForwardingRules.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.ForwardingRules.SetLabels(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // SetTarget is a method on GCEBetaForwardingRules.
 func (g *GCEBetaForwardingRules) SetTarget(ctx context.Context, key *meta.Key, arg0 *beta.TargetReference) error {
 	klog.V(5).Infof("GCEBetaForwardingRules.SetTarget(%v, %v, ...): called", ctx, key)
@@ -13090,6 +13219,7 @@ type AlphaGlobalForwardingRules interface {
 	List(ctx context.Context, fl *filter.F) ([]*alpha.ForwardingRule, error)
 	Insert(ctx context.Context, key *meta.Key, obj *alpha.ForwardingRule) error
 	Delete(ctx context.Context, key *meta.Key) error
+	SetLabels(context.Context, *meta.Key, *alpha.GlobalSetLabelsRequest) error
 	SetTarget(context.Context, *meta.Key, *alpha.TargetReference) error
 }
 
@@ -13130,6 +13260,7 @@ type MockAlphaGlobalForwardingRules struct {
 	ListHook      func(ctx context.Context, fl *filter.F, m *MockAlphaGlobalForwardingRules) (bool, []*alpha.ForwardingRule, error)
 	InsertHook    func(ctx context.Context, key *meta.Key, obj *alpha.ForwardingRule, m *MockAlphaGlobalForwardingRules) (bool, error)
 	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockAlphaGlobalForwardingRules) (bool, error)
+	SetLabelsHook func(context.Context, *meta.Key, *alpha.GlobalSetLabelsRequest, *MockAlphaGlobalForwardingRules) error
 	SetTargetHook func(context.Context, *meta.Key, *alpha.TargetReference, *MockAlphaGlobalForwardingRules) error
 
 	// X is extra state that can be used as part of the mock. Generated code
@@ -13274,6 +13405,14 @@ func (m *MockAlphaGlobalForwardingRules) Delete(ctx context.Context, key *meta.K
 // Obj wraps the object for use in the mock.
 func (m *MockAlphaGlobalForwardingRules) Obj(o *alpha.ForwardingRule) *MockGlobalForwardingRulesObj {
 	return &MockGlobalForwardingRulesObj{o}
+}
+
+// SetLabels is a mock for the corresponding method.
+func (m *MockAlphaGlobalForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 *alpha.GlobalSetLabelsRequest) error {
+	if m.SetLabelsHook != nil {
+		return m.SetLabelsHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetTarget is a mock for the corresponding method.
@@ -13426,6 +13565,39 @@ func (g *GCEAlphaGlobalForwardingRules) Delete(ctx context.Context, key *meta.Ke
 	return err
 }
 
+// SetLabels is a method on GCEAlphaGlobalForwardingRules.
+func (g *GCEAlphaGlobalForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 *alpha.GlobalSetLabelsRequest) error {
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.SetLabels(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaGlobalForwardingRules.SetLabels(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalForwardingRules")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetLabels",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalForwardingRules",
+	}
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.GlobalForwardingRules.SetLabels(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaGlobalForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // SetTarget is a method on GCEAlphaGlobalForwardingRules.
 func (g *GCEAlphaGlobalForwardingRules) SetTarget(ctx context.Context, key *meta.Key, arg0 *alpha.TargetReference) error {
 	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.SetTarget(%v, %v, ...): called", ctx, key)
@@ -13465,6 +13637,7 @@ type BetaGlobalForwardingRules interface {
 	List(ctx context.Context, fl *filter.F) ([]*beta.ForwardingRule, error)
 	Insert(ctx context.Context, key *meta.Key, obj *beta.ForwardingRule) error
 	Delete(ctx context.Context, key *meta.Key) error
+	SetLabels(context.Context, *meta.Key, *beta.GlobalSetLabelsRequest) error
 	SetTarget(context.Context, *meta.Key, *beta.TargetReference) error
 }
 
@@ -13505,6 +13678,7 @@ type MockBetaGlobalForwardingRules struct {
 	ListHook      func(ctx context.Context, fl *filter.F, m *MockBetaGlobalForwardingRules) (bool, []*beta.ForwardingRule, error)
 	InsertHook    func(ctx context.Context, key *meta.Key, obj *beta.ForwardingRule, m *MockBetaGlobalForwardingRules) (bool, error)
 	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockBetaGlobalForwardingRules) (bool, error)
+	SetLabelsHook func(context.Context, *meta.Key, *beta.GlobalSetLabelsRequest, *MockBetaGlobalForwardingRules) error
 	SetTargetHook func(context.Context, *meta.Key, *beta.TargetReference, *MockBetaGlobalForwardingRules) error
 
 	// X is extra state that can be used as part of the mock. Generated code
@@ -13649,6 +13823,14 @@ func (m *MockBetaGlobalForwardingRules) Delete(ctx context.Context, key *meta.Ke
 // Obj wraps the object for use in the mock.
 func (m *MockBetaGlobalForwardingRules) Obj(o *beta.ForwardingRule) *MockGlobalForwardingRulesObj {
 	return &MockGlobalForwardingRulesObj{o}
+}
+
+// SetLabels is a mock for the corresponding method.
+func (m *MockBetaGlobalForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 *beta.GlobalSetLabelsRequest) error {
+	if m.SetLabelsHook != nil {
+		return m.SetLabelsHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetTarget is a mock for the corresponding method.
@@ -13801,6 +13983,39 @@ func (g *GCEBetaGlobalForwardingRules) Delete(ctx context.Context, key *meta.Key
 	return err
 }
 
+// SetLabels is a method on GCEBetaGlobalForwardingRules.
+func (g *GCEBetaGlobalForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 *beta.GlobalSetLabelsRequest) error {
+	klog.V(5).Infof("GCEBetaGlobalForwardingRules.SetLabels(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaGlobalForwardingRules.SetLabels(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "GlobalForwardingRules")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetLabels",
+		Version:   meta.Version("beta"),
+		Service:   "GlobalForwardingRules",
+	}
+	klog.V(5).Infof("GCEBetaGlobalForwardingRules.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaGlobalForwardingRules.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.GlobalForwardingRules.SetLabels(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaGlobalForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaGlobalForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // SetTarget is a method on GCEBetaGlobalForwardingRules.
 func (g *GCEBetaGlobalForwardingRules) SetTarget(ctx context.Context, key *meta.Key, arg0 *beta.TargetReference) error {
 	klog.V(5).Infof("GCEBetaGlobalForwardingRules.SetTarget(%v, %v, ...): called", ctx, key)
@@ -13840,6 +14055,7 @@ type GlobalForwardingRules interface {
 	List(ctx context.Context, fl *filter.F) ([]*ga.ForwardingRule, error)
 	Insert(ctx context.Context, key *meta.Key, obj *ga.ForwardingRule) error
 	Delete(ctx context.Context, key *meta.Key) error
+	SetLabels(context.Context, *meta.Key, *ga.GlobalSetLabelsRequest) error
 	SetTarget(context.Context, *meta.Key, *ga.TargetReference) error
 }
 
@@ -13880,6 +14096,7 @@ type MockGlobalForwardingRules struct {
 	ListHook      func(ctx context.Context, fl *filter.F, m *MockGlobalForwardingRules) (bool, []*ga.ForwardingRule, error)
 	InsertHook    func(ctx context.Context, key *meta.Key, obj *ga.ForwardingRule, m *MockGlobalForwardingRules) (bool, error)
 	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockGlobalForwardingRules) (bool, error)
+	SetLabelsHook func(context.Context, *meta.Key, *ga.GlobalSetLabelsRequest, *MockGlobalForwardingRules) error
 	SetTargetHook func(context.Context, *meta.Key, *ga.TargetReference, *MockGlobalForwardingRules) error
 
 	// X is extra state that can be used as part of the mock. Generated code
@@ -14024,6 +14241,14 @@ func (m *MockGlobalForwardingRules) Delete(ctx context.Context, key *meta.Key) e
 // Obj wraps the object for use in the mock.
 func (m *MockGlobalForwardingRules) Obj(o *ga.ForwardingRule) *MockGlobalForwardingRulesObj {
 	return &MockGlobalForwardingRulesObj{o}
+}
+
+// SetLabels is a mock for the corresponding method.
+func (m *MockGlobalForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 *ga.GlobalSetLabelsRequest) error {
+	if m.SetLabelsHook != nil {
+		return m.SetLabelsHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetTarget is a mock for the corresponding method.
@@ -14173,6 +14398,39 @@ func (g *GCEGlobalForwardingRules) Delete(ctx context.Context, key *meta.Key) er
 
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCEGlobalForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// SetLabels is a method on GCEGlobalForwardingRules.
+func (g *GCEGlobalForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 *ga.GlobalSetLabelsRequest) error {
+	klog.V(5).Infof("GCEGlobalForwardingRules.SetLabels(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEGlobalForwardingRules.SetLabels(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "GlobalForwardingRules")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetLabels",
+		Version:   meta.Version("ga"),
+		Service:   "GlobalForwardingRules",
+	}
+	klog.V(5).Infof("GCEGlobalForwardingRules.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEGlobalForwardingRules.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.GlobalForwardingRules.SetLabels(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEGlobalForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEGlobalForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
 
@@ -34125,6 +34383,7 @@ type TargetHttpsProxies interface {
 	List(ctx context.Context, fl *filter.F) ([]*ga.TargetHttpsProxy, error)
 	Insert(ctx context.Context, key *meta.Key, obj *ga.TargetHttpsProxy) error
 	Delete(ctx context.Context, key *meta.Key) error
+	SetCertificateMap(context.Context, *meta.Key, *ga.TargetHttpsProxiesSetCertificateMapRequest) error
 	SetSslCertificates(context.Context, *meta.Key, *ga.TargetHttpsProxiesSetSslCertificatesRequest) error
 	SetSslPolicy(context.Context, *meta.Key, *ga.SslPolicyReference) error
 	SetUrlMap(context.Context, *meta.Key, *ga.UrlMapReference) error
@@ -34167,6 +34426,7 @@ type MockTargetHttpsProxies struct {
 	ListHook               func(ctx context.Context, fl *filter.F, m *MockTargetHttpsProxies) (bool, []*ga.TargetHttpsProxy, error)
 	InsertHook             func(ctx context.Context, key *meta.Key, obj *ga.TargetHttpsProxy, m *MockTargetHttpsProxies) (bool, error)
 	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockTargetHttpsProxies) (bool, error)
+	SetCertificateMapHook  func(context.Context, *meta.Key, *ga.TargetHttpsProxiesSetCertificateMapRequest, *MockTargetHttpsProxies) error
 	SetSslCertificatesHook func(context.Context, *meta.Key, *ga.TargetHttpsProxiesSetSslCertificatesRequest, *MockTargetHttpsProxies) error
 	SetSslPolicyHook       func(context.Context, *meta.Key, *ga.SslPolicyReference, *MockTargetHttpsProxies) error
 	SetUrlMapHook          func(context.Context, *meta.Key, *ga.UrlMapReference, *MockTargetHttpsProxies) error
@@ -34313,6 +34573,14 @@ func (m *MockTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) erro
 // Obj wraps the object for use in the mock.
 func (m *MockTargetHttpsProxies) Obj(o *ga.TargetHttpsProxy) *MockTargetHttpsProxiesObj {
 	return &MockTargetHttpsProxiesObj{o}
+}
+
+// SetCertificateMap is a mock for the corresponding method.
+func (m *MockTargetHttpsProxies) SetCertificateMap(ctx context.Context, key *meta.Key, arg0 *ga.TargetHttpsProxiesSetCertificateMapRequest) error {
+	if m.SetCertificateMapHook != nil {
+		return m.SetCertificateMapHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetSslCertificates is a mock for the corresponding method.
@@ -34478,6 +34746,39 @@ func (g *GCETargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) error
 
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCETargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// SetCertificateMap is a method on GCETargetHttpsProxies.
+func (g *GCETargetHttpsProxies) SetCertificateMap(ctx context.Context, key *meta.Key, arg0 *ga.TargetHttpsProxiesSetCertificateMapRequest) error {
+	klog.V(5).Infof("GCETargetHttpsProxies.SetCertificateMap(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCETargetHttpsProxies.SetCertificateMap(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetHttpsProxies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetCertificateMap",
+		Version:   meta.Version("ga"),
+		Service:   "TargetHttpsProxies",
+	}
+	klog.V(5).Infof("GCETargetHttpsProxies.SetCertificateMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCETargetHttpsProxies.SetCertificateMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.TargetHttpsProxies.SetCertificateMap(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCETargetHttpsProxies.SetCertificateMap(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCETargetHttpsProxies.SetCertificateMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
 
@@ -35090,6 +35391,7 @@ type BetaTargetHttpsProxies interface {
 	List(ctx context.Context, fl *filter.F) ([]*beta.TargetHttpsProxy, error)
 	Insert(ctx context.Context, key *meta.Key, obj *beta.TargetHttpsProxy) error
 	Delete(ctx context.Context, key *meta.Key) error
+	SetCertificateMap(context.Context, *meta.Key, *beta.TargetHttpsProxiesSetCertificateMapRequest) error
 	SetSslCertificates(context.Context, *meta.Key, *beta.TargetHttpsProxiesSetSslCertificatesRequest) error
 	SetSslPolicy(context.Context, *meta.Key, *beta.SslPolicyReference) error
 	SetUrlMap(context.Context, *meta.Key, *beta.UrlMapReference) error
@@ -35132,6 +35434,7 @@ type MockBetaTargetHttpsProxies struct {
 	ListHook               func(ctx context.Context, fl *filter.F, m *MockBetaTargetHttpsProxies) (bool, []*beta.TargetHttpsProxy, error)
 	InsertHook             func(ctx context.Context, key *meta.Key, obj *beta.TargetHttpsProxy, m *MockBetaTargetHttpsProxies) (bool, error)
 	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockBetaTargetHttpsProxies) (bool, error)
+	SetCertificateMapHook  func(context.Context, *meta.Key, *beta.TargetHttpsProxiesSetCertificateMapRequest, *MockBetaTargetHttpsProxies) error
 	SetSslCertificatesHook func(context.Context, *meta.Key, *beta.TargetHttpsProxiesSetSslCertificatesRequest, *MockBetaTargetHttpsProxies) error
 	SetSslPolicyHook       func(context.Context, *meta.Key, *beta.SslPolicyReference, *MockBetaTargetHttpsProxies) error
 	SetUrlMapHook          func(context.Context, *meta.Key, *beta.UrlMapReference, *MockBetaTargetHttpsProxies) error
@@ -35278,6 +35581,14 @@ func (m *MockBetaTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) 
 // Obj wraps the object for use in the mock.
 func (m *MockBetaTargetHttpsProxies) Obj(o *beta.TargetHttpsProxy) *MockTargetHttpsProxiesObj {
 	return &MockTargetHttpsProxiesObj{o}
+}
+
+// SetCertificateMap is a mock for the corresponding method.
+func (m *MockBetaTargetHttpsProxies) SetCertificateMap(ctx context.Context, key *meta.Key, arg0 *beta.TargetHttpsProxiesSetCertificateMapRequest) error {
+	if m.SetCertificateMapHook != nil {
+		return m.SetCertificateMapHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetSslCertificates is a mock for the corresponding method.
@@ -35443,6 +35754,39 @@ func (g *GCEBetaTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) e
 
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCEBetaTargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// SetCertificateMap is a method on GCEBetaTargetHttpsProxies.
+func (g *GCEBetaTargetHttpsProxies) SetCertificateMap(ctx context.Context, key *meta.Key, arg0 *beta.TargetHttpsProxiesSetCertificateMapRequest) error {
+	klog.V(5).Infof("GCEBetaTargetHttpsProxies.SetCertificateMap(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaTargetHttpsProxies.SetCertificateMap(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetHttpsProxies")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetCertificateMap",
+		Version:   meta.Version("beta"),
+		Service:   "TargetHttpsProxies",
+	}
+	klog.V(5).Infof("GCEBetaTargetHttpsProxies.SetCertificateMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetCertificateMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.TargetHttpsProxies.SetCertificateMap(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetCertificateMap(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetCertificateMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
 

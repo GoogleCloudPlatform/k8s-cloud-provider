@@ -2324,6 +2324,55 @@ func TestRegionHealthChecksGroup(t *testing.T) {
 	}
 }
 
+func TestRegionInstanceGroupManagersGroup(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pr := &SingleProjectRouter{"mock-project"}
+	mock := NewMockGCE(pr)
+
+	var key *meta.Key
+	keyGA := meta.RegionalKey("key-ga", "location")
+	key = keyGA
+	// Ignore unused variables.
+	_, _, _ = ctx, mock, key
+
+	// Get not found.
+	if _, err := mock.RegionInstanceGroupManagers().Get(ctx, key); err == nil {
+		t.Errorf("RegionInstanceGroupManagers().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+
+	// Insert.
+	{
+		obj := &ga.InstanceGroupManager{}
+		if err := mock.RegionInstanceGroupManagers().Insert(ctx, keyGA, obj); err != nil {
+			t.Errorf("RegionInstanceGroupManagers().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
+		}
+	}
+
+	// Get across versions.
+	if obj, err := mock.RegionInstanceGroupManagers().Get(ctx, key); err != nil {
+		t.Errorf("RegionInstanceGroupManagers().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+
+	// List.
+	mock.MockRegionInstanceGroupManagers.Objects[*keyGA] = mock.MockRegionInstanceGroupManagers.Obj(&ga.InstanceGroupManager{Name: keyGA.Name})
+	want := map[string]bool{
+		"key-ga": true,
+	}
+	_ = want // ignore unused variables.
+
+	// Delete across versions.
+	if err := mock.RegionInstanceGroupManagers().Delete(ctx, keyGA); err != nil {
+		t.Errorf("RegionInstanceGroupManagers().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
+	}
+
+	// Delete not found.
+	if err := mock.RegionInstanceGroupManagers().Delete(ctx, keyGA); err == nil {
+		t.Errorf("RegionInstanceGroupManagers().Delete(%v, %v) = nil; want error", ctx, keyGA)
+	}
+}
+
 func TestRegionNetworkFirewallPoliciesGroup(t *testing.T) {
 	t.Parallel()
 
@@ -4367,6 +4416,7 @@ func TestResourceIDConversion(t *testing.T) {
 		NewRegionBackendServicesResourceID("some-project", "us-central1", "my-backendServices-resource"),
 		NewRegionDisksResourceID("some-project", "us-central1", "my-disks-resource"),
 		NewRegionHealthChecksResourceID("some-project", "us-central1", "my-healthChecks-resource"),
+		NewRegionInstanceGroupManagersResourceID("some-project", "us-central1", "my-RegionInstanceGroupManagers-resource"),
 		NewRegionNetworkFirewallPoliciesResourceID("some-project", "us-central1", "my-regionNetworkFirewallPolicies-resource"),
 		NewRegionSslCertificatesResourceID("some-project", "us-central1", "my-sslCertificates-resource"),
 		NewRegionTargetHttpProxiesResourceID("some-project", "us-central1", "my-targetHttpProxies-resource"),

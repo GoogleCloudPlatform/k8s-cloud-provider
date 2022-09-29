@@ -73,6 +73,7 @@ type Cloud interface {
 	HttpsHealthChecks() HttpsHealthChecks
 	InstanceGroups() InstanceGroups
 	InstanceGroupManagers() InstanceGroupManagers
+	RegionInstanceGroupManagers() RegionInstanceGroupManagers
 	InstanceTemplates() InstanceTemplates
 	Instances() Instances
 	BetaInstances() BetaInstances
@@ -169,6 +170,7 @@ func NewGCE(s *Service) *GCE {
 		gceHttpsHealthChecks:                  &GCEHttpsHealthChecks{s},
 		gceInstanceGroups:                     &GCEInstanceGroups{s},
 		gceInstanceGroupManagers:              &GCEInstanceGroupManagers{s},
+		gceRegionInstanceGroupManagers:        &GCERegionInstanceGroupManagers{s},
 		gceInstanceTemplates:                  &GCEInstanceTemplates{s},
 		gceInstances:                          &GCEInstances{s},
 		gceBetaInstances:                      &GCEBetaInstances{s},
@@ -269,6 +271,7 @@ type GCE struct {
 	gceHttpsHealthChecks                  *GCEHttpsHealthChecks
 	gceInstanceGroups                     *GCEInstanceGroups
 	gceInstanceGroupManagers              *GCEInstanceGroupManagers
+	gceRegionInstanceGroupManagers        *GCERegionInstanceGroupManagers
 	gceInstanceTemplates                  *GCEInstanceTemplates
 	gceInstances                          *GCEInstances
 	gceBetaInstances                      *GCEBetaInstances
@@ -500,6 +503,11 @@ func (gce *GCE) InstanceGroups() InstanceGroups {
 // InstanceGroupManagers returns the interface for the ga InstanceGroupManagers.
 func (gce *GCE) InstanceGroupManagers() InstanceGroupManagers {
 	return gce.gceInstanceGroupManagers
+}
+
+// RegionInstanceGroupManagers returns the interface for the ga RegionInstanceGroupManagers.
+func (gce *GCE) RegionInstanceGroupManagers() RegionInstanceGroupManagers {
+	return gce.gceRegionInstanceGroupManagers
 }
 
 // InstanceTemplates returns the interface for the ga InstanceTemplates.
@@ -806,6 +814,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 	mockRegionBackendServicesObjs := map[meta.Key]*MockRegionBackendServicesObj{}
 	mockRegionDisksObjs := map[meta.Key]*MockRegionDisksObj{}
 	mockRegionHealthChecksObjs := map[meta.Key]*MockRegionHealthChecksObj{}
+	mockRegionInstanceGroupManagersObjs := map[meta.Key]*MockRegionInstanceGroupManagersObj{}
 	mockRegionNetworkFirewallPoliciesObjs := map[meta.Key]*MockRegionNetworkFirewallPoliciesObj{}
 	mockRegionSslCertificatesObjs := map[meta.Key]*MockRegionSslCertificatesObj{}
 	mockRegionTargetHttpProxiesObjs := map[meta.Key]*MockRegionTargetHttpProxiesObj{}
@@ -862,6 +871,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockHttpsHealthChecks:                  NewMockHttpsHealthChecks(projectRouter, mockHttpsHealthChecksObjs),
 		MockInstanceGroups:                     NewMockInstanceGroups(projectRouter, mockInstanceGroupsObjs),
 		MockInstanceGroupManagers:              NewMockInstanceGroupManagers(projectRouter, mockInstanceGroupManagersObjs),
+		MockRegionInstanceGroupManagers:        NewMockRegionInstanceGroupManagers(projectRouter, mockRegionInstanceGroupManagersObjs),
 		MockInstanceTemplates:                  NewMockInstanceTemplates(projectRouter, mockInstanceTemplatesObjs),
 		MockInstances:                          NewMockInstances(projectRouter, mockInstancesObjs),
 		MockBetaInstances:                      NewMockBetaInstances(projectRouter, mockInstancesObjs),
@@ -962,6 +972,7 @@ type MockGCE struct {
 	MockHttpsHealthChecks                  *MockHttpsHealthChecks
 	MockInstanceGroups                     *MockInstanceGroups
 	MockInstanceGroupManagers              *MockInstanceGroupManagers
+	MockRegionInstanceGroupManagers        *MockRegionInstanceGroupManagers
 	MockInstanceTemplates                  *MockInstanceTemplates
 	MockInstances                          *MockInstances
 	MockBetaInstances                      *MockBetaInstances
@@ -1193,6 +1204,11 @@ func (mock *MockGCE) InstanceGroups() InstanceGroups {
 // InstanceGroupManagers returns the interface for the ga InstanceGroupManagers.
 func (mock *MockGCE) InstanceGroupManagers() InstanceGroupManagers {
 	return mock.MockInstanceGroupManagers
+}
+
+// RegionInstanceGroupManagers returns the interface for the ga RegionInstanceGroupManagers.
+func (mock *MockGCE) RegionInstanceGroupManagers() RegionInstanceGroupManagers {
+	return mock.MockRegionInstanceGroupManagers
 }
 
 // InstanceTemplates returns the interface for the ga InstanceTemplates.
@@ -2249,6 +2265,26 @@ func (m *MockRegionHealthChecksObj) ToGA() *ga.HealthCheck {
 	ret := &ga.HealthCheck{}
 	if err := copyViaJSON(ret, m.Obj); err != nil {
 		klog.Errorf("Could not convert %T to *ga.HealthCheck via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// MockRegionInstanceGroupManagersObj is used to store the various object versions in the shared
+// map of mocked objects. This allows for multiple API versions to co-exist and
+// share the same "view" of the objects in the backend.
+type MockRegionInstanceGroupManagersObj struct {
+	Obj interface{}
+}
+
+// ToGA retrieves the given version of the object.
+func (m *MockRegionInstanceGroupManagersObj) ToGA() *ga.InstanceGroupManager {
+	if ret, ok := m.Obj.(*ga.InstanceGroupManager); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &ga.InstanceGroupManager{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *ga.InstanceGroupManager via JSON: %v", m.Obj, err)
 	}
 	return ret
 }
@@ -18493,6 +18529,433 @@ func (g *GCEInstanceGroupManagers) SetInstanceTemplate(ctx context.Context, key 
 	}
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCEInstanceGroupManagers.SetInstanceTemplate(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// RegionInstanceGroupManagers is an interface that allows for mocking of RegionInstanceGroupManagers.
+type RegionInstanceGroupManagers interface {
+	Get(ctx context.Context, key *meta.Key) (*ga.InstanceGroupManager, error)
+	Insert(ctx context.Context, key *meta.Key, obj *ga.InstanceGroupManager) error
+	Delete(ctx context.Context, key *meta.Key) error
+	CreateInstances(context.Context, *meta.Key, *ga.RegionInstanceGroupManagersCreateInstancesRequest) error
+	DeleteInstances(context.Context, *meta.Key, *ga.RegionInstanceGroupManagersDeleteInstancesRequest) error
+	Resize(context.Context, *meta.Key, int64) error
+	SetInstanceTemplate(context.Context, *meta.Key, *ga.RegionInstanceGroupManagersSetTemplateRequest) error
+}
+
+// NewMockRegionInstanceGroupManagers returns a new mock for RegionInstanceGroupManagers.
+func NewMockRegionInstanceGroupManagers(pr ProjectRouter, objs map[meta.Key]*MockRegionInstanceGroupManagersObj) *MockRegionInstanceGroupManagers {
+	mock := &MockRegionInstanceGroupManagers{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockRegionInstanceGroupManagers is the mock for RegionInstanceGroupManagers.
+type MockRegionInstanceGroupManagers struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockRegionInstanceGroupManagersObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook                 func(ctx context.Context, key *meta.Key, m *MockRegionInstanceGroupManagers) (bool, *ga.InstanceGroupManager, error)
+	InsertHook              func(ctx context.Context, key *meta.Key, obj *ga.InstanceGroupManager, m *MockRegionInstanceGroupManagers) (bool, error)
+	DeleteHook              func(ctx context.Context, key *meta.Key, m *MockRegionInstanceGroupManagers) (bool, error)
+	CreateInstancesHook     func(context.Context, *meta.Key, *ga.RegionInstanceGroupManagersCreateInstancesRequest, *MockRegionInstanceGroupManagers) error
+	DeleteInstancesHook     func(context.Context, *meta.Key, *ga.RegionInstanceGroupManagersDeleteInstancesRequest, *MockRegionInstanceGroupManagers) error
+	ResizeHook              func(context.Context, *meta.Key, int64, *MockRegionInstanceGroupManagers) error
+	SetInstanceTemplateHook func(context.Context, *meta.Key, *ga.RegionInstanceGroupManagersSetTemplateRequest, *MockRegionInstanceGroupManagers) error
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockRegionInstanceGroupManagers) Get(ctx context.Context, key *meta.Key) (*ga.InstanceGroupManager, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockRegionInstanceGroupManagers.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockRegionInstanceGroupManagers.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToGA()
+		klog.V(5).Infof("MockRegionInstanceGroupManagers.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockRegionInstanceGroupManagers %v not found", key),
+	}
+	klog.V(5).Infof("MockRegionInstanceGroupManagers.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockRegionInstanceGroupManagers) Insert(ctx context.Context, key *meta.Key, obj *ga.InstanceGroupManager) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockRegionInstanceGroupManagers.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockRegionInstanceGroupManagers.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockRegionInstanceGroupManagers %v exists", key),
+		}
+		klog.V(5).Infof("MockRegionInstanceGroupManagers.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "RegionInstanceGroupManagers")
+	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "RegionInstanceGroupManagers", key)
+
+	m.Objects[*key] = &MockRegionInstanceGroupManagersObj{obj}
+	klog.V(5).Infof("MockRegionInstanceGroupManagers.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockRegionInstanceGroupManagers) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockRegionInstanceGroupManagers.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockRegionInstanceGroupManagers.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockRegionInstanceGroupManagers %v not found", key),
+		}
+		klog.V(5).Infof("MockRegionInstanceGroupManagers.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockRegionInstanceGroupManagers.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockRegionInstanceGroupManagers) Obj(o *ga.InstanceGroupManager) *MockRegionInstanceGroupManagersObj {
+	return &MockRegionInstanceGroupManagersObj{o}
+}
+
+// CreateInstances is a mock for the corresponding method.
+func (m *MockRegionInstanceGroupManagers) CreateInstances(ctx context.Context, key *meta.Key, arg0 *ga.RegionInstanceGroupManagersCreateInstancesRequest) error {
+	if m.CreateInstancesHook != nil {
+		return m.CreateInstancesHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// DeleteInstances is a mock for the corresponding method.
+func (m *MockRegionInstanceGroupManagers) DeleteInstances(ctx context.Context, key *meta.Key, arg0 *ga.RegionInstanceGroupManagersDeleteInstancesRequest) error {
+	if m.DeleteInstancesHook != nil {
+		return m.DeleteInstancesHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// Resize is a mock for the corresponding method.
+func (m *MockRegionInstanceGroupManagers) Resize(ctx context.Context, key *meta.Key, arg0 int64) error {
+	if m.ResizeHook != nil {
+		return m.ResizeHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// SetInstanceTemplate is a mock for the corresponding method.
+func (m *MockRegionInstanceGroupManagers) SetInstanceTemplate(ctx context.Context, key *meta.Key, arg0 *ga.RegionInstanceGroupManagersSetTemplateRequest) error {
+	if m.SetInstanceTemplateHook != nil {
+		return m.SetInstanceTemplateHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// GCERegionInstanceGroupManagers is a simplifying adapter for the GCE RegionInstanceGroupManagers.
+type GCERegionInstanceGroupManagers struct {
+	s *Service
+}
+
+// Get the InstanceGroupManager named by key.
+func (g *GCERegionInstanceGroupManagers) Get(ctx context.Context, key *meta.Key) (*ga.InstanceGroupManager, error) {
+	klog.V(5).Infof("GCERegionInstanceGroupManagers.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCERegionInstanceGroupManagers.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionInstanceGroupManagers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("ga"),
+		Service:   "RegionInstanceGroupManagers",
+	}
+	klog.V(5).Infof("GCERegionInstanceGroupManagers.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCERegionInstanceGroupManagers.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.GA.RegionInstanceGroupManagers.Get(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCERegionInstanceGroupManagers.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	return v, err
+}
+
+// Insert InstanceGroupManager with key of value obj.
+func (g *GCERegionInstanceGroupManagers) Insert(ctx context.Context, key *meta.Key, obj *ga.InstanceGroupManager) error {
+	klog.V(5).Infof("GCERegionInstanceGroupManagers.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCERegionInstanceGroupManagers.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionInstanceGroupManagers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("ga"),
+		Service:   "RegionInstanceGroupManagers",
+	}
+	klog.V(5).Infof("GCERegionInstanceGroupManagers.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCERegionInstanceGroupManagers.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.GA.RegionInstanceGroupManagers.Insert(projectID, key.Region, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCERegionInstanceGroupManagers.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCERegionInstanceGroupManagers.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the InstanceGroupManager referenced by key.
+func (g *GCERegionInstanceGroupManagers) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCERegionInstanceGroupManagers.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCERegionInstanceGroupManagers.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionInstanceGroupManagers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("ga"),
+		Service:   "RegionInstanceGroupManagers",
+	}
+	klog.V(5).Infof("GCERegionInstanceGroupManagers.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCERegionInstanceGroupManagers.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.RegionInstanceGroupManagers.Delete(projectID, key.Region, key.Name)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCERegionInstanceGroupManagers.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCERegionInstanceGroupManagers.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// CreateInstances is a method on GCERegionInstanceGroupManagers.
+func (g *GCERegionInstanceGroupManagers) CreateInstances(ctx context.Context, key *meta.Key, arg0 *ga.RegionInstanceGroupManagersCreateInstancesRequest) error {
+	klog.V(5).Infof("GCERegionInstanceGroupManagers.CreateInstances(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCERegionInstanceGroupManagers.CreateInstances(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionInstanceGroupManagers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "CreateInstances",
+		Version:   meta.Version("ga"),
+		Service:   "RegionInstanceGroupManagers",
+	}
+	klog.V(5).Infof("GCERegionInstanceGroupManagers.CreateInstances(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCERegionInstanceGroupManagers.CreateInstances(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.RegionInstanceGroupManagers.CreateInstances(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCERegionInstanceGroupManagers.CreateInstances(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCERegionInstanceGroupManagers.CreateInstances(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// DeleteInstances is a method on GCERegionInstanceGroupManagers.
+func (g *GCERegionInstanceGroupManagers) DeleteInstances(ctx context.Context, key *meta.Key, arg0 *ga.RegionInstanceGroupManagersDeleteInstancesRequest) error {
+	klog.V(5).Infof("GCERegionInstanceGroupManagers.DeleteInstances(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCERegionInstanceGroupManagers.DeleteInstances(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionInstanceGroupManagers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "DeleteInstances",
+		Version:   meta.Version("ga"),
+		Service:   "RegionInstanceGroupManagers",
+	}
+	klog.V(5).Infof("GCERegionInstanceGroupManagers.DeleteInstances(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCERegionInstanceGroupManagers.DeleteInstances(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.RegionInstanceGroupManagers.DeleteInstances(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCERegionInstanceGroupManagers.DeleteInstances(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCERegionInstanceGroupManagers.DeleteInstances(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// Resize is a method on GCERegionInstanceGroupManagers.
+func (g *GCERegionInstanceGroupManagers) Resize(ctx context.Context, key *meta.Key, arg0 int64) error {
+	klog.V(5).Infof("GCERegionInstanceGroupManagers.Resize(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCERegionInstanceGroupManagers.Resize(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionInstanceGroupManagers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Resize",
+		Version:   meta.Version("ga"),
+		Service:   "RegionInstanceGroupManagers",
+	}
+	klog.V(5).Infof("GCERegionInstanceGroupManagers.Resize(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCERegionInstanceGroupManagers.Resize(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.RegionInstanceGroupManagers.Resize(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCERegionInstanceGroupManagers.Resize(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCERegionInstanceGroupManagers.Resize(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// SetInstanceTemplate is a method on GCERegionInstanceGroupManagers.
+func (g *GCERegionInstanceGroupManagers) SetInstanceTemplate(ctx context.Context, key *meta.Key, arg0 *ga.RegionInstanceGroupManagersSetTemplateRequest) error {
+	klog.V(5).Infof("GCERegionInstanceGroupManagers.SetInstanceTemplate(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCERegionInstanceGroupManagers.SetInstanceTemplate(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionInstanceGroupManagers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "SetInstanceTemplate",
+		Version:   meta.Version("ga"),
+		Service:   "RegionInstanceGroupManagers",
+	}
+	klog.V(5).Infof("GCERegionInstanceGroupManagers.SetInstanceTemplate(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCERegionInstanceGroupManagers.SetInstanceTemplate(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.RegionInstanceGroupManagers.SetInstanceTemplate(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	if err != nil {
+		klog.V(4).Infof("GCERegionInstanceGroupManagers.SetInstanceTemplate(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCERegionInstanceGroupManagers.SetInstanceTemplate(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
 
@@ -41266,6 +41729,12 @@ func NewRegionDisksResourceID(project, region, name string) *ResourceID {
 func NewRegionHealthChecksResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
 	return &ResourceID{project, "healthChecks", key}
+}
+
+// NewRegionInstanceGroupManagersResourceID creates a ResourceID for the RegionInstanceGroupManagers resource.
+func NewRegionInstanceGroupManagersResourceID(project, region, name string) *ResourceID {
+	key := meta.RegionalKey(name, region)
+	return &ResourceID{project, "RegionInstanceGroupManagers", key}
 }
 
 // NewRegionNetworkFirewallPoliciesResourceID creates a ResourceID for the RegionNetworkFirewallPolicies resource.

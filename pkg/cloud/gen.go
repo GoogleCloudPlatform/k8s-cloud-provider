@@ -18537,6 +18537,7 @@ type RegionInstanceGroupManagers interface {
 	Get(ctx context.Context, key *meta.Key) (*ga.InstanceGroupManager, error)
 	Insert(ctx context.Context, key *meta.Key, obj *ga.InstanceGroupManager) error
 	Delete(ctx context.Context, key *meta.Key) error
+	ListManagedInstances(ctx context.Context, region string, instanceGroupManager string, fl *filter.F) ([]*ga.ManagedInstance, error)
 	CreateInstances(context.Context, *meta.Key, *ga.RegionInstanceGroupManagersCreateInstancesRequest) error
 	DeleteInstances(context.Context, *meta.Key, *ga.RegionInstanceGroupManagersDeleteInstancesRequest) error
 	Resize(context.Context, *meta.Key, int64) error
@@ -18556,6 +18557,23 @@ func NewMockRegionInstanceGroupManagers(pr ProjectRouter, objs map[meta.Key]*Moc
 	return mock
 }
 
+type MockManagedInstanceObj struct {
+	Obj interface{}
+}
+
+// ToGA retrieves the given version of the object.
+func (m *MockManagedInstanceObj) ToGA() *ga.ManagedInstance {
+	if ret, ok := m.Obj.(*ga.ManagedInstance); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &ga.ManagedInstance{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *ga.ManagedInstance via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
 // MockRegionInstanceGroupManagers is the mock for RegionInstanceGroupManagers.
 type MockRegionInstanceGroupManagers struct {
 	Lock sync.Mutex
@@ -18563,25 +18581,28 @@ type MockRegionInstanceGroupManagers struct {
 	ProjectRouter ProjectRouter
 
 	// Objects maintained by the mock.
-	Objects map[meta.Key]*MockRegionInstanceGroupManagersObj
+	Objects                map[meta.Key]*MockRegionInstanceGroupManagersObj
+	ManagedInstanceObjects map[meta.Key]*MockManagedInstanceObj
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
-	GetError    map[meta.Key]error
-	InsertError map[meta.Key]error
-	DeleteError map[meta.Key]error
+	GetError                  map[meta.Key]error
+	InsertError               map[meta.Key]error
+	DeleteError               map[meta.Key]error
+	ListManagedInstancesError *error
 
 	// xxxHook allow you to intercept the standard processing of the mock in
 	// order to add your own logic. Return (true, _, _) to prevent the normal
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
-	GetHook                 func(ctx context.Context, key *meta.Key, m *MockRegionInstanceGroupManagers) (bool, *ga.InstanceGroupManager, error)
-	InsertHook              func(ctx context.Context, key *meta.Key, obj *ga.InstanceGroupManager, m *MockRegionInstanceGroupManagers) (bool, error)
-	DeleteHook              func(ctx context.Context, key *meta.Key, m *MockRegionInstanceGroupManagers) (bool, error)
-	CreateInstancesHook     func(context.Context, *meta.Key, *ga.RegionInstanceGroupManagersCreateInstancesRequest, *MockRegionInstanceGroupManagers) error
-	DeleteInstancesHook     func(context.Context, *meta.Key, *ga.RegionInstanceGroupManagersDeleteInstancesRequest, *MockRegionInstanceGroupManagers) error
-	ResizeHook              func(context.Context, *meta.Key, int64, *MockRegionInstanceGroupManagers) error
-	SetInstanceTemplateHook func(context.Context, *meta.Key, *ga.RegionInstanceGroupManagersSetTemplateRequest, *MockRegionInstanceGroupManagers) error
+	GetHook                  func(ctx context.Context, key *meta.Key, m *MockRegionInstanceGroupManagers) (bool, *ga.InstanceGroupManager, error)
+	InsertHook               func(ctx context.Context, key *meta.Key, obj *ga.InstanceGroupManager, m *MockRegionInstanceGroupManagers) (bool, error)
+	DeleteHook               func(ctx context.Context, key *meta.Key, m *MockRegionInstanceGroupManagers) (bool, error)
+	ListManagedInstancesHook func(ctx context.Context, region string, instanceGroupManager string, fl *filter.F, m *MockRegionInstanceGroupManagers) (bool, []*ga.ManagedInstance, error)
+	CreateInstancesHook      func(context.Context, *meta.Key, *ga.RegionInstanceGroupManagersCreateInstancesRequest, *MockRegionInstanceGroupManagers) error
+	DeleteInstancesHook      func(context.Context, *meta.Key, *ga.RegionInstanceGroupManagersDeleteInstancesRequest, *MockRegionInstanceGroupManagers) error
+	ResizeHook               func(context.Context, *meta.Key, int64, *MockRegionInstanceGroupManagers) error
+	SetInstanceTemplateHook  func(context.Context, *meta.Key, *ga.RegionInstanceGroupManagersSetTemplateRequest, *MockRegionInstanceGroupManagers) error
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -18689,6 +18710,39 @@ func (m *MockRegionInstanceGroupManagers) Delete(ctx context.Context, key *meta.
 	delete(m.Objects, *key)
 	klog.V(5).Infof("MockRegionInstanceGroupManagers.Delete(%v, %v) = nil", ctx, key)
 	return nil
+}
+
+// List all of the objects in the mock.
+func (m *MockRegionInstanceGroupManagers) ListManagedInstances(ctx context.Context, region string, instanceGroupManager string, fl *filter.F) ([]*ga.ManagedInstance, error) {
+	if m.ListManagedInstancesHook != nil {
+		if intercept, objs, err := m.ListManagedInstancesHook(ctx, region, instanceGroupManager, fl, m); intercept {
+			klog.V(5).Infof("MockRegionInstanceGroupManagers.ListManagedInstances(%v, %q, %v, %v) = [%v items], %v", ctx, region, instanceGroupManager, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListManagedInstancesError != nil {
+		err := *m.ListManagedInstancesError
+		klog.V(5).Infof("MockRegionInstanceGroupManagers.ListManagedInstances(%v, %q, %v, %v) = nil, %v", ctx, region, instanceGroupManager, fl, err)
+		return nil, *m.ListManagedInstancesError
+	}
+
+	var objs []*ga.ManagedInstance
+
+	for key, obj := range m.ManagedInstanceObjects {
+		if key.Region != region {
+			continue
+		}
+		if !fl.Match(obj.ToGA()) {
+			continue
+		}
+		objs = append(objs, obj.ToGA())
+	}
+	klog.V(5).Infof("MockRegionInstanceGroupManagers.ListManagedInstances(%v, %q, %v, %v) = [%v items], nil", ctx, region, instanceGroupManager, fl, len(objs))
+	return objs, nil
 }
 
 // Obj wraps the object for use in the mock.
@@ -18825,6 +18879,50 @@ func (g *GCERegionInstanceGroupManagers) Delete(ctx context.Context, key *meta.K
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCERegionInstanceGroupManagers.Delete(%v, %v) = %v", ctx, key, err)
 	return err
+}
+
+// ListManagedInstances all InstanceGroupManager objects.
+func (g *GCERegionInstanceGroupManagers) ListManagedInstances(ctx context.Context, region string, instanceGroupManager string, fl *filter.F) ([]*ga.ManagedInstance, error) {
+	klog.V(5).Infof("GCERegionInstanceGroupManagers.ListManagedInstances(%v, %v, %v, %v) called", ctx, region, instanceGroupManager, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionInstanceGroupManagers")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "ListManagedInstances",
+		Version:   meta.Version("ga"),
+		Service:   "RegionInstanceGroupManagers",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCERegionInstanceGroupManagers.ListManagedInstances(%v, %v, %v, %v): projectID = %v, rk = %+v", ctx, region, instanceGroupManager, fl, projectID, rk)
+	call := g.s.GA.RegionInstanceGroupManagers.ListManagedInstances(projectID, region, instanceGroupManager)
+
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+
+	var all []*ga.ManagedInstance
+	f := func(l *ga.RegionInstanceGroupManagersListInstancesResponse) error {
+		klog.V(5).Infof("GCERegionInstanceGroupManagers.ListManagedInstances(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.ManagedInstances...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("GCERegionInstanceGroupManagers.ListManagedInstances(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("GCERegionInstanceGroupManagers.ListManagedInstances(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCERegionInstanceGroupManagers.ListManagedInstances(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
 }
 
 // CreateInstances is a method on GCERegionInstanceGroupManagers.

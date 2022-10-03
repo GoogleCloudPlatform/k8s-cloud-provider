@@ -44,6 +44,8 @@ const (
 	AggregatedList = 1 << iota
 	// ListUsable will generate a method for ListUsable().
 	ListUsable = 1 << iota
+	// ListManagedInstances will generate a method for ListManagedInstances().
+	ListManagedInstances = 1 << iota
 
 	// ReadOnly specifies that the given resource is read-only and should not
 	// have insert() or delete() methods generated for the wrapper.
@@ -485,7 +487,8 @@ var AllServices = []*ServiceInfo{
 		Resource:    "RegionInstanceGroupManagers",
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&ga.RegionInstanceGroupManagersService{}),
-		options:     NoList,
+		options:     NoList | ListManagedInstances,
+		version:     VersionGA,
 		additionalMethods: []string{
 			"CreateInstances",
 			"DeleteInstances",

@@ -109,6 +109,16 @@ func (i *ServiceInfo) FQListUsableObjectType() string {
 	return fmt.Sprintf("%v.Usable%v", i.Version(), i.Object)
 }
 
+// ObjectListManagedInstancesType is the compute List type for the object (contains ManagedInstances field).
+func (i *ServiceInfo) ObjectListManagedInstancesType() string {
+	return fmt.Sprintf("%v.%vListInstancesResponse", i.version, i.Service)
+}
+
+// FQListManagedInstancesObjectType is fully qualified name of the object (e.g. compute.Instance).
+func (i *ServiceInfo) FQListManagedInstancesObjectType() string {
+	return fmt.Sprintf("%v.%v", i.Version(), "ManagedInstance")
+}
+
 // MockWrapType is the name of the concrete mock for this type.
 func (i *ServiceInfo) MockWrapType() string {
 	return "Mock" + i.WrapType()
@@ -233,6 +243,10 @@ func (i *ServiceInfo) AggregatedListField() string {
 
 func (i *ServiceInfo) ListUsable() bool {
 	return i.options&ListUsable != 0
+}
+
+func (i *ServiceInfo) ListManagedInstances() bool {
+	return i.options&ListManagedInstances != 0
 }
 
 // ServiceGroup is a grouping of the same service but at different API versions.

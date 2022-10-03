@@ -219,7 +219,10 @@ func (m *Method) init() {
 			listType := out0.Elem()
 			itemsField, ok := listType.FieldByName("Items")
 			if !ok {
-				panic(fmt.Errorf("method %q.%q: paged return type %q does not have a .Items field", m.Service, m.Name(), listType.Name()))
+				itemsField, ok = listType.FieldByName("ManagedInstances")
+				if !ok {
+					panic(fmt.Errorf("method %q.%q: paged return type %q does not have a .Items or a .ManagedInstances field", m.Service, m.Name(), listType.Name()))
+				}
 			}
 			// itemsField will be a []*ItemType. Dereference to
 			// extract the ItemType.

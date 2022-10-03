@@ -17,7 +17,7 @@ limitations under the License.
 // Generator for GCE compute wrapper code. You must regenerate the code after
 // modifying this file:
 //
-//   $ go run gen/main.go > gen.go
+//	$ go run gen/main.go > gen.go
 package main
 
 import (
@@ -300,6 +300,9 @@ type {{.WrapType}} interface {
 {{- if .ListUsable}}
 	ListUsable(ctx context.Context, fl *filter.F) ([]*{{.FQListUsableObjectType}}, error)
 {{- end}}
+{{- if .ListManagedInstances}}
+	ListManagedInstances(ctx context.Context, region string, instanceGroupManager string, fl *filter.F) ([]*{{.FQListManagedInstancesObjectType}}, error)
+{{- end}}
 {{- with .Methods -}}
 {{- range .}}
 	{{.InterfaceFunc}}
@@ -326,6 +329,25 @@ func New{{.MockWrapType}}(pr ProjectRouter, objs map[meta.Key]*Mock{{.Service}}O
 	return mock
 }
 
+{{- if .ListManagedInstances}}
+type MockManagedInstanceObj struct {
+	Obj interface{}
+}
+
+// ToGA retrieves the given version of the object.
+func (m *MockManagedInstanceObj) ToGA() *{{.FQListManagedInstancesObjectType}} {
+	if ret, ok := m.Obj.(*{{.FQListManagedInstancesObjectType}}); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &{{.FQListManagedInstancesObjectType}}{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *{{.FQListManagedInstancesObjectType}} via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+{{- end}}
+
 // {{.MockWrapType}} is the mock for {{.Service}}.
 type {{.MockWrapType}} struct {
 	Lock sync.Mutex
@@ -334,6 +356,10 @@ type {{.MockWrapType}} struct {
 
 	// Objects maintained by the mock.
 	Objects map[meta.Key]*Mock{{.Service}}Obj
+	{{- if .ListManagedInstances}}
+	ManagedInstanceObjects map[meta.Key]*MockManagedInstanceObj
+	{{- end}}
+
 
 	// If an entry exists for the given key and operation, then the error
 	// will be returned instead of the operation.
@@ -354,6 +380,9 @@ type {{.MockWrapType}} struct {
 	{{- end}}
 	{{- if .ListUsable}}
 	ListUsableError *error
+	{{- end}}
+	{{- if .ListManagedInstances}}
+	ListManagedInstancesError *error
 	{{- end}}
 
 	// xxxHook allow you to intercept the standard processing of the mock in
@@ -385,6 +414,9 @@ type {{.MockWrapType}} struct {
 	{{- end}}
 	{{- if .ListUsable}}
 	ListUsableHook   func(ctx context.Context, fl *filter.F, m *{{.MockWrapType}}) (bool, []*{{.FQListUsableObjectType}}, error)
+	{{- end}}
+	{{- if .ListManagedInstances}}
+	ListManagedInstancesHook   func(ctx context.Context, region string, instanceGroupManager string, fl *filter.F, m *{{.MockWrapType}}) (bool, []*{{.FQListManagedInstancesObjectType}}, error)
 	{{- end}}
 
 {{- with .Methods -}}
@@ -661,6 +693,41 @@ func (m *{{.MockWrapType}}) ListUsable(ctx context.Context, fl *filter.F) ([]*{{
 		objs = append(objs, dest)
 	}
   klog.V(5).Infof("{{.MockWrapType}}.ListUsable(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+{{- end}}
+
+{{- if .ListManagedInstances}}
+// List all of the objects in the mock.
+func (m *{{.MockWrapType}}) ListManagedInstances(ctx context.Context, region string, instanceGroupManager string, fl *filter.F) ([]*{{.FQListManagedInstancesObjectType}}, error) {
+	if m.ListManagedInstancesHook != nil {
+		if intercept, objs, err := m.ListManagedInstancesHook(ctx, region, instanceGroupManager, fl, m);  intercept {
+			klog.V(5).Infof("{{.MockWrapType}}.ListManagedInstances(%v, %q, %v, %v) = [%v items], %v", ctx, region, instanceGroupManager, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListManagedInstancesError != nil {
+		err := *m.ListManagedInstancesError
+		klog.V(5).Infof("{{.MockWrapType}}.ListManagedInstances(%v, %q, %v, %v) = nil, %v", ctx, region, instanceGroupManager, fl, err)
+		return nil, *m.ListManagedInstancesError
+	}
+
+	var objs []*{{.FQListManagedInstancesObjectType}}
+
+	for key, obj := range m.ManagedInstanceObjects {
+		if key.Region != region {
+			continue
+		}
+		if !fl.Match(obj.To{{.VersionTitle}}()) {
+			continue
+		}
+		objs = append(objs, obj.To{{.VersionTitle}}())
+	}
+	klog.V(5).Infof("{{.MockWrapType}}.ListManagedInstances(%v, %q, %v, %v) = [%v items], nil", ctx, region, instanceGroupManager, fl, len(objs))
 	return objs, nil
 }
 {{- end}}
@@ -974,6 +1041,53 @@ func (g *{{.GCEWrapType}}) ListUsable(ctx context.Context, fl *filter.F) ([]*{{.
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
 		}
 		klog.V(5).Infof("{{.GCEWrapType}}.ListUsable(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+{{- end}}
+
+
+{{- if .ListManagedInstances}}
+// ListManagedInstances all {{.Object}} objects.
+func (g *{{.GCEWrapType}}) ListManagedInstances(ctx context.Context, region string, instanceGroupManager string, fl *filter.F) ([]*{{.FQListManagedInstancesObjectType}}, error) {
+	klog.V(5).Infof("{{.GCEWrapType}}.ListManagedInstances(%v, %v, %v, %v) called", ctx, region, instanceGroupManager, fl)
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Service}}")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "ListManagedInstances",
+		Version: meta.Version("{{.Version}}"),
+		Service: "{{.Service}}",
+	}
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("{{.GCEWrapType}}.ListManagedInstances(%v, %v, %v, %v): projectID = %v, rk = %+v", ctx, region, instanceGroupManager, fl, projectID, rk)
+	call := g.s.{{.VersionTitle}}.{{.Service}}.ListManagedInstances(projectID, region, instanceGroupManager)
+
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+
+	var all []*{{.FQListManagedInstancesObjectType}}
+	f := func(l *{{.ObjectListManagedInstancesType}}) error {
+		klog.V(5).Infof("{{.GCEWrapType}}.ListManagedInstances(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.ManagedInstances...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		klog.V(4).Infof("{{.GCEWrapType}}.ListManagedInstances(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	if klog.V(4).Enabled() {
+		klog.V(4).Infof("{{.GCEWrapType}}.ListManagedInstances(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if klog.V(5).Enabled() {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("{{.GCEWrapType}}.ListManagedInstances(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
 	}
 
 	return all, nil

@@ -17,7 +17,7 @@ limitations under the License.
 // Generator for GCE compute wrapper code. You must regenerate the code after
 // modifying this file:
 //
-//   $ go run gen/main.go > gen.go
+//	$ go run gen/main.go > gen.go
 package main
 
 import (
@@ -731,6 +731,7 @@ func (g *{{.GCEWrapType}}) Get(ctx context.Context, key *meta.Key) (*{{.FQObject
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("{{.GCEWrapType}}.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+	g.s.RateLimiter.Observe(ctx, err, rk)
 	return v, err
 }
 {{- end}}
@@ -781,10 +782,12 @@ func (g *{{.GCEWrapType}}) List(ctx context.Context, zone string, fl *filter.F) 
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
+		g.s.RateLimiter.Observe(ctx, err, rk)
 		klog.V(4).Infof("{{.GCEWrapType}}.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
+	g.s.RateLimiter.Observe(ctx, nil, rk)
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("{{.GCEWrapType}}.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -832,6 +835,7 @@ func (g *{{.GCEWrapType}}) Insert(ctx context.Context, key *meta.Key, obj *{{.FQ
 	call.Context(ctx)
 
 	op, err := call.Do()
+	g.s.RateLimiter.Observe(ctx, err, rk)
 	if err != nil {
 		klog.V(4).Infof("{{.GCEWrapType}}.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -875,6 +879,7 @@ func (g *{{.GCEWrapType}}) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
+	g.s.RateLimiter.Observe(ctx, err, rk)
 	if err != nil {
 		klog.V(4).Infof("{{.GCEWrapType}}.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -920,6 +925,7 @@ func (g *{{.GCEWrapType}}) AggregatedList(ctx context.Context, fl *filter.F) (ma
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
+		g.s.RateLimiter.Observe(ctx, err, rk)
 		klog.V(4).Infof("{{.GCEWrapType}}.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -962,6 +968,7 @@ func (g *{{.GCEWrapType}}) ListUsable(ctx context.Context, fl *filter.F) ([]*{{.
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
+		g.s.RateLimiter.Observe(ctx, err, rk)
 		klog.V(4).Infof("{{.GCEWrapType}}.ListUsable(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -1025,6 +1032,7 @@ func (g *{{.GCEWrapType}}) {{.FcnArgs}} {
 {{- if .IsOperation}}
 	call.Context(ctx)
 	op, err := call.Do()
+	g.s.RateLimiter.Observe(ctx, err, rk)
 	if err != nil {
 		klog.V(4).Infof("{{.GCEWrapType}}.{{.Name}}(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -1035,6 +1043,7 @@ func (g *{{.GCEWrapType}}) {{.FcnArgs}} {
 {{- else if .IsGet}}
 	call.Context(ctx)
 	v, err := call.Do()
+	g.s.RateLimiter.Observe(ctx, err, rk)
 	klog.V(4).Infof("{{.GCEWrapType}}.{{.Name}}(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 {{- else if .IsPaged}}
@@ -1045,6 +1054,7 @@ func (g *{{.GCEWrapType}}) {{.FcnArgs}} {
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
+		g.s.RateLimiter.Observe(ctx, err, rk)
 		klog.V(4).Infof("{{.GCEWrapType}}.{{.Name}}(%v, %v, ...) = %v, %v", ctx, key, nil, err)
 		return nil, err
 	}

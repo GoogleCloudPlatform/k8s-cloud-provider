@@ -18,9 +18,11 @@ package cloud
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/meta"
+	"k8s.io/apimachinery/pkg/util/clock"
 )
 
 // RateLimitKey is a key identifying the operation to be rate limited. The rate limit
@@ -81,6 +83,49 @@ func (rl *AcceptRateLimiter) Accept(ctx context.Context, _ *RateLimitKey) error 
 
 // Observe does nothing.
 func (rl *AcceptRateLimiter) Observe(context.Context, error, *RateLimitKey) {
+}
+
+// ThrottlingStrategy handles delays based on feedbacks provided.
+type ThrottlingStrategy interface {
+	// Delay returns the delay for next request.
+	Delay() time.Duration
+	// Observe recalculates the next delay based on the feedback.
+	Observe(err error)
+}
+
+// StrategyRateLimiter wraps a ThrottlingStrategy with RateLimiter parameters.
+type StrategyRateLimiter struct {
+	lock sync.Mutex
+	// strategy is the underlying throttling strategy.
+	strategy ThrottlingStrategy
+	
+	clock clock.Clock
+}
+
+// NewStrategyRateLimiter returns a StrategyRateLimiter backed by the provided ThrottlingStrategy.
+func NewStrategyRateLimiter(strategy ThrottlingStrategy) *StrategyRateLimiter {
+	return &StrategyRateLimiter{
+		strategy: strategy,
+		clock:    clock.RealClock{},
+	}
+}
+
+// Accept block for the delay provided by the strategy or until context.Done(). Key is ignored.
+func (rl *StrategyRateLimiter) Accept(ctx context.Context, _ *RateLimitKey) error {
+	rl.lock.Lock()
+	defer rl.lock.Unlock()
+	select {
+	case <-rl.clock.After(rl.strategy.Delay()):
+		break
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	return nil
+}
+
+// Observe pushes error further to the strategy. Key is ignored.
+func (rl *StrategyRateLimiter) Observe(_ context.Context, err error, _ *RateLimitKey) {
+	rl.strategy.Observe(err)
 }
 
 // NopRateLimiter is a rate limiter that performs no rate limiting.

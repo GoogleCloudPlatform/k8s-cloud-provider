@@ -61,6 +61,12 @@ func (r *ResourceID) RelativeResourceName() string {
 	return RelativeResourceName(r.ProjectID, r.Resource, r.Key)
 }
 
+// RelativeResourceNameWithVersion returns the relative resource name string
+// representing this ResourceID with a version.  This is the same as the SelfLink without the api endpoint.
+func (r *ResourceID) RelativeResourceNameWithVersion(ver meta.Version) string {
+	return RelativeResourceNameWithVersion(ver, r.ProjectID, r.Resource, r.Key)
+}
+
 // ResourcePath returns the resource path representing this ResourceID.
 func (r *ResourceID) ResourcePath() string {
 	return ResourcePath(r.Resource, r.Key)
@@ -186,7 +192,24 @@ func RelativeResourceName(project, resource string, key *meta.Key) string {
 	}
 }
 
-// SelfLink returns the self link URL for the given object.
+// RelativeResourceNameWithVersion returns the relative resource name with the version included.
+//  This is the same as the SelfLink without the api endpoint.
+func RelativeResourceNameWithVersion(ver meta.Version, project, resource string, key *meta.Key) string {
+	var prefix string
+	switch ver {
+	case meta.VersionAlpha:
+		prefix = "compute/alpha"
+	case meta.VersionBeta:
+		prefix = "compute/beta"
+	case meta.VersionGA:
+		prefix = "compute/v1"
+	default:
+		prefix = "invalid-prefix"
+	}
+	return fmt.Sprintf("%s/%s", prefix, RelativeResourceName(project, resource, key))
+}
+
+// SelfLink returns the googleapis self link URL for the given object.
 func SelfLink(ver meta.Version, project, resource string, key *meta.Key) string {
 	var prefix string
 	switch ver {
@@ -201,7 +224,6 @@ func SelfLink(ver meta.Version, project, resource string, key *meta.Key) string 
 	}
 
 	return fmt.Sprintf("%s/%s", prefix, RelativeResourceName(project, resource, key))
-
 }
 
 // aggregatedListKey return the aggregated list key based on the resource key.

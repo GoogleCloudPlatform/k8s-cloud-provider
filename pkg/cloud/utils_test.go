@@ -46,7 +46,6 @@ func TestEqualResourceID(t *testing.T) {
 			a: nil,
 			b: nil,
 		},
-
 	} {
 		if !tc.a.Equal(tc.b) {
 			t.Errorf("%v.Equal(%v) = false, want true", tc.a, tc.b)
@@ -163,7 +162,6 @@ func TestParseResourceURL(t *testing.T) {
 			"https://compute.googleapis.com/compute/v1/projects/some-gce-project/regions/us-central1/backendServices/bs1",
 			&ResourceID{"some-gce-project", "backendServices", meta.RegionalKey("bs1", "us-central1")},
 		},
-		
 	} {
 		r, err := ParseResourceURL(tc.in)
 		if err != nil {
@@ -299,6 +297,65 @@ func TestSelfLink(t *testing.T) {
 		},
 	} {
 		if link := SelfLink(tc.ver, tc.project, tc.resource, tc.key); link != tc.want {
+			t.Errorf("SelfLink(%v, %q, %q, %v) = %v, want %q", tc.ver, tc.project, tc.resource, tc.key, link, tc.want)
+		}
+	}
+}
+
+func TestRelativeResourceNameWithVersion(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		ver      meta.Version
+		project  string
+		resource string
+		key      *meta.Key
+		want     string
+	}{
+		{
+			meta.VersionAlpha,
+			"proj1",
+			"addresses",
+			meta.RegionalKey("key1", "us-central1"),
+			"compute/alpha/projects/proj1/regions/us-central1/addresses/key1",
+		},
+		{
+			meta.VersionBeta,
+			"proj3",
+			"disks",
+			meta.ZonalKey("key2", "us-central1-b"),
+			"compute/beta/projects/proj3/zones/us-central1-b/disks/key2",
+		},
+		{
+			meta.VersionGA,
+			"proj4",
+			"urlMaps",
+			meta.GlobalKey("key3"),
+			"compute/v1/projects/proj4/global/urlMaps/key3",
+		},
+		{
+			meta.VersionGA,
+			"proj4",
+			"projects",
+			nil,
+			"compute/v1/projects/proj4",
+		},
+		{
+			meta.VersionGA,
+			"proj4",
+			"regions",
+			meta.GlobalKey("us-central1"),
+			"compute/v1/projects/proj4/regions/us-central1",
+		},
+		{
+			meta.VersionGA,
+			"proj4",
+			"zones",
+			meta.GlobalKey("us-central1-a"),
+			"compute/v1/projects/proj4/zones/us-central1-a",
+		},
+	} {
+		if link := RelativeResourceNameWithVersion(tc.ver, tc.project, tc.resource, tc.key); link != tc.want {
 			t.Errorf("SelfLink(%v, %q, %q, %v) = %v, want %q", tc.ver, tc.project, tc.resource, tc.key, link, tc.want)
 		}
 	}

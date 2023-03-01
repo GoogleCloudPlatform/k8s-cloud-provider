@@ -45,6 +45,9 @@ type RateLimiter interface {
 	// Accept returns an error if the given context ctx was canceled
 	// while waiting for acceptance into the queue.
 	Accept(ctx context.Context, key *RateLimitKey) error
+	// Observe uses the RateLimitKey to handle response results, which may affect
+	// the sleep time for the Accept function.
+	Observe(ctx context.Context, err error, key *RateLimitKey)
 }
 
 // acceptor is an object which blocks within Accept until a call is allowed to run.
@@ -61,7 +64,7 @@ type AcceptRateLimiter struct {
 }
 
 // Accept wraps an Acceptor and blocks on Accept or context.Done(). Key is ignored.
-func (rl *AcceptRateLimiter) Accept(ctx context.Context, key *RateLimitKey) error {
+func (rl *AcceptRateLimiter) Accept(ctx context.Context, _ *RateLimitKey) error {
 	ch := make(chan struct{})
 	go func() {
 		rl.Acceptor.Accept()
@@ -76,13 +79,21 @@ func (rl *AcceptRateLimiter) Accept(ctx context.Context, key *RateLimitKey) erro
 	return nil
 }
 
+// Observe does nothing.
+func (rl *AcceptRateLimiter) Observe(context.Context, error, *RateLimitKey) {
+}
+
 // NopRateLimiter is a rate limiter that performs no rate limiting.
 type NopRateLimiter struct {
 }
 
 // Accept everything immediately.
-func (*NopRateLimiter) Accept(ctx context.Context, key *RateLimitKey) error {
+func (*NopRateLimiter) Accept(context.Context, *RateLimitKey) error {
 	return nil
+}
+
+// Observe does nothing.
+func (*NopRateLimiter) Observe(context.Context, error, *RateLimitKey) {
 }
 
 // MinimumRateLimiter wraps a RateLimiter and will only call its Accept until the minimum
@@ -103,4 +114,9 @@ func (m *MinimumRateLimiter) Accept(ctx context.Context, key *RateLimitKey) erro
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+}
+
+// Observe just passes error to the underlying ratelimiter.
+func (m *MinimumRateLimiter) Observe(ctx context.Context, err error, key *RateLimitKey) {
+	m.RateLimiter.Observe(ctx, err, key)
 }

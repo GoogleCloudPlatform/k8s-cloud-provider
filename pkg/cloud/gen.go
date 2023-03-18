@@ -3118,14 +3118,16 @@ func (g *GCEAddresses) Get(ctx context.Context, key *meta.Key) (*ga.Address, err
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Addresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "Addresses",
 	}
-	klog.V(5).Infof("GCEAddresses.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAddresses.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAddresses.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -3133,7 +3135,10 @@ func (g *GCEAddresses) Get(ctx context.Context, key *meta.Key) (*ga.Address, err
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAddresses.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -3141,16 +3146,18 @@ func (g *GCEAddresses) Get(ctx context.Context, key *meta.Key) (*ga.Address, err
 func (g *GCEAddresses) List(ctx context.Context, region string, fl *filter.F) ([]*ga.Address, error) {
 	klog.V(5).Infof("GCEAddresses.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Addresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "Addresses",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAddresses.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEAddresses.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.GA.Addresses.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -3162,12 +3169,16 @@ func (g *GCEAddresses) List(ctx context.Context, region string, fl *filter.F) ([
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAddresses.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAddresses.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -3189,14 +3200,16 @@ func (g *GCEAddresses) Insert(ctx context.Context, key *meta.Key, obj *ga.Addres
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Addresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "Addresses",
 	}
-	klog.V(5).Infof("GCEAddresses.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAddresses.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAddresses.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -3205,7 +3218,10 @@ func (g *GCEAddresses) Insert(ctx context.Context, key *meta.Key, obj *ga.Addres
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAddresses.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -3224,14 +3240,15 @@ func (g *GCEAddresses) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Addresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "Addresses",
 	}
-	klog.V(5).Infof("GCEAddresses.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAddresses.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAddresses.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -3239,7 +3256,10 @@ func (g *GCEAddresses) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAddresses.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -3255,15 +3275,16 @@ func (g *GCEAddresses) AggregatedList(ctx context.Context, fl *filter.F) (map[st
 	klog.V(5).Infof("GCEAddresses.AggregatedList(%v, %v) called", ctx, fl)
 
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Addresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AggregatedList",
 		Version:   meta.Version("ga"),
 		Service:   "Addresses",
 	}
 
-	klog.V(5).Infof("GCEAddresses.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAddresses.AggregatedList(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(5).Infof("GCEAddresses.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
 		return nil, err
 	}
@@ -3283,7 +3304,9 @@ func (g *GCEAddresses) AggregatedList(ctx context.Context, fl *filter.F) (map[st
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAddresses.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -3544,14 +3567,16 @@ func (g *GCEAlphaAddresses) Get(ctx context.Context, key *meta.Key) (*alpha.Addr
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Addresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "Addresses",
 	}
-	klog.V(5).Infof("GCEAlphaAddresses.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaAddresses.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaAddresses.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -3559,7 +3584,10 @@ func (g *GCEAlphaAddresses) Get(ctx context.Context, key *meta.Key) (*alpha.Addr
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaAddresses.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -3567,16 +3595,18 @@ func (g *GCEAlphaAddresses) Get(ctx context.Context, key *meta.Key) (*alpha.Addr
 func (g *GCEAlphaAddresses) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.Address, error) {
 	klog.V(5).Infof("GCEAlphaAddresses.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Addresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "Addresses",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaAddresses.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaAddresses.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Alpha.Addresses.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -3588,12 +3618,16 @@ func (g *GCEAlphaAddresses) List(ctx context.Context, region string, fl *filter.
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaAddresses.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaAddresses.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -3615,14 +3649,16 @@ func (g *GCEAlphaAddresses) Insert(ctx context.Context, key *meta.Key, obj *alph
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Addresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "Addresses",
 	}
-	klog.V(5).Infof("GCEAlphaAddresses.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaAddresses.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaAddresses.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -3631,7 +3667,10 @@ func (g *GCEAlphaAddresses) Insert(ctx context.Context, key *meta.Key, obj *alph
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaAddresses.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -3650,14 +3689,15 @@ func (g *GCEAlphaAddresses) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Addresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "Addresses",
 	}
-	klog.V(5).Infof("GCEAlphaAddresses.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaAddresses.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaAddresses.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -3665,7 +3705,10 @@ func (g *GCEAlphaAddresses) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaAddresses.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -3681,15 +3724,16 @@ func (g *GCEAlphaAddresses) AggregatedList(ctx context.Context, fl *filter.F) (m
 	klog.V(5).Infof("GCEAlphaAddresses.AggregatedList(%v, %v) called", ctx, fl)
 
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Addresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AggregatedList",
 		Version:   meta.Version("alpha"),
 		Service:   "Addresses",
 	}
 
-	klog.V(5).Infof("GCEAlphaAddresses.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaAddresses.AggregatedList(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(5).Infof("GCEAlphaAddresses.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
 		return nil, err
 	}
@@ -3709,7 +3753,9 @@ func (g *GCEAlphaAddresses) AggregatedList(ctx context.Context, fl *filter.F) (m
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaAddresses.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -3970,14 +4016,16 @@ func (g *GCEBetaAddresses) Get(ctx context.Context, key *meta.Key) (*beta.Addres
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Addresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "Addresses",
 	}
-	klog.V(5).Infof("GCEBetaAddresses.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaAddresses.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaAddresses.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -3985,7 +4033,10 @@ func (g *GCEBetaAddresses) Get(ctx context.Context, key *meta.Key) (*beta.Addres
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaAddresses.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -3993,16 +4044,18 @@ func (g *GCEBetaAddresses) Get(ctx context.Context, key *meta.Key) (*beta.Addres
 func (g *GCEBetaAddresses) List(ctx context.Context, region string, fl *filter.F) ([]*beta.Address, error) {
 	klog.V(5).Infof("GCEBetaAddresses.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Addresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "Addresses",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaAddresses.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaAddresses.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Beta.Addresses.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -4014,12 +4067,16 @@ func (g *GCEBetaAddresses) List(ctx context.Context, region string, fl *filter.F
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaAddresses.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaAddresses.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -4041,14 +4098,16 @@ func (g *GCEBetaAddresses) Insert(ctx context.Context, key *meta.Key, obj *beta.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Addresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "Addresses",
 	}
-	klog.V(5).Infof("GCEBetaAddresses.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaAddresses.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaAddresses.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -4057,7 +4116,10 @@ func (g *GCEBetaAddresses) Insert(ctx context.Context, key *meta.Key, obj *beta.
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaAddresses.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -4076,14 +4138,15 @@ func (g *GCEBetaAddresses) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Addresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "Addresses",
 	}
-	klog.V(5).Infof("GCEBetaAddresses.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaAddresses.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaAddresses.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -4091,7 +4154,10 @@ func (g *GCEBetaAddresses) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaAddresses.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -4107,15 +4173,16 @@ func (g *GCEBetaAddresses) AggregatedList(ctx context.Context, fl *filter.F) (ma
 	klog.V(5).Infof("GCEBetaAddresses.AggregatedList(%v, %v) called", ctx, fl)
 
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Addresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AggregatedList",
 		Version:   meta.Version("beta"),
 		Service:   "Addresses",
 	}
 
-	klog.V(5).Infof("GCEBetaAddresses.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaAddresses.AggregatedList(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(5).Infof("GCEBetaAddresses.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
 		return nil, err
 	}
@@ -4135,7 +4202,9 @@ func (g *GCEBetaAddresses) AggregatedList(ctx context.Context, fl *filter.F) (ma
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaAddresses.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -4355,14 +4424,16 @@ func (g *GCEAlphaGlobalAddresses) Get(ctx context.Context, key *meta.Key) (*alph
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalAddresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "GlobalAddresses",
 	}
-	klog.V(5).Infof("GCEAlphaGlobalAddresses.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaGlobalAddresses.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaGlobalAddresses.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -4370,7 +4441,10 @@ func (g *GCEAlphaGlobalAddresses) Get(ctx context.Context, key *meta.Key) (*alph
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaGlobalAddresses.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -4378,16 +4452,18 @@ func (g *GCEAlphaGlobalAddresses) Get(ctx context.Context, key *meta.Key) (*alph
 func (g *GCEAlphaGlobalAddresses) List(ctx context.Context, fl *filter.F) ([]*alpha.Address, error) {
 	klog.V(5).Infof("GCEAlphaGlobalAddresses.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalAddresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "GlobalAddresses",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaGlobalAddresses.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaGlobalAddresses.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Alpha.GlobalAddresses.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -4399,12 +4475,16 @@ func (g *GCEAlphaGlobalAddresses) List(ctx context.Context, fl *filter.F) ([]*al
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaGlobalAddresses.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaGlobalAddresses.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -4426,14 +4506,16 @@ func (g *GCEAlphaGlobalAddresses) Insert(ctx context.Context, key *meta.Key, obj
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalAddresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "GlobalAddresses",
 	}
-	klog.V(5).Infof("GCEAlphaGlobalAddresses.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaGlobalAddresses.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaGlobalAddresses.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -4442,7 +4524,10 @@ func (g *GCEAlphaGlobalAddresses) Insert(ctx context.Context, key *meta.Key, obj
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaGlobalAddresses.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -4461,14 +4546,15 @@ func (g *GCEAlphaGlobalAddresses) Delete(ctx context.Context, key *meta.Key) err
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalAddresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "GlobalAddresses",
 	}
-	klog.V(5).Infof("GCEAlphaGlobalAddresses.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaGlobalAddresses.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaGlobalAddresses.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -4477,7 +4563,10 @@ func (g *GCEAlphaGlobalAddresses) Delete(ctx context.Context, key *meta.Key) err
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaGlobalAddresses.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -4692,14 +4781,16 @@ func (g *GCEBetaGlobalAddresses) Get(ctx context.Context, key *meta.Key) (*beta.
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "GlobalAddresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "GlobalAddresses",
 	}
-	klog.V(5).Infof("GCEBetaGlobalAddresses.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaGlobalAddresses.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaGlobalAddresses.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -4707,7 +4798,10 @@ func (g *GCEBetaGlobalAddresses) Get(ctx context.Context, key *meta.Key) (*beta.
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaGlobalAddresses.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -4715,16 +4809,18 @@ func (g *GCEBetaGlobalAddresses) Get(ctx context.Context, key *meta.Key) (*beta.
 func (g *GCEBetaGlobalAddresses) List(ctx context.Context, fl *filter.F) ([]*beta.Address, error) {
 	klog.V(5).Infof("GCEBetaGlobalAddresses.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "GlobalAddresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "GlobalAddresses",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaGlobalAddresses.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaGlobalAddresses.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Beta.GlobalAddresses.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -4736,12 +4832,16 @@ func (g *GCEBetaGlobalAddresses) List(ctx context.Context, fl *filter.F) ([]*bet
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaGlobalAddresses.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaGlobalAddresses.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -4763,14 +4863,16 @@ func (g *GCEBetaGlobalAddresses) Insert(ctx context.Context, key *meta.Key, obj 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "GlobalAddresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "GlobalAddresses",
 	}
-	klog.V(5).Infof("GCEBetaGlobalAddresses.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaGlobalAddresses.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaGlobalAddresses.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -4779,7 +4881,10 @@ func (g *GCEBetaGlobalAddresses) Insert(ctx context.Context, key *meta.Key, obj 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaGlobalAddresses.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -4798,14 +4903,15 @@ func (g *GCEBetaGlobalAddresses) Delete(ctx context.Context, key *meta.Key) erro
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "GlobalAddresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "GlobalAddresses",
 	}
-	klog.V(5).Infof("GCEBetaGlobalAddresses.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaGlobalAddresses.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaGlobalAddresses.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -4814,7 +4920,10 @@ func (g *GCEBetaGlobalAddresses) Delete(ctx context.Context, key *meta.Key) erro
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaGlobalAddresses.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -5029,14 +5138,16 @@ func (g *GCEGlobalAddresses) Get(ctx context.Context, key *meta.Key) (*ga.Addres
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "GlobalAddresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "GlobalAddresses",
 	}
-	klog.V(5).Infof("GCEGlobalAddresses.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEGlobalAddresses.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEGlobalAddresses.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -5044,7 +5155,10 @@ func (g *GCEGlobalAddresses) Get(ctx context.Context, key *meta.Key) (*ga.Addres
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEGlobalAddresses.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -5052,16 +5166,18 @@ func (g *GCEGlobalAddresses) Get(ctx context.Context, key *meta.Key) (*ga.Addres
 func (g *GCEGlobalAddresses) List(ctx context.Context, fl *filter.F) ([]*ga.Address, error) {
 	klog.V(5).Infof("GCEGlobalAddresses.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "GlobalAddresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "GlobalAddresses",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEGlobalAddresses.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEGlobalAddresses.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.GlobalAddresses.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -5073,12 +5189,16 @@ func (g *GCEGlobalAddresses) List(ctx context.Context, fl *filter.F) ([]*ga.Addr
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEGlobalAddresses.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEGlobalAddresses.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -5100,14 +5220,16 @@ func (g *GCEGlobalAddresses) Insert(ctx context.Context, key *meta.Key, obj *ga.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "GlobalAddresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "GlobalAddresses",
 	}
-	klog.V(5).Infof("GCEGlobalAddresses.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEGlobalAddresses.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEGlobalAddresses.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -5116,7 +5238,10 @@ func (g *GCEGlobalAddresses) Insert(ctx context.Context, key *meta.Key, obj *ga.
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEGlobalAddresses.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -5135,14 +5260,15 @@ func (g *GCEGlobalAddresses) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "GlobalAddresses")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "GlobalAddresses",
 	}
-	klog.V(5).Infof("GCEGlobalAddresses.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEGlobalAddresses.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEGlobalAddresses.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -5151,7 +5277,10 @@ func (g *GCEGlobalAddresses) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEGlobalAddresses.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -5464,14 +5593,16 @@ func (g *GCEBackendServices) Get(ctx context.Context, key *meta.Key) (*ga.Backen
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEBackendServices.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBackendServices.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBackendServices.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -5479,7 +5610,10 @@ func (g *GCEBackendServices) Get(ctx context.Context, key *meta.Key) (*ga.Backen
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBackendServices.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -5487,16 +5621,18 @@ func (g *GCEBackendServices) Get(ctx context.Context, key *meta.Key) (*ga.Backen
 func (g *GCEBackendServices) List(ctx context.Context, fl *filter.F) ([]*ga.BackendService, error) {
 	klog.V(5).Infof("GCEBackendServices.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "BackendServices",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBackendServices.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEBackendServices.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.BackendServices.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -5508,12 +5644,16 @@ func (g *GCEBackendServices) List(ctx context.Context, fl *filter.F) ([]*ga.Back
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBackendServices.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBackendServices.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -5535,14 +5675,16 @@ func (g *GCEBackendServices) Insert(ctx context.Context, key *meta.Key, obj *ga.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEBackendServices.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBackendServices.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBackendServices.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -5551,7 +5693,10 @@ func (g *GCEBackendServices) Insert(ctx context.Context, key *meta.Key, obj *ga.
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBackendServices.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -5570,14 +5715,15 @@ func (g *GCEBackendServices) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEBackendServices.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBackendServices.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBackendServices.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -5586,7 +5732,10 @@ func (g *GCEBackendServices) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBackendServices.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -5602,15 +5751,16 @@ func (g *GCEBackendServices) AggregatedList(ctx context.Context, fl *filter.F) (
 	klog.V(5).Infof("GCEBackendServices.AggregatedList(%v, %v) called", ctx, fl)
 
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AggregatedList",
 		Version:   meta.Version("ga"),
 		Service:   "BackendServices",
 	}
 
-	klog.V(5).Infof("GCEBackendServices.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBackendServices.AggregatedList(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(5).Infof("GCEBackendServices.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
 		return nil, err
 	}
@@ -5630,7 +5780,9 @@ func (g *GCEBackendServices) AggregatedList(ctx context.Context, fl *filter.F) (
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBackendServices.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -5655,27 +5807,35 @@ func (g *GCEBackendServices) AddSignedUrlKey(ctx context.Context, key *meta.Key,
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AddSignedUrlKey",
 		Version:   meta.Version("ga"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEBackendServices.AddSignedUrlKey(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBackendServices.AddSignedUrlKey(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBackendServices.AddSignedUrlKey(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.BackendServices.AddSignedUrlKey(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBackendServices.AddSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBackendServices.AddSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -5689,27 +5849,35 @@ func (g *GCEBackendServices) DeleteSignedUrlKey(ctx context.Context, key *meta.K
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "DeleteSignedUrlKey",
 		Version:   meta.Version("ga"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEBackendServices.DeleteSignedUrlKey(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBackendServices.DeleteSignedUrlKey(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBackendServices.DeleteSignedUrlKey(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.BackendServices.DeleteSignedUrlKey(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBackendServices.DeleteSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBackendServices.DeleteSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -5723,22 +5891,25 @@ func (g *GCEBackendServices) GetHealth(ctx context.Context, key *meta.Key, arg0 
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetHealth",
 		Version:   meta.Version("ga"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEBackendServices.GetHealth(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBackendServices.GetHealth(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBackendServices.GetHealth(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.GA.BackendServices.GetHealth(projectID, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEBackendServices.GetHealth(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -5752,27 +5923,35 @@ func (g *GCEBackendServices) Patch(ctx context.Context, key *meta.Key, arg0 *ga.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("ga"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEBackendServices.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBackendServices.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBackendServices.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.BackendServices.Patch(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -5786,27 +5965,35 @@ func (g *GCEBackendServices) SetSecurityPolicy(ctx context.Context, key *meta.Ke
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetSecurityPolicy",
 		Version:   meta.Version("ga"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEBackendServices.SetSecurityPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBackendServices.SetSecurityPolicy(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBackendServices.SetSecurityPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.BackendServices.SetSecurityPolicy(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBackendServices.SetSecurityPolicy(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBackendServices.SetSecurityPolicy(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -5820,27 +6007,35 @@ func (g *GCEBackendServices) Update(ctx context.Context, key *meta.Key, arg0 *ga
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("ga"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEBackendServices.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBackendServices.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBackendServices.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.BackendServices.Update(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBackendServices.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBackendServices.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -6137,14 +6332,16 @@ func (g *GCEBetaBackendServices) Get(ctx context.Context, key *meta.Key) (*beta.
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEBetaBackendServices.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaBackendServices.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaBackendServices.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -6152,7 +6349,10 @@ func (g *GCEBetaBackendServices) Get(ctx context.Context, key *meta.Key) (*beta.
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaBackendServices.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -6160,16 +6360,18 @@ func (g *GCEBetaBackendServices) Get(ctx context.Context, key *meta.Key) (*beta.
 func (g *GCEBetaBackendServices) List(ctx context.Context, fl *filter.F) ([]*beta.BackendService, error) {
 	klog.V(5).Infof("GCEBetaBackendServices.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "BackendServices",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaBackendServices.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaBackendServices.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Beta.BackendServices.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -6181,12 +6383,16 @@ func (g *GCEBetaBackendServices) List(ctx context.Context, fl *filter.F) ([]*bet
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaBackendServices.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaBackendServices.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -6208,14 +6414,16 @@ func (g *GCEBetaBackendServices) Insert(ctx context.Context, key *meta.Key, obj 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEBetaBackendServices.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaBackendServices.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaBackendServices.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -6224,7 +6432,10 @@ func (g *GCEBetaBackendServices) Insert(ctx context.Context, key *meta.Key, obj 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaBackendServices.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -6243,14 +6454,15 @@ func (g *GCEBetaBackendServices) Delete(ctx context.Context, key *meta.Key) erro
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEBetaBackendServices.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaBackendServices.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaBackendServices.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -6259,7 +6471,10 @@ func (g *GCEBetaBackendServices) Delete(ctx context.Context, key *meta.Key) erro
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaBackendServices.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -6275,15 +6490,16 @@ func (g *GCEBetaBackendServices) AggregatedList(ctx context.Context, fl *filter.
 	klog.V(5).Infof("GCEBetaBackendServices.AggregatedList(%v, %v) called", ctx, fl)
 
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AggregatedList",
 		Version:   meta.Version("beta"),
 		Service:   "BackendServices",
 	}
 
-	klog.V(5).Infof("GCEBetaBackendServices.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaBackendServices.AggregatedList(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(5).Infof("GCEBetaBackendServices.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
 		return nil, err
 	}
@@ -6303,7 +6519,9 @@ func (g *GCEBetaBackendServices) AggregatedList(ctx context.Context, fl *filter.
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaBackendServices.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -6328,27 +6546,35 @@ func (g *GCEBetaBackendServices) AddSignedUrlKey(ctx context.Context, key *meta.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AddSignedUrlKey",
 		Version:   meta.Version("beta"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEBetaBackendServices.AddSignedUrlKey(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaBackendServices.AddSignedUrlKey(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaBackendServices.AddSignedUrlKey(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.BackendServices.AddSignedUrlKey(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaBackendServices.AddSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaBackendServices.AddSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -6362,27 +6588,35 @@ func (g *GCEBetaBackendServices) DeleteSignedUrlKey(ctx context.Context, key *me
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "DeleteSignedUrlKey",
 		Version:   meta.Version("beta"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEBetaBackendServices.DeleteSignedUrlKey(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaBackendServices.DeleteSignedUrlKey(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaBackendServices.DeleteSignedUrlKey(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.BackendServices.DeleteSignedUrlKey(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaBackendServices.DeleteSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaBackendServices.DeleteSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -6396,27 +6630,35 @@ func (g *GCEBetaBackendServices) Patch(ctx context.Context, key *meta.Key, arg0 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("beta"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEBetaBackendServices.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaBackendServices.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaBackendServices.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.BackendServices.Patch(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -6430,27 +6672,35 @@ func (g *GCEBetaBackendServices) SetSecurityPolicy(ctx context.Context, key *met
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetSecurityPolicy",
 		Version:   meta.Version("beta"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEBetaBackendServices.SetSecurityPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaBackendServices.SetSecurityPolicy(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaBackendServices.SetSecurityPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.BackendServices.SetSecurityPolicy(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaBackendServices.SetSecurityPolicy(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaBackendServices.SetSecurityPolicy(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -6464,27 +6714,35 @@ func (g *GCEBetaBackendServices) Update(ctx context.Context, key *meta.Key, arg0
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("beta"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEBetaBackendServices.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaBackendServices.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaBackendServices.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.BackendServices.Update(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaBackendServices.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaBackendServices.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -6781,14 +7039,16 @@ func (g *GCEAlphaBackendServices) Get(ctx context.Context, key *meta.Key) (*alph
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEAlphaBackendServices.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaBackendServices.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaBackendServices.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -6796,7 +7056,10 @@ func (g *GCEAlphaBackendServices) Get(ctx context.Context, key *meta.Key) (*alph
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaBackendServices.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -6804,16 +7067,18 @@ func (g *GCEAlphaBackendServices) Get(ctx context.Context, key *meta.Key) (*alph
 func (g *GCEAlphaBackendServices) List(ctx context.Context, fl *filter.F) ([]*alpha.BackendService, error) {
 	klog.V(5).Infof("GCEAlphaBackendServices.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "BackendServices",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaBackendServices.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaBackendServices.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Alpha.BackendServices.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -6825,12 +7090,16 @@ func (g *GCEAlphaBackendServices) List(ctx context.Context, fl *filter.F) ([]*al
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaBackendServices.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaBackendServices.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -6852,14 +7121,16 @@ func (g *GCEAlphaBackendServices) Insert(ctx context.Context, key *meta.Key, obj
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEAlphaBackendServices.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaBackendServices.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaBackendServices.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -6868,7 +7139,10 @@ func (g *GCEAlphaBackendServices) Insert(ctx context.Context, key *meta.Key, obj
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaBackendServices.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -6887,14 +7161,15 @@ func (g *GCEAlphaBackendServices) Delete(ctx context.Context, key *meta.Key) err
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEAlphaBackendServices.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaBackendServices.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaBackendServices.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -6903,7 +7178,10 @@ func (g *GCEAlphaBackendServices) Delete(ctx context.Context, key *meta.Key) err
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaBackendServices.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -6919,15 +7197,16 @@ func (g *GCEAlphaBackendServices) AggregatedList(ctx context.Context, fl *filter
 	klog.V(5).Infof("GCEAlphaBackendServices.AggregatedList(%v, %v) called", ctx, fl)
 
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AggregatedList",
 		Version:   meta.Version("alpha"),
 		Service:   "BackendServices",
 	}
 
-	klog.V(5).Infof("GCEAlphaBackendServices.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaBackendServices.AggregatedList(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(5).Infof("GCEAlphaBackendServices.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
 		return nil, err
 	}
@@ -6947,7 +7226,9 @@ func (g *GCEAlphaBackendServices) AggregatedList(ctx context.Context, fl *filter
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaBackendServices.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -6972,27 +7253,35 @@ func (g *GCEAlphaBackendServices) AddSignedUrlKey(ctx context.Context, key *meta
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AddSignedUrlKey",
 		Version:   meta.Version("alpha"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEAlphaBackendServices.AddSignedUrlKey(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaBackendServices.AddSignedUrlKey(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaBackendServices.AddSignedUrlKey(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.BackendServices.AddSignedUrlKey(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaBackendServices.AddSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaBackendServices.AddSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -7006,27 +7295,35 @@ func (g *GCEAlphaBackendServices) DeleteSignedUrlKey(ctx context.Context, key *m
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "DeleteSignedUrlKey",
 		Version:   meta.Version("alpha"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEAlphaBackendServices.DeleteSignedUrlKey(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaBackendServices.DeleteSignedUrlKey(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaBackendServices.DeleteSignedUrlKey(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.BackendServices.DeleteSignedUrlKey(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaBackendServices.DeleteSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaBackendServices.DeleteSignedUrlKey(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -7040,27 +7337,35 @@ func (g *GCEAlphaBackendServices) Patch(ctx context.Context, key *meta.Key, arg0
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("alpha"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEAlphaBackendServices.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaBackendServices.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaBackendServices.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.BackendServices.Patch(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -7074,27 +7379,35 @@ func (g *GCEAlphaBackendServices) SetSecurityPolicy(ctx context.Context, key *me
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetSecurityPolicy",
 		Version:   meta.Version("alpha"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEAlphaBackendServices.SetSecurityPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaBackendServices.SetSecurityPolicy(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaBackendServices.SetSecurityPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.BackendServices.SetSecurityPolicy(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaBackendServices.SetSecurityPolicy(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaBackendServices.SetSecurityPolicy(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -7108,27 +7421,35 @@ func (g *GCEAlphaBackendServices) Update(ctx context.Context, key *meta.Key, arg
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "BackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("alpha"),
 		Service:   "BackendServices",
 	}
-	klog.V(5).Infof("GCEAlphaBackendServices.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaBackendServices.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaBackendServices.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.BackendServices.Update(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaBackendServices.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaBackendServices.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -7370,14 +7691,16 @@ func (g *GCERegionBackendServices) Get(ctx context.Context, key *meta.Key) (*ga.
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCERegionBackendServices.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERegionBackendServices.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionBackendServices.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -7385,7 +7708,10 @@ func (g *GCERegionBackendServices) Get(ctx context.Context, key *meta.Key) (*ga.
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCERegionBackendServices.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -7393,16 +7719,18 @@ func (g *GCERegionBackendServices) Get(ctx context.Context, key *meta.Key) (*ga.
 func (g *GCERegionBackendServices) List(ctx context.Context, region string, fl *filter.F) ([]*ga.BackendService, error) {
 	klog.V(5).Infof("GCERegionBackendServices.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "RegionBackendServices",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCERegionBackendServices.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCERegionBackendServices.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.GA.RegionBackendServices.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -7414,12 +7742,16 @@ func (g *GCERegionBackendServices) List(ctx context.Context, region string, fl *
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERegionBackendServices.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCERegionBackendServices.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -7441,14 +7773,16 @@ func (g *GCERegionBackendServices) Insert(ctx context.Context, key *meta.Key, ob
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCERegionBackendServices.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERegionBackendServices.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionBackendServices.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -7457,7 +7791,10 @@ func (g *GCERegionBackendServices) Insert(ctx context.Context, key *meta.Key, ob
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERegionBackendServices.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -7476,14 +7813,15 @@ func (g *GCERegionBackendServices) Delete(ctx context.Context, key *meta.Key) er
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCERegionBackendServices.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERegionBackendServices.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionBackendServices.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -7491,7 +7829,10 @@ func (g *GCERegionBackendServices) Delete(ctx context.Context, key *meta.Key) er
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERegionBackendServices.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -7511,22 +7852,25 @@ func (g *GCERegionBackendServices) GetHealth(ctx context.Context, key *meta.Key,
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetHealth",
 		Version:   meta.Version("ga"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCERegionBackendServices.GetHealth(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERegionBackendServices.GetHealth(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionBackendServices.GetHealth(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.GA.RegionBackendServices.GetHealth(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCERegionBackendServices.GetHealth(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -7540,27 +7884,35 @@ func (g *GCERegionBackendServices) Patch(ctx context.Context, key *meta.Key, arg
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("ga"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCERegionBackendServices.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERegionBackendServices.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionBackendServices.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.RegionBackendServices.Patch(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERegionBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCERegionBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -7574,27 +7926,35 @@ func (g *GCERegionBackendServices) Update(ctx context.Context, key *meta.Key, ar
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("ga"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCERegionBackendServices.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERegionBackendServices.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionBackendServices.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.RegionBackendServices.Update(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERegionBackendServices.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCERegionBackendServices.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -7836,14 +8196,16 @@ func (g *GCEAlphaRegionBackendServices) Get(ctx context.Context, key *meta.Key) 
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCEAlphaRegionBackendServices.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaRegionBackendServices.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionBackendServices.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -7851,7 +8213,10 @@ func (g *GCEAlphaRegionBackendServices) Get(ctx context.Context, key *meta.Key) 
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaRegionBackendServices.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -7859,16 +8224,18 @@ func (g *GCEAlphaRegionBackendServices) Get(ctx context.Context, key *meta.Key) 
 func (g *GCEAlphaRegionBackendServices) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.BackendService, error) {
 	klog.V(5).Infof("GCEAlphaRegionBackendServices.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionBackendServices",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaRegionBackendServices.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaRegionBackendServices.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Alpha.RegionBackendServices.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -7880,12 +8247,16 @@ func (g *GCEAlphaRegionBackendServices) List(ctx context.Context, region string,
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionBackendServices.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaRegionBackendServices.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -7907,14 +8278,16 @@ func (g *GCEAlphaRegionBackendServices) Insert(ctx context.Context, key *meta.Ke
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCEAlphaRegionBackendServices.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaRegionBackendServices.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionBackendServices.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -7923,7 +8296,10 @@ func (g *GCEAlphaRegionBackendServices) Insert(ctx context.Context, key *meta.Ke
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaRegionBackendServices.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -7942,14 +8318,15 @@ func (g *GCEAlphaRegionBackendServices) Delete(ctx context.Context, key *meta.Ke
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCEAlphaRegionBackendServices.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionBackendServices.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionBackendServices.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -7957,7 +8334,10 @@ func (g *GCEAlphaRegionBackendServices) Delete(ctx context.Context, key *meta.Ke
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaRegionBackendServices.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -7977,22 +8357,25 @@ func (g *GCEAlphaRegionBackendServices) GetHealth(ctx context.Context, key *meta
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetHealth",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCEAlphaRegionBackendServices.GetHealth(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionBackendServices.GetHealth(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionBackendServices.GetHealth(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.RegionBackendServices.GetHealth(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaRegionBackendServices.GetHealth(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -8006,27 +8389,35 @@ func (g *GCEAlphaRegionBackendServices) Patch(ctx context.Context, key *meta.Key
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCEAlphaRegionBackendServices.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionBackendServices.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionBackendServices.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.RegionBackendServices.Patch(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaRegionBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -8040,27 +8431,35 @@ func (g *GCEAlphaRegionBackendServices) Update(ctx context.Context, key *meta.Ke
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCEAlphaRegionBackendServices.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionBackendServices.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionBackendServices.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.RegionBackendServices.Update(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionBackendServices.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaRegionBackendServices.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -8302,14 +8701,16 @@ func (g *GCEBetaRegionBackendServices) Get(ctx context.Context, key *meta.Key) (
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCEBetaRegionBackendServices.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaRegionBackendServices.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionBackendServices.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -8317,7 +8718,10 @@ func (g *GCEBetaRegionBackendServices) Get(ctx context.Context, key *meta.Key) (
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaRegionBackendServices.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -8325,16 +8729,18 @@ func (g *GCEBetaRegionBackendServices) Get(ctx context.Context, key *meta.Key) (
 func (g *GCEBetaRegionBackendServices) List(ctx context.Context, region string, fl *filter.F) ([]*beta.BackendService, error) {
 	klog.V(5).Infof("GCEBetaRegionBackendServices.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "RegionBackendServices",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaRegionBackendServices.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaRegionBackendServices.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Beta.RegionBackendServices.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -8346,12 +8752,16 @@ func (g *GCEBetaRegionBackendServices) List(ctx context.Context, region string, 
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaRegionBackendServices.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaRegionBackendServices.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -8373,14 +8783,16 @@ func (g *GCEBetaRegionBackendServices) Insert(ctx context.Context, key *meta.Key
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCEBetaRegionBackendServices.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaRegionBackendServices.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionBackendServices.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -8389,7 +8801,10 @@ func (g *GCEBetaRegionBackendServices) Insert(ctx context.Context, key *meta.Key
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaRegionBackendServices.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -8408,14 +8823,15 @@ func (g *GCEBetaRegionBackendServices) Delete(ctx context.Context, key *meta.Key
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCEBetaRegionBackendServices.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRegionBackendServices.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionBackendServices.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -8423,7 +8839,10 @@ func (g *GCEBetaRegionBackendServices) Delete(ctx context.Context, key *meta.Key
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaRegionBackendServices.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -8443,22 +8862,25 @@ func (g *GCEBetaRegionBackendServices) GetHealth(ctx context.Context, key *meta.
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetHealth",
 		Version:   meta.Version("beta"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCEBetaRegionBackendServices.GetHealth(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRegionBackendServices.GetHealth(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionBackendServices.GetHealth(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Beta.RegionBackendServices.GetHealth(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEBetaRegionBackendServices.GetHealth(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -8472,27 +8894,35 @@ func (g *GCEBetaRegionBackendServices) Patch(ctx context.Context, key *meta.Key,
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("beta"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCEBetaRegionBackendServices.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRegionBackendServices.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionBackendServices.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.RegionBackendServices.Patch(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaRegionBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaRegionBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -8506,27 +8936,35 @@ func (g *GCEBetaRegionBackendServices) Update(ctx context.Context, key *meta.Key
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionBackendServices")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("beta"),
 		Service:   "RegionBackendServices",
 	}
-	klog.V(5).Infof("GCEBetaRegionBackendServices.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRegionBackendServices.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionBackendServices.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.RegionBackendServices.Update(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaRegionBackendServices.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaRegionBackendServices.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -8748,14 +9186,16 @@ func (g *GCEDisks) Get(ctx context.Context, key *meta.Key) (*ga.Disk, error) {
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Disks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "Disks",
 	}
-	klog.V(5).Infof("GCEDisks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEDisks.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEDisks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -8763,7 +9203,10 @@ func (g *GCEDisks) Get(ctx context.Context, key *meta.Key) (*ga.Disk, error) {
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEDisks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -8771,16 +9214,18 @@ func (g *GCEDisks) Get(ctx context.Context, key *meta.Key) (*ga.Disk, error) {
 func (g *GCEDisks) List(ctx context.Context, zone string, fl *filter.F) ([]*ga.Disk, error) {
 	klog.V(5).Infof("GCEDisks.List(%v, %v, %v) called", ctx, zone, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Disks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "Disks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEDisks.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, zone, fl, projectID, rk)
+	klog.V(5).Infof("GCEDisks.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, zone, fl, projectID, ck)
 	call := g.s.GA.Disks.List(projectID, zone)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -8792,12 +9237,16 @@ func (g *GCEDisks) List(ctx context.Context, zone string, fl *filter.F) ([]*ga.D
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEDisks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEDisks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -8819,14 +9268,16 @@ func (g *GCEDisks) Insert(ctx context.Context, key *meta.Key, obj *ga.Disk) erro
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Disks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "Disks",
 	}
-	klog.V(5).Infof("GCEDisks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEDisks.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEDisks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -8835,7 +9286,10 @@ func (g *GCEDisks) Insert(ctx context.Context, key *meta.Key, obj *ga.Disk) erro
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEDisks.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -8854,14 +9308,15 @@ func (g *GCEDisks) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Disks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "Disks",
 	}
-	klog.V(5).Infof("GCEDisks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEDisks.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEDisks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -8869,7 +9324,10 @@ func (g *GCEDisks) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEDisks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -8889,27 +9347,35 @@ func (g *GCEDisks) Resize(ctx context.Context, key *meta.Key, arg0 *ga.DisksResi
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Disks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Resize",
 		Version:   meta.Version("ga"),
 		Service:   "Disks",
 	}
-	klog.V(5).Infof("GCEDisks.Resize(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEDisks.Resize(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEDisks.Resize(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.Disks.Resize(projectID, key.Zone, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEDisks.Resize(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEDisks.Resize(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -9131,14 +9597,16 @@ func (g *GCERegionDisks) Get(ctx context.Context, key *meta.Key) (*ga.Disk, erro
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionDisks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "RegionDisks",
 	}
-	klog.V(5).Infof("GCERegionDisks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERegionDisks.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionDisks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -9146,7 +9614,10 @@ func (g *GCERegionDisks) Get(ctx context.Context, key *meta.Key) (*ga.Disk, erro
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCERegionDisks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -9154,16 +9625,18 @@ func (g *GCERegionDisks) Get(ctx context.Context, key *meta.Key) (*ga.Disk, erro
 func (g *GCERegionDisks) List(ctx context.Context, region string, fl *filter.F) ([]*ga.Disk, error) {
 	klog.V(5).Infof("GCERegionDisks.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionDisks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "RegionDisks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCERegionDisks.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCERegionDisks.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.GA.RegionDisks.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -9175,12 +9648,16 @@ func (g *GCERegionDisks) List(ctx context.Context, region string, fl *filter.F) 
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERegionDisks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCERegionDisks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -9202,14 +9679,16 @@ func (g *GCERegionDisks) Insert(ctx context.Context, key *meta.Key, obj *ga.Disk
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionDisks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "RegionDisks",
 	}
-	klog.V(5).Infof("GCERegionDisks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERegionDisks.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionDisks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -9218,7 +9697,10 @@ func (g *GCERegionDisks) Insert(ctx context.Context, key *meta.Key, obj *ga.Disk
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERegionDisks.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -9237,14 +9719,15 @@ func (g *GCERegionDisks) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionDisks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "RegionDisks",
 	}
-	klog.V(5).Infof("GCERegionDisks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERegionDisks.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionDisks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -9252,7 +9735,10 @@ func (g *GCERegionDisks) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERegionDisks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -9272,27 +9758,35 @@ func (g *GCERegionDisks) Resize(ctx context.Context, key *meta.Key, arg0 *ga.Reg
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionDisks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Resize",
 		Version:   meta.Version("ga"),
 		Service:   "RegionDisks",
 	}
-	klog.V(5).Infof("GCERegionDisks.Resize(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERegionDisks.Resize(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionDisks.Resize(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.RegionDisks.Resize(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERegionDisks.Resize(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCERegionDisks.Resize(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -9521,14 +10015,16 @@ func (g *GCEAlphaFirewalls) Get(ctx context.Context, key *meta.Key) (*alpha.Fire
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "Firewalls",
 	}
-	klog.V(5).Infof("GCEAlphaFirewalls.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaFirewalls.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaFirewalls.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -9536,7 +10032,10 @@ func (g *GCEAlphaFirewalls) Get(ctx context.Context, key *meta.Key) (*alpha.Fire
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaFirewalls.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -9544,16 +10043,18 @@ func (g *GCEAlphaFirewalls) Get(ctx context.Context, key *meta.Key) (*alpha.Fire
 func (g *GCEAlphaFirewalls) List(ctx context.Context, fl *filter.F) ([]*alpha.Firewall, error) {
 	klog.V(5).Infof("GCEAlphaFirewalls.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "Firewalls",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaFirewalls.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaFirewalls.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Alpha.Firewalls.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -9565,12 +10066,16 @@ func (g *GCEAlphaFirewalls) List(ctx context.Context, fl *filter.F) ([]*alpha.Fi
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaFirewalls.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaFirewalls.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -9592,14 +10097,16 @@ func (g *GCEAlphaFirewalls) Insert(ctx context.Context, key *meta.Key, obj *alph
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "Firewalls",
 	}
-	klog.V(5).Infof("GCEAlphaFirewalls.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaFirewalls.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaFirewalls.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -9608,7 +10115,10 @@ func (g *GCEAlphaFirewalls) Insert(ctx context.Context, key *meta.Key, obj *alph
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaFirewalls.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -9627,14 +10137,15 @@ func (g *GCEAlphaFirewalls) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "Firewalls",
 	}
-	klog.V(5).Infof("GCEAlphaFirewalls.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaFirewalls.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaFirewalls.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -9643,7 +10154,10 @@ func (g *GCEAlphaFirewalls) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaFirewalls.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -9663,27 +10177,35 @@ func (g *GCEAlphaFirewalls) Patch(ctx context.Context, key *meta.Key, arg0 *alph
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("alpha"),
 		Service:   "Firewalls",
 	}
-	klog.V(5).Infof("GCEAlphaFirewalls.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaFirewalls.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaFirewalls.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.Firewalls.Patch(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaFirewalls.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaFirewalls.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -9697,27 +10219,35 @@ func (g *GCEAlphaFirewalls) Update(ctx context.Context, key *meta.Key, arg0 *alp
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("alpha"),
 		Service:   "Firewalls",
 	}
-	klog.V(5).Infof("GCEAlphaFirewalls.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaFirewalls.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaFirewalls.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.Firewalls.Update(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaFirewalls.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaFirewalls.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -9946,14 +10476,16 @@ func (g *GCEBetaFirewalls) Get(ctx context.Context, key *meta.Key) (*beta.Firewa
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "Firewalls",
 	}
-	klog.V(5).Infof("GCEBetaFirewalls.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaFirewalls.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaFirewalls.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -9961,7 +10493,10 @@ func (g *GCEBetaFirewalls) Get(ctx context.Context, key *meta.Key) (*beta.Firewa
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaFirewalls.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -9969,16 +10504,18 @@ func (g *GCEBetaFirewalls) Get(ctx context.Context, key *meta.Key) (*beta.Firewa
 func (g *GCEBetaFirewalls) List(ctx context.Context, fl *filter.F) ([]*beta.Firewall, error) {
 	klog.V(5).Infof("GCEBetaFirewalls.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "Firewalls",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaFirewalls.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaFirewalls.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Beta.Firewalls.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -9990,12 +10527,16 @@ func (g *GCEBetaFirewalls) List(ctx context.Context, fl *filter.F) ([]*beta.Fire
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaFirewalls.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaFirewalls.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -10017,14 +10558,16 @@ func (g *GCEBetaFirewalls) Insert(ctx context.Context, key *meta.Key, obj *beta.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "Firewalls",
 	}
-	klog.V(5).Infof("GCEBetaFirewalls.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaFirewalls.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaFirewalls.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -10033,7 +10576,10 @@ func (g *GCEBetaFirewalls) Insert(ctx context.Context, key *meta.Key, obj *beta.
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaFirewalls.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -10052,14 +10598,15 @@ func (g *GCEBetaFirewalls) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "Firewalls",
 	}
-	klog.V(5).Infof("GCEBetaFirewalls.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaFirewalls.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaFirewalls.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -10068,7 +10615,10 @@ func (g *GCEBetaFirewalls) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaFirewalls.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -10088,27 +10638,35 @@ func (g *GCEBetaFirewalls) Patch(ctx context.Context, key *meta.Key, arg0 *beta.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("beta"),
 		Service:   "Firewalls",
 	}
-	klog.V(5).Infof("GCEBetaFirewalls.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaFirewalls.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaFirewalls.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.Firewalls.Patch(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaFirewalls.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaFirewalls.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -10122,27 +10680,35 @@ func (g *GCEBetaFirewalls) Update(ctx context.Context, key *meta.Key, arg0 *beta
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("beta"),
 		Service:   "Firewalls",
 	}
-	klog.V(5).Infof("GCEBetaFirewalls.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaFirewalls.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaFirewalls.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.Firewalls.Update(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaFirewalls.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaFirewalls.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -10371,14 +10937,16 @@ func (g *GCEFirewalls) Get(ctx context.Context, key *meta.Key) (*ga.Firewall, er
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "Firewalls",
 	}
-	klog.V(5).Infof("GCEFirewalls.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEFirewalls.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEFirewalls.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -10386,7 +10954,10 @@ func (g *GCEFirewalls) Get(ctx context.Context, key *meta.Key) (*ga.Firewall, er
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEFirewalls.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -10394,16 +10965,18 @@ func (g *GCEFirewalls) Get(ctx context.Context, key *meta.Key) (*ga.Firewall, er
 func (g *GCEFirewalls) List(ctx context.Context, fl *filter.F) ([]*ga.Firewall, error) {
 	klog.V(5).Infof("GCEFirewalls.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "Firewalls",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEFirewalls.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEFirewalls.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.Firewalls.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -10415,12 +10988,16 @@ func (g *GCEFirewalls) List(ctx context.Context, fl *filter.F) ([]*ga.Firewall, 
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEFirewalls.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEFirewalls.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -10442,14 +11019,16 @@ func (g *GCEFirewalls) Insert(ctx context.Context, key *meta.Key, obj *ga.Firewa
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "Firewalls",
 	}
-	klog.V(5).Infof("GCEFirewalls.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEFirewalls.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEFirewalls.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -10458,7 +11037,10 @@ func (g *GCEFirewalls) Insert(ctx context.Context, key *meta.Key, obj *ga.Firewa
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEFirewalls.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -10477,14 +11059,15 @@ func (g *GCEFirewalls) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "Firewalls",
 	}
-	klog.V(5).Infof("GCEFirewalls.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEFirewalls.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEFirewalls.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -10493,7 +11076,10 @@ func (g *GCEFirewalls) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEFirewalls.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -10513,27 +11099,35 @@ func (g *GCEFirewalls) Patch(ctx context.Context, key *meta.Key, arg0 *ga.Firewa
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("ga"),
 		Service:   "Firewalls",
 	}
-	klog.V(5).Infof("GCEFirewalls.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEFirewalls.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEFirewalls.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.Firewalls.Patch(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEFirewalls.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEFirewalls.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -10547,27 +11141,35 @@ func (g *GCEFirewalls) Update(ctx context.Context, key *meta.Key, arg0 *ga.Firew
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Firewalls")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("ga"),
 		Service:   "Firewalls",
 	}
-	klog.V(5).Infof("GCEFirewalls.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEFirewalls.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEFirewalls.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.Firewalls.Update(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEFirewalls.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEFirewalls.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -10896,14 +11498,16 @@ func (g *GCEAlphaNetworkFirewallPolicies) Get(ctx context.Context, key *meta.Key
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -10911,7 +11515,10 @@ func (g *GCEAlphaNetworkFirewallPolicies) Get(ctx context.Context, key *meta.Key
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -10919,16 +11526,18 @@ func (g *GCEAlphaNetworkFirewallPolicies) Get(ctx context.Context, key *meta.Key
 func (g *GCEAlphaNetworkFirewallPolicies) List(ctx context.Context, fl *filter.F) ([]*alpha.FirewallPolicy, error) {
 	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkFirewallPolicies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Alpha.NetworkFirewallPolicies.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -10940,12 +11549,16 @@ func (g *GCEAlphaNetworkFirewallPolicies) List(ctx context.Context, fl *filter.F
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -10967,14 +11580,16 @@ func (g *GCEAlphaNetworkFirewallPolicies) Insert(ctx context.Context, key *meta.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -10983,7 +11598,10 @@ func (g *GCEAlphaNetworkFirewallPolicies) Insert(ctx context.Context, key *meta.
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -11002,14 +11620,15 @@ func (g *GCEAlphaNetworkFirewallPolicies) Delete(ctx context.Context, key *meta.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -11018,7 +11637,10 @@ func (g *GCEAlphaNetworkFirewallPolicies) Delete(ctx context.Context, key *meta.
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -11038,27 +11660,35 @@ func (g *GCEAlphaNetworkFirewallPolicies) AddAssociation(ctx context.Context, ke
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AddAssociation",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.AddAssociation(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.AddAssociation(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.AddAssociation(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.NetworkFirewallPolicies.AddAssociation(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.AddAssociation(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.AddAssociation(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -11072,27 +11702,35 @@ func (g *GCEAlphaNetworkFirewallPolicies) AddRule(ctx context.Context, key *meta
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AddRule",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.AddRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.AddRule(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.AddRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.NetworkFirewallPolicies.AddRule(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.AddRule(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.AddRule(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -11106,27 +11744,35 @@ func (g *GCEAlphaNetworkFirewallPolicies) CloneRules(ctx context.Context, key *m
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "CloneRules",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.CloneRules(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.CloneRules(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.CloneRules(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.NetworkFirewallPolicies.CloneRules(projectID, key.Name)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.CloneRules(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.CloneRules(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -11140,22 +11786,25 @@ func (g *GCEAlphaNetworkFirewallPolicies) GetAssociation(ctx context.Context, ke
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetAssociation",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.GetAssociation(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.GetAssociation(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.GetAssociation(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.NetworkFirewallPolicies.GetAssociation(projectID, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.GetAssociation(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -11169,22 +11818,25 @@ func (g *GCEAlphaNetworkFirewallPolicies) GetIamPolicy(ctx context.Context, key 
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetIamPolicy",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.NetworkFirewallPolicies.GetIamPolicy(projectID, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -11198,22 +11850,25 @@ func (g *GCEAlphaNetworkFirewallPolicies) GetRule(ctx context.Context, key *meta
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetRule",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.GetRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.GetRule(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.GetRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.NetworkFirewallPolicies.GetRule(projectID, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.GetRule(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -11227,27 +11882,35 @@ func (g *GCEAlphaNetworkFirewallPolicies) Patch(ctx context.Context, key *meta.K
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.NetworkFirewallPolicies.Patch(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -11261,27 +11924,35 @@ func (g *GCEAlphaNetworkFirewallPolicies) PatchRule(ctx context.Context, key *me
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "PatchRule",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.PatchRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.PatchRule(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.PatchRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.NetworkFirewallPolicies.PatchRule(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.PatchRule(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.PatchRule(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -11295,27 +11966,35 @@ func (g *GCEAlphaNetworkFirewallPolicies) RemoveAssociation(ctx context.Context,
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "RemoveAssociation",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.NetworkFirewallPolicies.RemoveAssociation(projectID, key.Name)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -11329,27 +12008,35 @@ func (g *GCEAlphaNetworkFirewallPolicies) RemoveRule(ctx context.Context, key *m
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "RemoveRule",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.RemoveRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.RemoveRule(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.RemoveRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.NetworkFirewallPolicies.RemoveRule(projectID, key.Name)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.RemoveRule(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.RemoveRule(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -11363,22 +12050,25 @@ func (g *GCEAlphaNetworkFirewallPolicies) SetIamPolicy(ctx context.Context, key 
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetIamPolicy",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.NetworkFirewallPolicies.SetIamPolicy(projectID, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -11392,22 +12082,25 @@ func (g *GCEAlphaNetworkFirewallPolicies) TestIamPermissions(ctx context.Context
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "TestIamPermissions",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.NetworkFirewallPolicies.TestIamPermissions(projectID, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -11739,14 +12432,16 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) Get(ctx context.Context, key *me
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionNetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -11754,7 +12449,10 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) Get(ctx context.Context, key *me
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -11762,16 +12460,18 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) Get(ctx context.Context, key *me
 func (g *GCEAlphaRegionNetworkFirewallPolicies) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.FirewallPolicy, error) {
 	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionNetworkFirewallPolicies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Alpha.RegionNetworkFirewallPolicies.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -11783,12 +12483,16 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) List(ctx context.Context, region
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -11810,14 +12514,16 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) Insert(ctx context.Context, key 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionNetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -11826,7 +12532,10 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) Insert(ctx context.Context, key 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -11845,14 +12554,15 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) Delete(ctx context.Context, key 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionNetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -11860,7 +12570,10 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) Delete(ctx context.Context, key 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -11880,27 +12593,35 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) AddAssociation(ctx context.Conte
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AddAssociation",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionNetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddAssociation(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddAssociation(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddAssociation(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.RegionNetworkFirewallPolicies.AddAssociation(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddAssociation(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddAssociation(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -11914,27 +12635,35 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) AddRule(ctx context.Context, key
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AddRule",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionNetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddRule(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.RegionNetworkFirewallPolicies.AddRule(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddRule(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.AddRule(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -11948,27 +12677,35 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) CloneRules(ctx context.Context, 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "CloneRules",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionNetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.CloneRules(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.CloneRules(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.CloneRules(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.RegionNetworkFirewallPolicies.CloneRules(projectID, key.Region, key.Name)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.CloneRules(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.CloneRules(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -11982,22 +12719,25 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) GetAssociation(ctx context.Conte
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetAssociation",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionNetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetAssociation(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetAssociation(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetAssociation(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.RegionNetworkFirewallPolicies.GetAssociation(projectID, key.Region, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetAssociation(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -12011,22 +12751,25 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) GetIamPolicy(ctx context.Context
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetIamPolicy",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionNetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.RegionNetworkFirewallPolicies.GetIamPolicy(projectID, key.Region, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -12040,22 +12783,25 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) GetRule(ctx context.Context, key
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetRule",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionNetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetRule(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.RegionNetworkFirewallPolicies.GetRule(projectID, key.Region, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.GetRule(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -12069,27 +12815,35 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) Patch(ctx context.Context, key *
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionNetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.RegionNetworkFirewallPolicies.Patch(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -12103,27 +12857,35 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) PatchRule(ctx context.Context, k
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "PatchRule",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionNetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.PatchRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.PatchRule(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.PatchRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.RegionNetworkFirewallPolicies.PatchRule(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.PatchRule(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.PatchRule(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -12137,27 +12899,35 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) RemoveAssociation(ctx context.Co
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "RemoveAssociation",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionNetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.RegionNetworkFirewallPolicies.RemoveAssociation(projectID, key.Region, key.Name)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveAssociation(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -12171,27 +12941,35 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) RemoveRule(ctx context.Context, 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "RemoveRule",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionNetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveRule(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.RegionNetworkFirewallPolicies.RemoveRule(projectID, key.Region, key.Name)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveRule(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.RemoveRule(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -12205,22 +12983,25 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) SetIamPolicy(ctx context.Context
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetIamPolicy",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionNetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.RegionNetworkFirewallPolicies.SetIamPolicy(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.SetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -12234,22 +13015,25 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) TestIamPermissions(ctx context.C
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionNetworkFirewallPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "TestIamPermissions",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionNetworkFirewallPolicies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.RegionNetworkFirewallPolicies.TestIamPermissions(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.TestIamPermissions(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -12481,14 +13265,16 @@ func (g *GCEForwardingRules) Get(ctx context.Context, key *meta.Key) (*ga.Forwar
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "ForwardingRules",
 	}
-	klog.V(5).Infof("GCEForwardingRules.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEForwardingRules.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEForwardingRules.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -12496,7 +13282,10 @@ func (g *GCEForwardingRules) Get(ctx context.Context, key *meta.Key) (*ga.Forwar
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEForwardingRules.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -12504,16 +13293,18 @@ func (g *GCEForwardingRules) Get(ctx context.Context, key *meta.Key) (*ga.Forwar
 func (g *GCEForwardingRules) List(ctx context.Context, region string, fl *filter.F) ([]*ga.ForwardingRule, error) {
 	klog.V(5).Infof("GCEForwardingRules.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "ForwardingRules",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEForwardingRules.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEForwardingRules.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.GA.ForwardingRules.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -12525,12 +13316,16 @@ func (g *GCEForwardingRules) List(ctx context.Context, region string, fl *filter
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEForwardingRules.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEForwardingRules.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -12552,14 +13347,16 @@ func (g *GCEForwardingRules) Insert(ctx context.Context, key *meta.Key, obj *ga.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "ForwardingRules",
 	}
-	klog.V(5).Infof("GCEForwardingRules.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEForwardingRules.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEForwardingRules.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -12568,7 +13365,10 @@ func (g *GCEForwardingRules) Insert(ctx context.Context, key *meta.Key, obj *ga.
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEForwardingRules.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -12587,14 +13387,15 @@ func (g *GCEForwardingRules) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "ForwardingRules",
 	}
-	klog.V(5).Infof("GCEForwardingRules.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEForwardingRules.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEForwardingRules.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -12602,7 +13403,10 @@ func (g *GCEForwardingRules) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -12622,27 +13426,35 @@ func (g *GCEForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetLabels",
 		Version:   meta.Version("ga"),
 		Service:   "ForwardingRules",
 	}
-	klog.V(5).Infof("GCEForwardingRules.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEForwardingRules.SetLabels(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEForwardingRules.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.ForwardingRules.SetLabels(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -12656,27 +13468,35 @@ func (g *GCEForwardingRules) SetTarget(ctx context.Context, key *meta.Key, arg0 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetTarget",
 		Version:   meta.Version("ga"),
 		Service:   "ForwardingRules",
 	}
-	klog.V(5).Infof("GCEForwardingRules.SetTarget(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEForwardingRules.SetTarget(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEForwardingRules.SetTarget(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.ForwardingRules.SetTarget(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -12908,14 +13728,16 @@ func (g *GCEAlphaForwardingRules) Get(ctx context.Context, key *meta.Key) (*alph
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "ForwardingRules",
 	}
-	klog.V(5).Infof("GCEAlphaForwardingRules.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaForwardingRules.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaForwardingRules.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -12923,7 +13745,10 @@ func (g *GCEAlphaForwardingRules) Get(ctx context.Context, key *meta.Key) (*alph
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaForwardingRules.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -12931,16 +13756,18 @@ func (g *GCEAlphaForwardingRules) Get(ctx context.Context, key *meta.Key) (*alph
 func (g *GCEAlphaForwardingRules) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.ForwardingRule, error) {
 	klog.V(5).Infof("GCEAlphaForwardingRules.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "ForwardingRules",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaForwardingRules.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaForwardingRules.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Alpha.ForwardingRules.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -12952,12 +13779,16 @@ func (g *GCEAlphaForwardingRules) List(ctx context.Context, region string, fl *f
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaForwardingRules.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaForwardingRules.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -12979,14 +13810,16 @@ func (g *GCEAlphaForwardingRules) Insert(ctx context.Context, key *meta.Key, obj
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "ForwardingRules",
 	}
-	klog.V(5).Infof("GCEAlphaForwardingRules.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaForwardingRules.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaForwardingRules.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -12995,7 +13828,10 @@ func (g *GCEAlphaForwardingRules) Insert(ctx context.Context, key *meta.Key, obj
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaForwardingRules.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -13014,14 +13850,15 @@ func (g *GCEAlphaForwardingRules) Delete(ctx context.Context, key *meta.Key) err
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "ForwardingRules",
 	}
-	klog.V(5).Infof("GCEAlphaForwardingRules.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaForwardingRules.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaForwardingRules.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -13029,7 +13866,10 @@ func (g *GCEAlphaForwardingRules) Delete(ctx context.Context, key *meta.Key) err
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -13049,27 +13889,35 @@ func (g *GCEAlphaForwardingRules) SetLabels(ctx context.Context, key *meta.Key, 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetLabels",
 		Version:   meta.Version("alpha"),
 		Service:   "ForwardingRules",
 	}
-	klog.V(5).Infof("GCEAlphaForwardingRules.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaForwardingRules.SetLabels(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaForwardingRules.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.ForwardingRules.SetLabels(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -13083,27 +13931,35 @@ func (g *GCEAlphaForwardingRules) SetTarget(ctx context.Context, key *meta.Key, 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetTarget",
 		Version:   meta.Version("alpha"),
 		Service:   "ForwardingRules",
 	}
-	klog.V(5).Infof("GCEAlphaForwardingRules.SetTarget(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaForwardingRules.SetTarget(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaForwardingRules.SetTarget(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.ForwardingRules.SetTarget(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -13335,14 +14191,16 @@ func (g *GCEBetaForwardingRules) Get(ctx context.Context, key *meta.Key) (*beta.
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "ForwardingRules",
 	}
-	klog.V(5).Infof("GCEBetaForwardingRules.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaForwardingRules.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaForwardingRules.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -13350,7 +14208,10 @@ func (g *GCEBetaForwardingRules) Get(ctx context.Context, key *meta.Key) (*beta.
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaForwardingRules.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -13358,16 +14219,18 @@ func (g *GCEBetaForwardingRules) Get(ctx context.Context, key *meta.Key) (*beta.
 func (g *GCEBetaForwardingRules) List(ctx context.Context, region string, fl *filter.F) ([]*beta.ForwardingRule, error) {
 	klog.V(5).Infof("GCEBetaForwardingRules.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "ForwardingRules",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaForwardingRules.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaForwardingRules.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Beta.ForwardingRules.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -13379,12 +14242,16 @@ func (g *GCEBetaForwardingRules) List(ctx context.Context, region string, fl *fi
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaForwardingRules.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaForwardingRules.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -13406,14 +14273,16 @@ func (g *GCEBetaForwardingRules) Insert(ctx context.Context, key *meta.Key, obj 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "ForwardingRules",
 	}
-	klog.V(5).Infof("GCEBetaForwardingRules.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaForwardingRules.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaForwardingRules.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -13422,7 +14291,10 @@ func (g *GCEBetaForwardingRules) Insert(ctx context.Context, key *meta.Key, obj 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaForwardingRules.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -13441,14 +14313,15 @@ func (g *GCEBetaForwardingRules) Delete(ctx context.Context, key *meta.Key) erro
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "ForwardingRules",
 	}
-	klog.V(5).Infof("GCEBetaForwardingRules.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaForwardingRules.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaForwardingRules.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -13456,7 +14329,10 @@ func (g *GCEBetaForwardingRules) Delete(ctx context.Context, key *meta.Key) erro
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -13476,27 +14352,35 @@ func (g *GCEBetaForwardingRules) SetLabels(ctx context.Context, key *meta.Key, a
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetLabels",
 		Version:   meta.Version("beta"),
 		Service:   "ForwardingRules",
 	}
-	klog.V(5).Infof("GCEBetaForwardingRules.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaForwardingRules.SetLabels(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaForwardingRules.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.ForwardingRules.SetLabels(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -13510,27 +14394,35 @@ func (g *GCEBetaForwardingRules) SetTarget(ctx context.Context, key *meta.Key, a
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "ForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetTarget",
 		Version:   meta.Version("beta"),
 		Service:   "ForwardingRules",
 	}
-	klog.V(5).Infof("GCEBetaForwardingRules.SetTarget(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaForwardingRules.SetTarget(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaForwardingRules.SetTarget(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.ForwardingRules.SetTarget(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -13759,14 +14651,16 @@ func (g *GCEAlphaGlobalForwardingRules) Get(ctx context.Context, key *meta.Key) 
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "GlobalForwardingRules",
 	}
-	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -13774,7 +14668,10 @@ func (g *GCEAlphaGlobalForwardingRules) Get(ctx context.Context, key *meta.Key) 
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaGlobalForwardingRules.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -13782,16 +14679,18 @@ func (g *GCEAlphaGlobalForwardingRules) Get(ctx context.Context, key *meta.Key) 
 func (g *GCEAlphaGlobalForwardingRules) List(ctx context.Context, fl *filter.F) ([]*alpha.ForwardingRule, error) {
 	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "GlobalForwardingRules",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Alpha.GlobalForwardingRules.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -13803,12 +14702,16 @@ func (g *GCEAlphaGlobalForwardingRules) List(ctx context.Context, fl *filter.F) 
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -13830,14 +14733,16 @@ func (g *GCEAlphaGlobalForwardingRules) Insert(ctx context.Context, key *meta.Ke
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "GlobalForwardingRules",
 	}
-	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -13846,7 +14751,10 @@ func (g *GCEAlphaGlobalForwardingRules) Insert(ctx context.Context, key *meta.Ke
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -13865,14 +14773,15 @@ func (g *GCEAlphaGlobalForwardingRules) Delete(ctx context.Context, key *meta.Ke
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "GlobalForwardingRules",
 	}
-	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -13881,7 +14790,10 @@ func (g *GCEAlphaGlobalForwardingRules) Delete(ctx context.Context, key *meta.Ke
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -13901,27 +14813,35 @@ func (g *GCEAlphaGlobalForwardingRules) SetLabels(ctx context.Context, key *meta
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetLabels",
 		Version:   meta.Version("alpha"),
 		Service:   "GlobalForwardingRules",
 	}
-	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.SetLabels(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.GlobalForwardingRules.SetLabels(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaGlobalForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -13935,27 +14855,35 @@ func (g *GCEAlphaGlobalForwardingRules) SetTarget(ctx context.Context, key *meta
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetTarget",
 		Version:   meta.Version("alpha"),
 		Service:   "GlobalForwardingRules",
 	}
-	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.SetTarget(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.SetTarget(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.SetTarget(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.GlobalForwardingRules.SetTarget(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaGlobalForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -14184,14 +15112,16 @@ func (g *GCEBetaGlobalForwardingRules) Get(ctx context.Context, key *meta.Key) (
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "GlobalForwardingRules",
 	}
-	klog.V(5).Infof("GCEBetaGlobalForwardingRules.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaGlobalForwardingRules.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaGlobalForwardingRules.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -14199,7 +15129,10 @@ func (g *GCEBetaGlobalForwardingRules) Get(ctx context.Context, key *meta.Key) (
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaGlobalForwardingRules.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -14207,16 +15140,18 @@ func (g *GCEBetaGlobalForwardingRules) Get(ctx context.Context, key *meta.Key) (
 func (g *GCEBetaGlobalForwardingRules) List(ctx context.Context, fl *filter.F) ([]*beta.ForwardingRule, error) {
 	klog.V(5).Infof("GCEBetaGlobalForwardingRules.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "GlobalForwardingRules",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaGlobalForwardingRules.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaGlobalForwardingRules.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Beta.GlobalForwardingRules.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -14228,12 +15163,16 @@ func (g *GCEBetaGlobalForwardingRules) List(ctx context.Context, fl *filter.F) (
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaGlobalForwardingRules.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaGlobalForwardingRules.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -14255,14 +15194,16 @@ func (g *GCEBetaGlobalForwardingRules) Insert(ctx context.Context, key *meta.Key
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "GlobalForwardingRules",
 	}
-	klog.V(5).Infof("GCEBetaGlobalForwardingRules.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaGlobalForwardingRules.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaGlobalForwardingRules.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -14271,7 +15212,10 @@ func (g *GCEBetaGlobalForwardingRules) Insert(ctx context.Context, key *meta.Key
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaGlobalForwardingRules.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -14290,14 +15234,15 @@ func (g *GCEBetaGlobalForwardingRules) Delete(ctx context.Context, key *meta.Key
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "GlobalForwardingRules",
 	}
-	klog.V(5).Infof("GCEBetaGlobalForwardingRules.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaGlobalForwardingRules.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaGlobalForwardingRules.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -14306,7 +15251,10 @@ func (g *GCEBetaGlobalForwardingRules) Delete(ctx context.Context, key *meta.Key
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaGlobalForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -14326,27 +15274,35 @@ func (g *GCEBetaGlobalForwardingRules) SetLabels(ctx context.Context, key *meta.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetLabels",
 		Version:   meta.Version("beta"),
 		Service:   "GlobalForwardingRules",
 	}
-	klog.V(5).Infof("GCEBetaGlobalForwardingRules.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaGlobalForwardingRules.SetLabels(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaGlobalForwardingRules.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.GlobalForwardingRules.SetLabels(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaGlobalForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaGlobalForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -14360,27 +15316,35 @@ func (g *GCEBetaGlobalForwardingRules) SetTarget(ctx context.Context, key *meta.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetTarget",
 		Version:   meta.Version("beta"),
 		Service:   "GlobalForwardingRules",
 	}
-	klog.V(5).Infof("GCEBetaGlobalForwardingRules.SetTarget(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaGlobalForwardingRules.SetTarget(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaGlobalForwardingRules.SetTarget(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.GlobalForwardingRules.SetTarget(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaGlobalForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaGlobalForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -14609,14 +15573,16 @@ func (g *GCEGlobalForwardingRules) Get(ctx context.Context, key *meta.Key) (*ga.
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "GlobalForwardingRules",
 	}
-	klog.V(5).Infof("GCEGlobalForwardingRules.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEGlobalForwardingRules.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEGlobalForwardingRules.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -14624,7 +15590,10 @@ func (g *GCEGlobalForwardingRules) Get(ctx context.Context, key *meta.Key) (*ga.
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEGlobalForwardingRules.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -14632,16 +15601,18 @@ func (g *GCEGlobalForwardingRules) Get(ctx context.Context, key *meta.Key) (*ga.
 func (g *GCEGlobalForwardingRules) List(ctx context.Context, fl *filter.F) ([]*ga.ForwardingRule, error) {
 	klog.V(5).Infof("GCEGlobalForwardingRules.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "GlobalForwardingRules",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEGlobalForwardingRules.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEGlobalForwardingRules.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.GlobalForwardingRules.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -14653,12 +15624,16 @@ func (g *GCEGlobalForwardingRules) List(ctx context.Context, fl *filter.F) ([]*g
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEGlobalForwardingRules.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEGlobalForwardingRules.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -14680,14 +15655,16 @@ func (g *GCEGlobalForwardingRules) Insert(ctx context.Context, key *meta.Key, ob
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "GlobalForwardingRules",
 	}
-	klog.V(5).Infof("GCEGlobalForwardingRules.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEGlobalForwardingRules.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEGlobalForwardingRules.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -14696,7 +15673,10 @@ func (g *GCEGlobalForwardingRules) Insert(ctx context.Context, key *meta.Key, ob
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEGlobalForwardingRules.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -14715,14 +15695,15 @@ func (g *GCEGlobalForwardingRules) Delete(ctx context.Context, key *meta.Key) er
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "GlobalForwardingRules",
 	}
-	klog.V(5).Infof("GCEGlobalForwardingRules.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEGlobalForwardingRules.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEGlobalForwardingRules.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -14731,7 +15712,10 @@ func (g *GCEGlobalForwardingRules) Delete(ctx context.Context, key *meta.Key) er
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEGlobalForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -14751,27 +15735,35 @@ func (g *GCEGlobalForwardingRules) SetLabels(ctx context.Context, key *meta.Key,
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetLabels",
 		Version:   meta.Version("ga"),
 		Service:   "GlobalForwardingRules",
 	}
-	klog.V(5).Infof("GCEGlobalForwardingRules.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEGlobalForwardingRules.SetLabels(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEGlobalForwardingRules.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.GlobalForwardingRules.SetLabels(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEGlobalForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEGlobalForwardingRules.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -14785,27 +15777,35 @@ func (g *GCEGlobalForwardingRules) SetTarget(ctx context.Context, key *meta.Key,
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "GlobalForwardingRules")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetTarget",
 		Version:   meta.Version("ga"),
 		Service:   "GlobalForwardingRules",
 	}
-	klog.V(5).Infof("GCEGlobalForwardingRules.SetTarget(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEGlobalForwardingRules.SetTarget(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEGlobalForwardingRules.SetTarget(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.GlobalForwardingRules.SetTarget(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEGlobalForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEGlobalForwardingRules.SetTarget(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -15024,14 +16024,16 @@ func (g *GCEHealthChecks) Get(ctx context.Context, key *meta.Key) (*ga.HealthChe
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "HealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "HealthChecks",
 	}
-	klog.V(5).Infof("GCEHealthChecks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEHealthChecks.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEHealthChecks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -15039,7 +16041,10 @@ func (g *GCEHealthChecks) Get(ctx context.Context, key *meta.Key) (*ga.HealthChe
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEHealthChecks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -15047,16 +16052,18 @@ func (g *GCEHealthChecks) Get(ctx context.Context, key *meta.Key) (*ga.HealthChe
 func (g *GCEHealthChecks) List(ctx context.Context, fl *filter.F) ([]*ga.HealthCheck, error) {
 	klog.V(5).Infof("GCEHealthChecks.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "HealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "HealthChecks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEHealthChecks.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEHealthChecks.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.HealthChecks.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -15068,12 +16075,16 @@ func (g *GCEHealthChecks) List(ctx context.Context, fl *filter.F) ([]*ga.HealthC
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEHealthChecks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -15095,14 +16106,16 @@ func (g *GCEHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *ga.Hea
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "HealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "HealthChecks",
 	}
-	klog.V(5).Infof("GCEHealthChecks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEHealthChecks.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEHealthChecks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -15111,7 +16124,10 @@ func (g *GCEHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *ga.Hea
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEHealthChecks.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -15130,14 +16146,15 @@ func (g *GCEHealthChecks) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "HealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "HealthChecks",
 	}
-	klog.V(5).Infof("GCEHealthChecks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEHealthChecks.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEHealthChecks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -15146,7 +16163,10 @@ func (g *GCEHealthChecks) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -15166,27 +16186,35 @@ func (g *GCEHealthChecks) Update(ctx context.Context, key *meta.Key, arg0 *ga.He
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "HealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("ga"),
 		Service:   "HealthChecks",
 	}
-	klog.V(5).Infof("GCEHealthChecks.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEHealthChecks.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEHealthChecks.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.HealthChecks.Update(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -15405,14 +16433,16 @@ func (g *GCEAlphaHealthChecks) Get(ctx context.Context, key *meta.Key) (*alpha.H
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "HealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "HealthChecks",
 	}
-	klog.V(5).Infof("GCEAlphaHealthChecks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaHealthChecks.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaHealthChecks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -15420,7 +16450,10 @@ func (g *GCEAlphaHealthChecks) Get(ctx context.Context, key *meta.Key) (*alpha.H
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaHealthChecks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -15428,16 +16461,18 @@ func (g *GCEAlphaHealthChecks) Get(ctx context.Context, key *meta.Key) (*alpha.H
 func (g *GCEAlphaHealthChecks) List(ctx context.Context, fl *filter.F) ([]*alpha.HealthCheck, error) {
 	klog.V(5).Infof("GCEAlphaHealthChecks.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "HealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "HealthChecks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaHealthChecks.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaHealthChecks.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Alpha.HealthChecks.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -15449,12 +16484,16 @@ func (g *GCEAlphaHealthChecks) List(ctx context.Context, fl *filter.F) ([]*alpha
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaHealthChecks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -15476,14 +16515,16 @@ func (g *GCEAlphaHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *a
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "HealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "HealthChecks",
 	}
-	klog.V(5).Infof("GCEAlphaHealthChecks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaHealthChecks.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaHealthChecks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -15492,7 +16533,10 @@ func (g *GCEAlphaHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *a
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaHealthChecks.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -15511,14 +16555,15 @@ func (g *GCEAlphaHealthChecks) Delete(ctx context.Context, key *meta.Key) error 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "HealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "HealthChecks",
 	}
-	klog.V(5).Infof("GCEAlphaHealthChecks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaHealthChecks.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaHealthChecks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -15527,7 +16572,10 @@ func (g *GCEAlphaHealthChecks) Delete(ctx context.Context, key *meta.Key) error 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -15547,27 +16595,35 @@ func (g *GCEAlphaHealthChecks) Update(ctx context.Context, key *meta.Key, arg0 *
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "HealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("alpha"),
 		Service:   "HealthChecks",
 	}
-	klog.V(5).Infof("GCEAlphaHealthChecks.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaHealthChecks.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaHealthChecks.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.HealthChecks.Update(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -15786,14 +16842,16 @@ func (g *GCEBetaHealthChecks) Get(ctx context.Context, key *meta.Key) (*beta.Hea
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "HealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "HealthChecks",
 	}
-	klog.V(5).Infof("GCEBetaHealthChecks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaHealthChecks.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaHealthChecks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -15801,7 +16859,10 @@ func (g *GCEBetaHealthChecks) Get(ctx context.Context, key *meta.Key) (*beta.Hea
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaHealthChecks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -15809,16 +16870,18 @@ func (g *GCEBetaHealthChecks) Get(ctx context.Context, key *meta.Key) (*beta.Hea
 func (g *GCEBetaHealthChecks) List(ctx context.Context, fl *filter.F) ([]*beta.HealthCheck, error) {
 	klog.V(5).Infof("GCEBetaHealthChecks.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "HealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "HealthChecks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaHealthChecks.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaHealthChecks.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Beta.HealthChecks.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -15830,12 +16893,16 @@ func (g *GCEBetaHealthChecks) List(ctx context.Context, fl *filter.F) ([]*beta.H
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaHealthChecks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -15857,14 +16924,16 @@ func (g *GCEBetaHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *be
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "HealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "HealthChecks",
 	}
-	klog.V(5).Infof("GCEBetaHealthChecks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaHealthChecks.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaHealthChecks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -15873,7 +16942,10 @@ func (g *GCEBetaHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *be
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaHealthChecks.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -15892,14 +16964,15 @@ func (g *GCEBetaHealthChecks) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "HealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "HealthChecks",
 	}
-	klog.V(5).Infof("GCEBetaHealthChecks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaHealthChecks.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaHealthChecks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -15908,7 +16981,10 @@ func (g *GCEBetaHealthChecks) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -15928,27 +17004,35 @@ func (g *GCEBetaHealthChecks) Update(ctx context.Context, key *meta.Key, arg0 *b
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "HealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("beta"),
 		Service:   "HealthChecks",
 	}
-	klog.V(5).Infof("GCEBetaHealthChecks.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaHealthChecks.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaHealthChecks.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.HealthChecks.Update(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -16170,14 +17254,16 @@ func (g *GCEAlphaRegionHealthChecks) Get(ctx context.Context, key *meta.Key) (*a
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionHealthChecks",
 	}
-	klog.V(5).Infof("GCEAlphaRegionHealthChecks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaRegionHealthChecks.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionHealthChecks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -16185,7 +17271,10 @@ func (g *GCEAlphaRegionHealthChecks) Get(ctx context.Context, key *meta.Key) (*a
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaRegionHealthChecks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -16193,16 +17282,18 @@ func (g *GCEAlphaRegionHealthChecks) Get(ctx context.Context, key *meta.Key) (*a
 func (g *GCEAlphaRegionHealthChecks) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.HealthCheck, error) {
 	klog.V(5).Infof("GCEAlphaRegionHealthChecks.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionHealthChecks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaRegionHealthChecks.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaRegionHealthChecks.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Alpha.RegionHealthChecks.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -16214,12 +17305,16 @@ func (g *GCEAlphaRegionHealthChecks) List(ctx context.Context, region string, fl
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionHealthChecks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaRegionHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -16241,14 +17336,16 @@ func (g *GCEAlphaRegionHealthChecks) Insert(ctx context.Context, key *meta.Key, 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionHealthChecks",
 	}
-	klog.V(5).Infof("GCEAlphaRegionHealthChecks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaRegionHealthChecks.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionHealthChecks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -16257,7 +17354,10 @@ func (g *GCEAlphaRegionHealthChecks) Insert(ctx context.Context, key *meta.Key, 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaRegionHealthChecks.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -16276,14 +17376,15 @@ func (g *GCEAlphaRegionHealthChecks) Delete(ctx context.Context, key *meta.Key) 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionHealthChecks",
 	}
-	klog.V(5).Infof("GCEAlphaRegionHealthChecks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionHealthChecks.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionHealthChecks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -16291,7 +17392,10 @@ func (g *GCEAlphaRegionHealthChecks) Delete(ctx context.Context, key *meta.Key) 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaRegionHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -16311,27 +17415,35 @@ func (g *GCEAlphaRegionHealthChecks) Update(ctx context.Context, key *meta.Key, 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionHealthChecks",
 	}
-	klog.V(5).Infof("GCEAlphaRegionHealthChecks.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionHealthChecks.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionHealthChecks.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.RegionHealthChecks.Update(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaRegionHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -16553,14 +17665,16 @@ func (g *GCEBetaRegionHealthChecks) Get(ctx context.Context, key *meta.Key) (*be
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "RegionHealthChecks",
 	}
-	klog.V(5).Infof("GCEBetaRegionHealthChecks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaRegionHealthChecks.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionHealthChecks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -16568,7 +17682,10 @@ func (g *GCEBetaRegionHealthChecks) Get(ctx context.Context, key *meta.Key) (*be
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaRegionHealthChecks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -16576,16 +17693,18 @@ func (g *GCEBetaRegionHealthChecks) Get(ctx context.Context, key *meta.Key) (*be
 func (g *GCEBetaRegionHealthChecks) List(ctx context.Context, region string, fl *filter.F) ([]*beta.HealthCheck, error) {
 	klog.V(5).Infof("GCEBetaRegionHealthChecks.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "RegionHealthChecks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaRegionHealthChecks.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaRegionHealthChecks.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Beta.RegionHealthChecks.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -16597,12 +17716,16 @@ func (g *GCEBetaRegionHealthChecks) List(ctx context.Context, region string, fl 
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaRegionHealthChecks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaRegionHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -16624,14 +17747,16 @@ func (g *GCEBetaRegionHealthChecks) Insert(ctx context.Context, key *meta.Key, o
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "RegionHealthChecks",
 	}
-	klog.V(5).Infof("GCEBetaRegionHealthChecks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaRegionHealthChecks.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionHealthChecks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -16640,7 +17765,10 @@ func (g *GCEBetaRegionHealthChecks) Insert(ctx context.Context, key *meta.Key, o
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaRegionHealthChecks.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -16659,14 +17787,15 @@ func (g *GCEBetaRegionHealthChecks) Delete(ctx context.Context, key *meta.Key) e
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "RegionHealthChecks",
 	}
-	klog.V(5).Infof("GCEBetaRegionHealthChecks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRegionHealthChecks.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionHealthChecks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -16674,7 +17803,10 @@ func (g *GCEBetaRegionHealthChecks) Delete(ctx context.Context, key *meta.Key) e
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaRegionHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -16694,27 +17826,35 @@ func (g *GCEBetaRegionHealthChecks) Update(ctx context.Context, key *meta.Key, a
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("beta"),
 		Service:   "RegionHealthChecks",
 	}
-	klog.V(5).Infof("GCEBetaRegionHealthChecks.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRegionHealthChecks.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionHealthChecks.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.RegionHealthChecks.Update(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaRegionHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaRegionHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -16936,14 +18076,16 @@ func (g *GCERegionHealthChecks) Get(ctx context.Context, key *meta.Key) (*ga.Hea
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "RegionHealthChecks",
 	}
-	klog.V(5).Infof("GCERegionHealthChecks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERegionHealthChecks.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionHealthChecks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -16951,7 +18093,10 @@ func (g *GCERegionHealthChecks) Get(ctx context.Context, key *meta.Key) (*ga.Hea
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCERegionHealthChecks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -16959,16 +18104,18 @@ func (g *GCERegionHealthChecks) Get(ctx context.Context, key *meta.Key) (*ga.Hea
 func (g *GCERegionHealthChecks) List(ctx context.Context, region string, fl *filter.F) ([]*ga.HealthCheck, error) {
 	klog.V(5).Infof("GCERegionHealthChecks.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "RegionHealthChecks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCERegionHealthChecks.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCERegionHealthChecks.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.GA.RegionHealthChecks.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -16980,12 +18127,16 @@ func (g *GCERegionHealthChecks) List(ctx context.Context, region string, fl *fil
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERegionHealthChecks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCERegionHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -17007,14 +18158,16 @@ func (g *GCERegionHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "RegionHealthChecks",
 	}
-	klog.V(5).Infof("GCERegionHealthChecks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERegionHealthChecks.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionHealthChecks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -17023,7 +18176,10 @@ func (g *GCERegionHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERegionHealthChecks.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -17042,14 +18198,15 @@ func (g *GCERegionHealthChecks) Delete(ctx context.Context, key *meta.Key) error
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "RegionHealthChecks",
 	}
-	klog.V(5).Infof("GCERegionHealthChecks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERegionHealthChecks.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionHealthChecks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -17057,7 +18214,10 @@ func (g *GCERegionHealthChecks) Delete(ctx context.Context, key *meta.Key) error
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERegionHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -17077,27 +18237,35 @@ func (g *GCERegionHealthChecks) Update(ctx context.Context, key *meta.Key, arg0 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("ga"),
 		Service:   "RegionHealthChecks",
 	}
-	klog.V(5).Infof("GCERegionHealthChecks.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERegionHealthChecks.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionHealthChecks.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.RegionHealthChecks.Update(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERegionHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCERegionHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -17316,14 +18484,16 @@ func (g *GCEHttpHealthChecks) Get(ctx context.Context, key *meta.Key) (*ga.HttpH
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "HttpHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "HttpHealthChecks",
 	}
-	klog.V(5).Infof("GCEHttpHealthChecks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEHttpHealthChecks.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEHttpHealthChecks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -17331,7 +18501,10 @@ func (g *GCEHttpHealthChecks) Get(ctx context.Context, key *meta.Key) (*ga.HttpH
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEHttpHealthChecks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -17339,16 +18512,18 @@ func (g *GCEHttpHealthChecks) Get(ctx context.Context, key *meta.Key) (*ga.HttpH
 func (g *GCEHttpHealthChecks) List(ctx context.Context, fl *filter.F) ([]*ga.HttpHealthCheck, error) {
 	klog.V(5).Infof("GCEHttpHealthChecks.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "HttpHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "HttpHealthChecks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEHttpHealthChecks.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEHttpHealthChecks.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.HttpHealthChecks.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -17360,12 +18535,16 @@ func (g *GCEHttpHealthChecks) List(ctx context.Context, fl *filter.F) ([]*ga.Htt
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEHttpHealthChecks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEHttpHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -17387,14 +18566,16 @@ func (g *GCEHttpHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *ga
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "HttpHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "HttpHealthChecks",
 	}
-	klog.V(5).Infof("GCEHttpHealthChecks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEHttpHealthChecks.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEHttpHealthChecks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -17403,7 +18584,10 @@ func (g *GCEHttpHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *ga
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEHttpHealthChecks.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -17422,14 +18606,15 @@ func (g *GCEHttpHealthChecks) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "HttpHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "HttpHealthChecks",
 	}
-	klog.V(5).Infof("GCEHttpHealthChecks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEHttpHealthChecks.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEHttpHealthChecks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -17438,7 +18623,10 @@ func (g *GCEHttpHealthChecks) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEHttpHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -17458,27 +18646,35 @@ func (g *GCEHttpHealthChecks) Update(ctx context.Context, key *meta.Key, arg0 *g
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "HttpHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("ga"),
 		Service:   "HttpHealthChecks",
 	}
-	klog.V(5).Infof("GCEHttpHealthChecks.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEHttpHealthChecks.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEHttpHealthChecks.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.HttpHealthChecks.Update(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEHttpHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEHttpHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -17697,14 +18893,16 @@ func (g *GCEHttpsHealthChecks) Get(ctx context.Context, key *meta.Key) (*ga.Http
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "HttpsHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "HttpsHealthChecks",
 	}
-	klog.V(5).Infof("GCEHttpsHealthChecks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEHttpsHealthChecks.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEHttpsHealthChecks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -17712,7 +18910,10 @@ func (g *GCEHttpsHealthChecks) Get(ctx context.Context, key *meta.Key) (*ga.Http
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEHttpsHealthChecks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -17720,16 +18921,18 @@ func (g *GCEHttpsHealthChecks) Get(ctx context.Context, key *meta.Key) (*ga.Http
 func (g *GCEHttpsHealthChecks) List(ctx context.Context, fl *filter.F) ([]*ga.HttpsHealthCheck, error) {
 	klog.V(5).Infof("GCEHttpsHealthChecks.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "HttpsHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "HttpsHealthChecks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEHttpsHealthChecks.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEHttpsHealthChecks.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.HttpsHealthChecks.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -17741,12 +18944,16 @@ func (g *GCEHttpsHealthChecks) List(ctx context.Context, fl *filter.F) ([]*ga.Ht
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEHttpsHealthChecks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEHttpsHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -17768,14 +18975,16 @@ func (g *GCEHttpsHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *g
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "HttpsHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "HttpsHealthChecks",
 	}
-	klog.V(5).Infof("GCEHttpsHealthChecks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEHttpsHealthChecks.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEHttpsHealthChecks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -17784,7 +18993,10 @@ func (g *GCEHttpsHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *g
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEHttpsHealthChecks.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -17803,14 +19015,15 @@ func (g *GCEHttpsHealthChecks) Delete(ctx context.Context, key *meta.Key) error 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "HttpsHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "HttpsHealthChecks",
 	}
-	klog.V(5).Infof("GCEHttpsHealthChecks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEHttpsHealthChecks.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEHttpsHealthChecks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -17819,7 +19032,10 @@ func (g *GCEHttpsHealthChecks) Delete(ctx context.Context, key *meta.Key) error 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEHttpsHealthChecks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -17839,27 +19055,35 @@ func (g *GCEHttpsHealthChecks) Update(ctx context.Context, key *meta.Key, arg0 *
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "HttpsHealthChecks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("ga"),
 		Service:   "HttpsHealthChecks",
 	}
-	klog.V(5).Infof("GCEHttpsHealthChecks.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEHttpsHealthChecks.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEHttpsHealthChecks.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.HttpsHealthChecks.Update(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEHttpsHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEHttpsHealthChecks.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -18111,14 +19335,16 @@ func (g *GCEInstanceGroups) Get(ctx context.Context, key *meta.Key) (*ga.Instanc
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "InstanceGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "InstanceGroups",
 	}
-	klog.V(5).Infof("GCEInstanceGroups.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEInstanceGroups.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEInstanceGroups.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -18126,7 +19352,10 @@ func (g *GCEInstanceGroups) Get(ctx context.Context, key *meta.Key) (*ga.Instanc
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEInstanceGroups.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -18134,16 +19363,18 @@ func (g *GCEInstanceGroups) Get(ctx context.Context, key *meta.Key) (*ga.Instanc
 func (g *GCEInstanceGroups) List(ctx context.Context, zone string, fl *filter.F) ([]*ga.InstanceGroup, error) {
 	klog.V(5).Infof("GCEInstanceGroups.List(%v, %v, %v) called", ctx, zone, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "InstanceGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "InstanceGroups",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEInstanceGroups.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, zone, fl, projectID, rk)
+	klog.V(5).Infof("GCEInstanceGroups.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, zone, fl, projectID, ck)
 	call := g.s.GA.InstanceGroups.List(projectID, zone)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -18155,12 +19386,16 @@ func (g *GCEInstanceGroups) List(ctx context.Context, zone string, fl *filter.F)
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEInstanceGroups.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEInstanceGroups.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -18182,14 +19417,16 @@ func (g *GCEInstanceGroups) Insert(ctx context.Context, key *meta.Key, obj *ga.I
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "InstanceGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "InstanceGroups",
 	}
-	klog.V(5).Infof("GCEInstanceGroups.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEInstanceGroups.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEInstanceGroups.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -18198,7 +19435,10 @@ func (g *GCEInstanceGroups) Insert(ctx context.Context, key *meta.Key, obj *ga.I
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEInstanceGroups.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -18217,14 +19457,15 @@ func (g *GCEInstanceGroups) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "InstanceGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "InstanceGroups",
 	}
-	klog.V(5).Infof("GCEInstanceGroups.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEInstanceGroups.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEInstanceGroups.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -18232,7 +19473,10 @@ func (g *GCEInstanceGroups) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEInstanceGroups.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -18252,27 +19496,35 @@ func (g *GCEInstanceGroups) AddInstances(ctx context.Context, key *meta.Key, arg
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "InstanceGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AddInstances",
 		Version:   meta.Version("ga"),
 		Service:   "InstanceGroups",
 	}
-	klog.V(5).Infof("GCEInstanceGroups.AddInstances(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEInstanceGroups.AddInstances(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEInstanceGroups.AddInstances(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.InstanceGroups.AddInstances(projectID, key.Zone, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEInstanceGroups.AddInstances(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEInstanceGroups.AddInstances(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -18286,15 +19538,15 @@ func (g *GCEInstanceGroups) ListInstances(ctx context.Context, key *meta.Key, ar
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "InstanceGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "ListInstances",
 		Version:   meta.Version("ga"),
 		Service:   "InstanceGroups",
 	}
-	klog.V(5).Infof("GCEInstanceGroups.ListInstances(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEInstanceGroups.ListInstances(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEInstanceGroups.ListInstances(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -18306,10 +19558,16 @@ func (g *GCEInstanceGroups) ListInstances(ctx context.Context, key *meta.Key, ar
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEInstanceGroups.ListInstances(%v, %v, ...) = %v, %v", ctx, key, nil, err)
 		return nil, err
 	}
+
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEInstanceGroups.ListInstances(%v, %v, ...) = [%v items], %v", ctx, key, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -18331,27 +19589,35 @@ func (g *GCEInstanceGroups) RemoveInstances(ctx context.Context, key *meta.Key, 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "InstanceGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "RemoveInstances",
 		Version:   meta.Version("ga"),
 		Service:   "InstanceGroups",
 	}
-	klog.V(5).Infof("GCEInstanceGroups.RemoveInstances(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEInstanceGroups.RemoveInstances(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEInstanceGroups.RemoveInstances(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.InstanceGroups.RemoveInstances(projectID, key.Zone, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEInstanceGroups.RemoveInstances(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEInstanceGroups.RemoveInstances(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -18365,27 +19631,35 @@ func (g *GCEInstanceGroups) SetNamedPorts(ctx context.Context, key *meta.Key, ar
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "InstanceGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetNamedPorts",
 		Version:   meta.Version("ga"),
 		Service:   "InstanceGroups",
 	}
-	klog.V(5).Infof("GCEInstanceGroups.SetNamedPorts(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEInstanceGroups.SetNamedPorts(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEInstanceGroups.SetNamedPorts(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.InstanceGroups.SetNamedPorts(projectID, key.Zone, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEInstanceGroups.SetNamedPorts(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEInstanceGroups.SetNamedPorts(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -18617,14 +19891,16 @@ func (g *GCEInstances) Get(ctx context.Context, key *meta.Key) (*ga.Instance, er
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "Instances",
 	}
-	klog.V(5).Infof("GCEInstances.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEInstances.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEInstances.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -18632,7 +19908,10 @@ func (g *GCEInstances) Get(ctx context.Context, key *meta.Key) (*ga.Instance, er
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEInstances.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -18640,16 +19919,18 @@ func (g *GCEInstances) Get(ctx context.Context, key *meta.Key) (*ga.Instance, er
 func (g *GCEInstances) List(ctx context.Context, zone string, fl *filter.F) ([]*ga.Instance, error) {
 	klog.V(5).Infof("GCEInstances.List(%v, %v, %v) called", ctx, zone, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "Instances",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEInstances.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, zone, fl, projectID, rk)
+	klog.V(5).Infof("GCEInstances.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, zone, fl, projectID, ck)
 	call := g.s.GA.Instances.List(projectID, zone)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -18661,12 +19942,16 @@ func (g *GCEInstances) List(ctx context.Context, zone string, fl *filter.F) ([]*
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEInstances.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEInstances.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -18688,14 +19973,16 @@ func (g *GCEInstances) Insert(ctx context.Context, key *meta.Key, obj *ga.Instan
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "Instances",
 	}
-	klog.V(5).Infof("GCEInstances.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEInstances.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEInstances.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -18704,7 +19991,10 @@ func (g *GCEInstances) Insert(ctx context.Context, key *meta.Key, obj *ga.Instan
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEInstances.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -18723,14 +20013,15 @@ func (g *GCEInstances) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "Instances",
 	}
-	klog.V(5).Infof("GCEInstances.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEInstances.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEInstances.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -18738,7 +20029,10 @@ func (g *GCEInstances) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEInstances.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -18758,27 +20052,35 @@ func (g *GCEInstances) AttachDisk(ctx context.Context, key *meta.Key, arg0 *ga.A
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AttachDisk",
 		Version:   meta.Version("ga"),
 		Service:   "Instances",
 	}
-	klog.V(5).Infof("GCEInstances.AttachDisk(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEInstances.AttachDisk(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEInstances.AttachDisk(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.Instances.AttachDisk(projectID, key.Zone, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEInstances.AttachDisk(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEInstances.AttachDisk(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -18792,27 +20094,35 @@ func (g *GCEInstances) DetachDisk(ctx context.Context, key *meta.Key, arg0 strin
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "DetachDisk",
 		Version:   meta.Version("ga"),
 		Service:   "Instances",
 	}
-	klog.V(5).Infof("GCEInstances.DetachDisk(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEInstances.DetachDisk(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEInstances.DetachDisk(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.Instances.DetachDisk(projectID, key.Zone, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEInstances.DetachDisk(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEInstances.DetachDisk(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -19054,14 +20364,16 @@ func (g *GCEBetaInstances) Get(ctx context.Context, key *meta.Key) (*beta.Instan
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "Instances",
 	}
-	klog.V(5).Infof("GCEBetaInstances.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaInstances.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaInstances.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -19069,7 +20381,10 @@ func (g *GCEBetaInstances) Get(ctx context.Context, key *meta.Key) (*beta.Instan
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaInstances.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -19077,16 +20392,18 @@ func (g *GCEBetaInstances) Get(ctx context.Context, key *meta.Key) (*beta.Instan
 func (g *GCEBetaInstances) List(ctx context.Context, zone string, fl *filter.F) ([]*beta.Instance, error) {
 	klog.V(5).Infof("GCEBetaInstances.List(%v, %v, %v) called", ctx, zone, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "Instances",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaInstances.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, zone, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaInstances.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, zone, fl, projectID, ck)
 	call := g.s.Beta.Instances.List(projectID, zone)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -19098,12 +20415,16 @@ func (g *GCEBetaInstances) List(ctx context.Context, zone string, fl *filter.F) 
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaInstances.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaInstances.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -19125,14 +20446,16 @@ func (g *GCEBetaInstances) Insert(ctx context.Context, key *meta.Key, obj *beta.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "Instances",
 	}
-	klog.V(5).Infof("GCEBetaInstances.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaInstances.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaInstances.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -19141,7 +20464,10 @@ func (g *GCEBetaInstances) Insert(ctx context.Context, key *meta.Key, obj *beta.
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaInstances.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -19160,14 +20486,15 @@ func (g *GCEBetaInstances) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "Instances",
 	}
-	klog.V(5).Infof("GCEBetaInstances.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaInstances.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaInstances.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -19175,7 +20502,10 @@ func (g *GCEBetaInstances) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaInstances.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -19195,27 +20525,35 @@ func (g *GCEBetaInstances) AttachDisk(ctx context.Context, key *meta.Key, arg0 *
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AttachDisk",
 		Version:   meta.Version("beta"),
 		Service:   "Instances",
 	}
-	klog.V(5).Infof("GCEBetaInstances.AttachDisk(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaInstances.AttachDisk(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaInstances.AttachDisk(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.Instances.AttachDisk(projectID, key.Zone, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaInstances.AttachDisk(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaInstances.AttachDisk(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -19229,27 +20567,35 @@ func (g *GCEBetaInstances) DetachDisk(ctx context.Context, key *meta.Key, arg0 s
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "DetachDisk",
 		Version:   meta.Version("beta"),
 		Service:   "Instances",
 	}
-	klog.V(5).Infof("GCEBetaInstances.DetachDisk(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaInstances.DetachDisk(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaInstances.DetachDisk(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.Instances.DetachDisk(projectID, key.Zone, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaInstances.DetachDisk(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaInstances.DetachDisk(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -19263,27 +20609,35 @@ func (g *GCEBetaInstances) UpdateNetworkInterface(ctx context.Context, key *meta
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "UpdateNetworkInterface",
 		Version:   meta.Version("beta"),
 		Service:   "Instances",
 	}
-	klog.V(5).Infof("GCEBetaInstances.UpdateNetworkInterface(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaInstances.UpdateNetworkInterface(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaInstances.UpdateNetworkInterface(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.Instances.UpdateNetworkInterface(projectID, key.Zone, key.Name, arg0, arg1)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaInstances.UpdateNetworkInterface(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaInstances.UpdateNetworkInterface(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -19525,14 +20879,16 @@ func (g *GCEAlphaInstances) Get(ctx context.Context, key *meta.Key) (*alpha.Inst
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "Instances",
 	}
-	klog.V(5).Infof("GCEAlphaInstances.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaInstances.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaInstances.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -19540,7 +20896,10 @@ func (g *GCEAlphaInstances) Get(ctx context.Context, key *meta.Key) (*alpha.Inst
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaInstances.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -19548,16 +20907,18 @@ func (g *GCEAlphaInstances) Get(ctx context.Context, key *meta.Key) (*alpha.Inst
 func (g *GCEAlphaInstances) List(ctx context.Context, zone string, fl *filter.F) ([]*alpha.Instance, error) {
 	klog.V(5).Infof("GCEAlphaInstances.List(%v, %v, %v) called", ctx, zone, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "Instances",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaInstances.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, zone, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaInstances.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, zone, fl, projectID, ck)
 	call := g.s.Alpha.Instances.List(projectID, zone)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -19569,12 +20930,16 @@ func (g *GCEAlphaInstances) List(ctx context.Context, zone string, fl *filter.F)
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaInstances.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaInstances.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -19596,14 +20961,16 @@ func (g *GCEAlphaInstances) Insert(ctx context.Context, key *meta.Key, obj *alph
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "Instances",
 	}
-	klog.V(5).Infof("GCEAlphaInstances.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaInstances.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaInstances.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -19612,7 +20979,10 @@ func (g *GCEAlphaInstances) Insert(ctx context.Context, key *meta.Key, obj *alph
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaInstances.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -19631,14 +21001,15 @@ func (g *GCEAlphaInstances) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "Instances",
 	}
-	klog.V(5).Infof("GCEAlphaInstances.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaInstances.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaInstances.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -19646,7 +21017,10 @@ func (g *GCEAlphaInstances) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaInstances.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -19666,27 +21040,35 @@ func (g *GCEAlphaInstances) AttachDisk(ctx context.Context, key *meta.Key, arg0 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AttachDisk",
 		Version:   meta.Version("alpha"),
 		Service:   "Instances",
 	}
-	klog.V(5).Infof("GCEAlphaInstances.AttachDisk(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaInstances.AttachDisk(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaInstances.AttachDisk(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.Instances.AttachDisk(projectID, key.Zone, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaInstances.AttachDisk(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaInstances.AttachDisk(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -19700,27 +21082,35 @@ func (g *GCEAlphaInstances) DetachDisk(ctx context.Context, key *meta.Key, arg0 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "DetachDisk",
 		Version:   meta.Version("alpha"),
 		Service:   "Instances",
 	}
-	klog.V(5).Infof("GCEAlphaInstances.DetachDisk(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaInstances.DetachDisk(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaInstances.DetachDisk(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.Instances.DetachDisk(projectID, key.Zone, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaInstances.DetachDisk(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaInstances.DetachDisk(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -19734,27 +21124,35 @@ func (g *GCEAlphaInstances) UpdateNetworkInterface(ctx context.Context, key *met
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Instances")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "UpdateNetworkInterface",
 		Version:   meta.Version("alpha"),
 		Service:   "Instances",
 	}
-	klog.V(5).Infof("GCEAlphaInstances.UpdateNetworkInterface(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaInstances.UpdateNetworkInterface(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaInstances.UpdateNetworkInterface(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.Instances.UpdateNetworkInterface(projectID, key.Zone, key.Name, arg0, arg1)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaInstances.UpdateNetworkInterface(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaInstances.UpdateNetworkInterface(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -20023,14 +21421,16 @@ func (g *GCEImages) Get(ctx context.Context, key *meta.Key) (*ga.Image, error) {
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEImages.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEImages.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEImages.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -20038,7 +21438,10 @@ func (g *GCEImages) Get(ctx context.Context, key *meta.Key) (*ga.Image, error) {
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEImages.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -20046,16 +21449,18 @@ func (g *GCEImages) Get(ctx context.Context, key *meta.Key) (*ga.Image, error) {
 func (g *GCEImages) List(ctx context.Context, fl *filter.F) ([]*ga.Image, error) {
 	klog.V(5).Infof("GCEImages.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "Images",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEImages.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEImages.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.Images.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -20067,12 +21472,16 @@ func (g *GCEImages) List(ctx context.Context, fl *filter.F) ([]*ga.Image, error)
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEImages.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEImages.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -20094,14 +21503,16 @@ func (g *GCEImages) Insert(ctx context.Context, key *meta.Key, obj *ga.Image) er
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEImages.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEImages.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEImages.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -20110,7 +21521,10 @@ func (g *GCEImages) Insert(ctx context.Context, key *meta.Key, obj *ga.Image) er
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEImages.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -20129,14 +21543,15 @@ func (g *GCEImages) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEImages.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEImages.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEImages.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -20145,7 +21560,10 @@ func (g *GCEImages) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEImages.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -20165,22 +21583,25 @@ func (g *GCEImages) GetFromFamily(ctx context.Context, key *meta.Key) (*ga.Image
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetFromFamily",
 		Version:   meta.Version("ga"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEImages.GetFromFamily(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEImages.GetFromFamily(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEImages.GetFromFamily(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.GA.Images.GetFromFamily(projectID, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEImages.GetFromFamily(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -20194,22 +21615,25 @@ func (g *GCEImages) GetIamPolicy(ctx context.Context, key *meta.Key) (*ga.Policy
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetIamPolicy",
 		Version:   meta.Version("ga"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEImages.GetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEImages.GetIamPolicy(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEImages.GetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.GA.Images.GetIamPolicy(projectID, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEImages.GetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -20223,27 +21647,35 @@ func (g *GCEImages) Patch(ctx context.Context, key *meta.Key, arg0 *ga.Image) er
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("ga"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEImages.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEImages.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEImages.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.Images.Patch(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEImages.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEImages.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -20257,22 +21689,25 @@ func (g *GCEImages) SetIamPolicy(ctx context.Context, key *meta.Key, arg0 *ga.Gl
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetIamPolicy",
 		Version:   meta.Version("ga"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEImages.SetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEImages.SetIamPolicy(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEImages.SetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.GA.Images.SetIamPolicy(projectID, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEImages.SetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -20286,27 +21721,35 @@ func (g *GCEImages) SetLabels(ctx context.Context, key *meta.Key, arg0 *ga.Globa
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetLabels",
 		Version:   meta.Version("ga"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEImages.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEImages.SetLabels(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEImages.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.Images.SetLabels(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEImages.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEImages.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -20320,22 +21763,25 @@ func (g *GCEImages) TestIamPermissions(ctx context.Context, key *meta.Key, arg0 
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "TestIamPermissions",
 		Version:   meta.Version("ga"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEImages.TestIamPermissions(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEImages.TestIamPermissions(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEImages.TestIamPermissions(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.GA.Images.TestIamPermissions(projectID, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEImages.TestIamPermissions(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -20604,14 +22050,16 @@ func (g *GCEBetaImages) Get(ctx context.Context, key *meta.Key) (*beta.Image, er
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEBetaImages.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaImages.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaImages.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -20619,7 +22067,10 @@ func (g *GCEBetaImages) Get(ctx context.Context, key *meta.Key) (*beta.Image, er
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaImages.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -20627,16 +22078,18 @@ func (g *GCEBetaImages) Get(ctx context.Context, key *meta.Key) (*beta.Image, er
 func (g *GCEBetaImages) List(ctx context.Context, fl *filter.F) ([]*beta.Image, error) {
 	klog.V(5).Infof("GCEBetaImages.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "Images",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaImages.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaImages.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Beta.Images.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -20648,12 +22101,16 @@ func (g *GCEBetaImages) List(ctx context.Context, fl *filter.F) ([]*beta.Image, 
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaImages.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaImages.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -20675,14 +22132,16 @@ func (g *GCEBetaImages) Insert(ctx context.Context, key *meta.Key, obj *beta.Ima
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEBetaImages.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaImages.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaImages.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -20691,7 +22150,10 @@ func (g *GCEBetaImages) Insert(ctx context.Context, key *meta.Key, obj *beta.Ima
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaImages.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -20710,14 +22172,15 @@ func (g *GCEBetaImages) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEBetaImages.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaImages.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaImages.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -20726,7 +22189,10 @@ func (g *GCEBetaImages) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaImages.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -20746,22 +22212,25 @@ func (g *GCEBetaImages) GetFromFamily(ctx context.Context, key *meta.Key) (*beta
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetFromFamily",
 		Version:   meta.Version("beta"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEBetaImages.GetFromFamily(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaImages.GetFromFamily(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaImages.GetFromFamily(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Beta.Images.GetFromFamily(projectID, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEBetaImages.GetFromFamily(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -20775,22 +22244,25 @@ func (g *GCEBetaImages) GetIamPolicy(ctx context.Context, key *meta.Key) (*beta.
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetIamPolicy",
 		Version:   meta.Version("beta"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEBetaImages.GetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaImages.GetIamPolicy(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaImages.GetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Beta.Images.GetIamPolicy(projectID, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEBetaImages.GetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -20804,27 +22276,35 @@ func (g *GCEBetaImages) Patch(ctx context.Context, key *meta.Key, arg0 *beta.Ima
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("beta"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEBetaImages.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaImages.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaImages.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.Images.Patch(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaImages.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaImages.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -20838,22 +22318,25 @@ func (g *GCEBetaImages) SetIamPolicy(ctx context.Context, key *meta.Key, arg0 *b
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetIamPolicy",
 		Version:   meta.Version("beta"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEBetaImages.SetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaImages.SetIamPolicy(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaImages.SetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Beta.Images.SetIamPolicy(projectID, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEBetaImages.SetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -20867,27 +22350,35 @@ func (g *GCEBetaImages) SetLabels(ctx context.Context, key *meta.Key, arg0 *beta
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetLabels",
 		Version:   meta.Version("beta"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEBetaImages.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaImages.SetLabels(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaImages.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.Images.SetLabels(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaImages.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaImages.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -20901,22 +22392,25 @@ func (g *GCEBetaImages) TestIamPermissions(ctx context.Context, key *meta.Key, a
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "TestIamPermissions",
 		Version:   meta.Version("beta"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEBetaImages.TestIamPermissions(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaImages.TestIamPermissions(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaImages.TestIamPermissions(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Beta.Images.TestIamPermissions(projectID, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEBetaImages.TestIamPermissions(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -21185,14 +22679,16 @@ func (g *GCEAlphaImages) Get(ctx context.Context, key *meta.Key) (*alpha.Image, 
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEAlphaImages.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaImages.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaImages.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -21200,7 +22696,10 @@ func (g *GCEAlphaImages) Get(ctx context.Context, key *meta.Key) (*alpha.Image, 
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaImages.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -21208,16 +22707,18 @@ func (g *GCEAlphaImages) Get(ctx context.Context, key *meta.Key) (*alpha.Image, 
 func (g *GCEAlphaImages) List(ctx context.Context, fl *filter.F) ([]*alpha.Image, error) {
 	klog.V(5).Infof("GCEAlphaImages.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "Images",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaImages.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaImages.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Alpha.Images.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -21229,12 +22730,16 @@ func (g *GCEAlphaImages) List(ctx context.Context, fl *filter.F) ([]*alpha.Image
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaImages.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaImages.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -21256,14 +22761,16 @@ func (g *GCEAlphaImages) Insert(ctx context.Context, key *meta.Key, obj *alpha.I
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEAlphaImages.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaImages.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaImages.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -21272,7 +22779,10 @@ func (g *GCEAlphaImages) Insert(ctx context.Context, key *meta.Key, obj *alpha.I
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaImages.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -21291,14 +22801,15 @@ func (g *GCEAlphaImages) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEAlphaImages.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaImages.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaImages.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -21307,7 +22818,10 @@ func (g *GCEAlphaImages) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaImages.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -21327,22 +22841,25 @@ func (g *GCEAlphaImages) GetFromFamily(ctx context.Context, key *meta.Key) (*alp
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetFromFamily",
 		Version:   meta.Version("alpha"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEAlphaImages.GetFromFamily(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaImages.GetFromFamily(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaImages.GetFromFamily(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.Images.GetFromFamily(projectID, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaImages.GetFromFamily(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -21356,22 +22873,25 @@ func (g *GCEAlphaImages) GetIamPolicy(ctx context.Context, key *meta.Key) (*alph
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetIamPolicy",
 		Version:   meta.Version("alpha"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEAlphaImages.GetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaImages.GetIamPolicy(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaImages.GetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.Images.GetIamPolicy(projectID, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaImages.GetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -21385,27 +22905,35 @@ func (g *GCEAlphaImages) Patch(ctx context.Context, key *meta.Key, arg0 *alpha.I
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("alpha"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEAlphaImages.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaImages.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaImages.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.Images.Patch(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaImages.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaImages.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -21419,22 +22947,25 @@ func (g *GCEAlphaImages) SetIamPolicy(ctx context.Context, key *meta.Key, arg0 *
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetIamPolicy",
 		Version:   meta.Version("alpha"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEAlphaImages.SetIamPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaImages.SetIamPolicy(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaImages.SetIamPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.Images.SetIamPolicy(projectID, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaImages.SetIamPolicy(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -21448,27 +22979,35 @@ func (g *GCEAlphaImages) SetLabels(ctx context.Context, key *meta.Key, arg0 *alp
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetLabels",
 		Version:   meta.Version("alpha"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEAlphaImages.SetLabels(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaImages.SetLabels(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaImages.SetLabels(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.Images.SetLabels(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaImages.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaImages.SetLabels(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -21482,22 +23021,25 @@ func (g *GCEAlphaImages) TestIamPermissions(ctx context.Context, key *meta.Key, 
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Images")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "TestIamPermissions",
 		Version:   meta.Version("alpha"),
 		Service:   "Images",
 	}
-	klog.V(5).Infof("GCEAlphaImages.TestIamPermissions(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaImages.TestIamPermissions(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaImages.TestIamPermissions(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.Images.TestIamPermissions(projectID, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaImages.TestIamPermissions(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -21706,14 +23248,16 @@ func (g *GCEAlphaNetworks) Get(ctx context.Context, key *meta.Key) (*alpha.Netwo
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Networks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "Networks",
 	}
-	klog.V(5).Infof("GCEAlphaNetworks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaNetworks.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -21721,7 +23265,10 @@ func (g *GCEAlphaNetworks) Get(ctx context.Context, key *meta.Key) (*alpha.Netwo
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaNetworks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -21729,16 +23276,18 @@ func (g *GCEAlphaNetworks) Get(ctx context.Context, key *meta.Key) (*alpha.Netwo
 func (g *GCEAlphaNetworks) List(ctx context.Context, fl *filter.F) ([]*alpha.Network, error) {
 	klog.V(5).Infof("GCEAlphaNetworks.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Networks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "Networks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaNetworks.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaNetworks.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Alpha.Networks.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -21750,12 +23299,16 @@ func (g *GCEAlphaNetworks) List(ctx context.Context, fl *filter.F) ([]*alpha.Net
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaNetworks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaNetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -21777,14 +23330,16 @@ func (g *GCEAlphaNetworks) Insert(ctx context.Context, key *meta.Key, obj *alpha
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Networks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "Networks",
 	}
-	klog.V(5).Infof("GCEAlphaNetworks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaNetworks.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -21793,7 +23348,10 @@ func (g *GCEAlphaNetworks) Insert(ctx context.Context, key *meta.Key, obj *alpha
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaNetworks.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -21812,14 +23370,15 @@ func (g *GCEAlphaNetworks) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Networks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "Networks",
 	}
-	klog.V(5).Infof("GCEAlphaNetworks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworks.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -21828,7 +23387,10 @@ func (g *GCEAlphaNetworks) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaNetworks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -22043,14 +23605,16 @@ func (g *GCEBetaNetworks) Get(ctx context.Context, key *meta.Key) (*beta.Network
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Networks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "Networks",
 	}
-	klog.V(5).Infof("GCEBetaNetworks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaNetworks.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaNetworks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -22058,7 +23622,10 @@ func (g *GCEBetaNetworks) Get(ctx context.Context, key *meta.Key) (*beta.Network
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaNetworks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -22066,16 +23633,18 @@ func (g *GCEBetaNetworks) Get(ctx context.Context, key *meta.Key) (*beta.Network
 func (g *GCEBetaNetworks) List(ctx context.Context, fl *filter.F) ([]*beta.Network, error) {
 	klog.V(5).Infof("GCEBetaNetworks.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Networks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "Networks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaNetworks.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaNetworks.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Beta.Networks.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -22087,12 +23656,16 @@ func (g *GCEBetaNetworks) List(ctx context.Context, fl *filter.F) ([]*beta.Netwo
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaNetworks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaNetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -22114,14 +23687,16 @@ func (g *GCEBetaNetworks) Insert(ctx context.Context, key *meta.Key, obj *beta.N
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Networks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "Networks",
 	}
-	klog.V(5).Infof("GCEBetaNetworks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaNetworks.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaNetworks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -22130,7 +23705,10 @@ func (g *GCEBetaNetworks) Insert(ctx context.Context, key *meta.Key, obj *beta.N
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaNetworks.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -22149,14 +23727,15 @@ func (g *GCEBetaNetworks) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Networks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "Networks",
 	}
-	klog.V(5).Infof("GCEBetaNetworks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaNetworks.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaNetworks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -22165,7 +23744,10 @@ func (g *GCEBetaNetworks) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaNetworks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -22380,14 +23962,16 @@ func (g *GCENetworks) Get(ctx context.Context, key *meta.Key) (*ga.Network, erro
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Networks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "Networks",
 	}
-	klog.V(5).Infof("GCENetworks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCENetworks.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCENetworks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -22395,7 +23979,10 @@ func (g *GCENetworks) Get(ctx context.Context, key *meta.Key) (*ga.Network, erro
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCENetworks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -22403,16 +23990,18 @@ func (g *GCENetworks) Get(ctx context.Context, key *meta.Key) (*ga.Network, erro
 func (g *GCENetworks) List(ctx context.Context, fl *filter.F) ([]*ga.Network, error) {
 	klog.V(5).Infof("GCENetworks.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Networks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "Networks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCENetworks.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCENetworks.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.Networks.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -22424,12 +24013,16 @@ func (g *GCENetworks) List(ctx context.Context, fl *filter.F) ([]*ga.Network, er
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCENetworks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCENetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -22451,14 +24044,16 @@ func (g *GCENetworks) Insert(ctx context.Context, key *meta.Key, obj *ga.Network
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Networks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "Networks",
 	}
-	klog.V(5).Infof("GCENetworks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCENetworks.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCENetworks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -22467,7 +24062,10 @@ func (g *GCENetworks) Insert(ctx context.Context, key *meta.Key, obj *ga.Network
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCENetworks.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -22486,14 +24084,15 @@ func (g *GCENetworks) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Networks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "Networks",
 	}
-	klog.V(5).Infof("GCENetworks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCENetworks.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCENetworks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -22502,7 +24101,10 @@ func (g *GCENetworks) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCENetworks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -22788,14 +24390,16 @@ func (g *GCEAlphaNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key) 
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -22803,7 +24407,10 @@ func (g *GCEAlphaNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key) 
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -22811,16 +24418,18 @@ func (g *GCEAlphaNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key) 
 func (g *GCEAlphaNetworkEndpointGroups) List(ctx context.Context, zone string, fl *filter.F) ([]*alpha.NetworkEndpointGroup, error) {
 	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.List(%v, %v, %v) called", ctx, zone, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkEndpointGroups",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, zone, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, zone, fl, projectID, ck)
 	call := g.s.Alpha.NetworkEndpointGroups.List(projectID, zone)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -22832,12 +24441,16 @@ func (g *GCEAlphaNetworkEndpointGroups) List(ctx context.Context, zone string, f
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -22859,14 +24472,16 @@ func (g *GCEAlphaNetworkEndpointGroups) Insert(ctx context.Context, key *meta.Ke
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -22875,7 +24490,10 @@ func (g *GCEAlphaNetworkEndpointGroups) Insert(ctx context.Context, key *meta.Ke
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -22894,14 +24512,15 @@ func (g *GCEAlphaNetworkEndpointGroups) Delete(ctx context.Context, key *meta.Ke
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -22909,7 +24528,10 @@ func (g *GCEAlphaNetworkEndpointGroups) Delete(ctx context.Context, key *meta.Ke
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -22925,15 +24547,16 @@ func (g *GCEAlphaNetworkEndpointGroups) AggregatedList(ctx context.Context, fl *
 	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.AggregatedList(%v, %v) called", ctx, fl)
 
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AggregatedList",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkEndpointGroups",
 	}
 
-	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.AggregatedList(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
 		return nil, err
 	}
@@ -22953,7 +24576,9 @@ func (g *GCEAlphaNetworkEndpointGroups) AggregatedList(ctx context.Context, fl *
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -22978,27 +24603,35 @@ func (g *GCEAlphaNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Conte
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AttachNetworkEndpoints",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.NetworkEndpointGroups.AttachNetworkEndpoints(projectID, key.Zone, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -23012,27 +24645,35 @@ func (g *GCEAlphaNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Conte
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "DetachNetworkEndpoints",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.NetworkEndpointGroups.DetachNetworkEndpoints(projectID, key.Zone, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -23046,15 +24687,15 @@ func (g *GCEAlphaNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "ListNetworkEndpoints",
 		Version:   meta.Version("alpha"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -23066,10 +24707,16 @@ func (g *GCEAlphaNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = %v, %v", ctx, key, nil, err)
 		return nil, err
 	}
+
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = [%v items], %v", ctx, key, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -23357,14 +25004,16 @@ func (g *GCEBetaNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key) (
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -23372,7 +25021,10 @@ func (g *GCEBetaNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key) (
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaNetworkEndpointGroups.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -23380,16 +25032,18 @@ func (g *GCEBetaNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key) (
 func (g *GCEBetaNetworkEndpointGroups) List(ctx context.Context, zone string, fl *filter.F) ([]*beta.NetworkEndpointGroup, error) {
 	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.List(%v, %v, %v) called", ctx, zone, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "NetworkEndpointGroups",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, zone, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, zone, fl, projectID, ck)
 	call := g.s.Beta.NetworkEndpointGroups.List(projectID, zone)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -23401,12 +25055,16 @@ func (g *GCEBetaNetworkEndpointGroups) List(ctx context.Context, zone string, fl
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -23428,14 +25086,16 @@ func (g *GCEBetaNetworkEndpointGroups) Insert(ctx context.Context, key *meta.Key
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -23444,7 +25104,10 @@ func (g *GCEBetaNetworkEndpointGroups) Insert(ctx context.Context, key *meta.Key
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -23463,14 +25126,15 @@ func (g *GCEBetaNetworkEndpointGroups) Delete(ctx context.Context, key *meta.Key
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -23478,7 +25142,10 @@ func (g *GCEBetaNetworkEndpointGroups) Delete(ctx context.Context, key *meta.Key
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -23494,15 +25161,16 @@ func (g *GCEBetaNetworkEndpointGroups) AggregatedList(ctx context.Context, fl *f
 	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.AggregatedList(%v, %v) called", ctx, fl)
 
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AggregatedList",
 		Version:   meta.Version("beta"),
 		Service:   "NetworkEndpointGroups",
 	}
 
-	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.AggregatedList(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(5).Infof("GCEBetaNetworkEndpointGroups.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
 		return nil, err
 	}
@@ -23522,7 +25190,9 @@ func (g *GCEBetaNetworkEndpointGroups) AggregatedList(ctx context.Context, fl *f
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -23547,27 +25217,35 @@ func (g *GCEBetaNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Contex
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AttachNetworkEndpoints",
 		Version:   meta.Version("beta"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.NetworkEndpointGroups.AttachNetworkEndpoints(projectID, key.Zone, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -23581,27 +25259,35 @@ func (g *GCEBetaNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Contex
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "DetachNetworkEndpoints",
 		Version:   meta.Version("beta"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.NetworkEndpointGroups.DetachNetworkEndpoints(projectID, key.Zone, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -23615,15 +25301,15 @@ func (g *GCEBetaNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context,
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "ListNetworkEndpoints",
 		Version:   meta.Version("beta"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -23635,10 +25321,16 @@ func (g *GCEBetaNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context,
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = %v, %v", ctx, key, nil, err)
 		return nil, err
 	}
+
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = [%v items], %v", ctx, key, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -23926,14 +25618,16 @@ func (g *GCENetworkEndpointGroups) Get(ctx context.Context, key *meta.Key) (*ga.
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCENetworkEndpointGroups.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCENetworkEndpointGroups.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCENetworkEndpointGroups.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -23941,7 +25635,10 @@ func (g *GCENetworkEndpointGroups) Get(ctx context.Context, key *meta.Key) (*ga.
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCENetworkEndpointGroups.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -23949,16 +25646,18 @@ func (g *GCENetworkEndpointGroups) Get(ctx context.Context, key *meta.Key) (*ga.
 func (g *GCENetworkEndpointGroups) List(ctx context.Context, zone string, fl *filter.F) ([]*ga.NetworkEndpointGroup, error) {
 	klog.V(5).Infof("GCENetworkEndpointGroups.List(%v, %v, %v) called", ctx, zone, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "NetworkEndpointGroups",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCENetworkEndpointGroups.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, zone, fl, projectID, rk)
+	klog.V(5).Infof("GCENetworkEndpointGroups.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, zone, fl, projectID, ck)
 	call := g.s.GA.NetworkEndpointGroups.List(projectID, zone)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -23970,12 +25669,16 @@ func (g *GCENetworkEndpointGroups) List(ctx context.Context, zone string, fl *fi
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCENetworkEndpointGroups.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCENetworkEndpointGroups.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -23997,14 +25700,16 @@ func (g *GCENetworkEndpointGroups) Insert(ctx context.Context, key *meta.Key, ob
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCENetworkEndpointGroups.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCENetworkEndpointGroups.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCENetworkEndpointGroups.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -24013,7 +25718,10 @@ func (g *GCENetworkEndpointGroups) Insert(ctx context.Context, key *meta.Key, ob
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCENetworkEndpointGroups.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -24032,14 +25740,15 @@ func (g *GCENetworkEndpointGroups) Delete(ctx context.Context, key *meta.Key) er
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCENetworkEndpointGroups.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCENetworkEndpointGroups.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCENetworkEndpointGroups.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -24047,7 +25756,10 @@ func (g *GCENetworkEndpointGroups) Delete(ctx context.Context, key *meta.Key) er
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCENetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -24063,15 +25775,16 @@ func (g *GCENetworkEndpointGroups) AggregatedList(ctx context.Context, fl *filte
 	klog.V(5).Infof("GCENetworkEndpointGroups.AggregatedList(%v, %v) called", ctx, fl)
 
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AggregatedList",
 		Version:   meta.Version("ga"),
 		Service:   "NetworkEndpointGroups",
 	}
 
-	klog.V(5).Infof("GCENetworkEndpointGroups.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCENetworkEndpointGroups.AggregatedList(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(5).Infof("GCENetworkEndpointGroups.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
 		return nil, err
 	}
@@ -24091,7 +25804,9 @@ func (g *GCENetworkEndpointGroups) AggregatedList(ctx context.Context, fl *filte
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCENetworkEndpointGroups.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -24116,27 +25831,35 @@ func (g *GCENetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, k
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AttachNetworkEndpoints",
 		Version:   meta.Version("ga"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCENetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCENetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCENetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.NetworkEndpointGroups.AttachNetworkEndpoints(projectID, key.Zone, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCENetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCENetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -24150,27 +25873,35 @@ func (g *GCENetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, k
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "DetachNetworkEndpoints",
 		Version:   meta.Version("ga"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCENetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCENetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCENetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.NetworkEndpointGroups.DetachNetworkEndpoints(projectID, key.Zone, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCENetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCENetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -24184,15 +25915,15 @@ func (g *GCENetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "NetworkEndpointGroups")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "ListNetworkEndpoints",
 		Version:   meta.Version("ga"),
 		Service:   "NetworkEndpointGroups",
 	}
-	klog.V(5).Infof("GCENetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCENetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCENetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -24204,10 +25935,16 @@ func (g *GCENetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCENetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = %v, %v", ctx, key, nil, err)
 		return nil, err
 	}
+
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCENetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = [%v items], %v", ctx, key, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -24395,14 +26132,16 @@ func (g *GCERegions) Get(ctx context.Context, key *meta.Key) (*ga.Region, error)
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Regions")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "Regions",
 	}
-	klog.V(5).Infof("GCERegions.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERegions.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegions.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -24410,7 +26149,10 @@ func (g *GCERegions) Get(ctx context.Context, key *meta.Key) (*ga.Region, error)
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCERegions.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -24418,16 +26160,18 @@ func (g *GCERegions) Get(ctx context.Context, key *meta.Key) (*ga.Region, error)
 func (g *GCERegions) List(ctx context.Context, fl *filter.F) ([]*ga.Region, error) {
 	klog.V(5).Infof("GCERegions.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Regions")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "Regions",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCERegions.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCERegions.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.Regions.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -24439,12 +26183,16 @@ func (g *GCERegions) List(ctx context.Context, fl *filter.F) ([]*ga.Region, erro
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERegions.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCERegions.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -24743,14 +26491,16 @@ func (g *GCEAlphaRouters) Get(ctx context.Context, key *meta.Key) (*alpha.Router
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCEAlphaRouters.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaRouters.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRouters.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -24758,7 +26508,10 @@ func (g *GCEAlphaRouters) Get(ctx context.Context, key *meta.Key) (*alpha.Router
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaRouters.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -24766,16 +26519,18 @@ func (g *GCEAlphaRouters) Get(ctx context.Context, key *meta.Key) (*alpha.Router
 func (g *GCEAlphaRouters) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.Router, error) {
 	klog.V(5).Infof("GCEAlphaRouters.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "Routers",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaRouters.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaRouters.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Alpha.Routers.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -24787,12 +26542,16 @@ func (g *GCEAlphaRouters) List(ctx context.Context, region string, fl *filter.F)
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRouters.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaRouters.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -24814,14 +26573,16 @@ func (g *GCEAlphaRouters) Insert(ctx context.Context, key *meta.Key, obj *alpha.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCEAlphaRouters.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaRouters.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRouters.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -24830,7 +26591,10 @@ func (g *GCEAlphaRouters) Insert(ctx context.Context, key *meta.Key, obj *alpha.
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaRouters.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -24849,14 +26613,15 @@ func (g *GCEAlphaRouters) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCEAlphaRouters.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRouters.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRouters.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -24864,7 +26629,10 @@ func (g *GCEAlphaRouters) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaRouters.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -24880,15 +26648,16 @@ func (g *GCEAlphaRouters) AggregatedList(ctx context.Context, fl *filter.F) (map
 	klog.V(5).Infof("GCEAlphaRouters.AggregatedList(%v, %v) called", ctx, fl)
 
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AggregatedList",
 		Version:   meta.Version("alpha"),
 		Service:   "Routers",
 	}
 
-	klog.V(5).Infof("GCEAlphaRouters.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRouters.AggregatedList(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(5).Infof("GCEAlphaRouters.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
 		return nil, err
 	}
@@ -24908,7 +26677,9 @@ func (g *GCEAlphaRouters) AggregatedList(ctx context.Context, fl *filter.F) (map
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRouters.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -24933,22 +26704,25 @@ func (g *GCEAlphaRouters) GetRouterStatus(ctx context.Context, key *meta.Key) (*
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetRouterStatus",
 		Version:   meta.Version("alpha"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCEAlphaRouters.GetRouterStatus(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRouters.GetRouterStatus(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRouters.GetRouterStatus(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.Routers.GetRouterStatus(projectID, key.Region, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaRouters.GetRouterStatus(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -24962,27 +26736,35 @@ func (g *GCEAlphaRouters) Patch(ctx context.Context, key *meta.Key, arg0 *alpha.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("alpha"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCEAlphaRouters.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRouters.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRouters.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.Routers.Patch(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRouters.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaRouters.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -24996,22 +26778,25 @@ func (g *GCEAlphaRouters) Preview(ctx context.Context, key *meta.Key, arg0 *alph
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Preview",
 		Version:   meta.Version("alpha"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCEAlphaRouters.Preview(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRouters.Preview(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRouters.Preview(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.Routers.Preview(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaRouters.Preview(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -25025,22 +26810,25 @@ func (g *GCEAlphaRouters) TestIamPermissions(ctx context.Context, key *meta.Key,
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "TestIamPermissions",
 		Version:   meta.Version("alpha"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCEAlphaRouters.TestIamPermissions(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRouters.TestIamPermissions(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRouters.TestIamPermissions(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Alpha.Routers.TestIamPermissions(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEAlphaRouters.TestIamPermissions(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -25330,14 +27118,16 @@ func (g *GCEBetaRouters) Get(ctx context.Context, key *meta.Key) (*beta.Router, 
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCEBetaRouters.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaRouters.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRouters.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -25345,7 +27135,10 @@ func (g *GCEBetaRouters) Get(ctx context.Context, key *meta.Key) (*beta.Router, 
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaRouters.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -25353,16 +27146,18 @@ func (g *GCEBetaRouters) Get(ctx context.Context, key *meta.Key) (*beta.Router, 
 func (g *GCEBetaRouters) List(ctx context.Context, region string, fl *filter.F) ([]*beta.Router, error) {
 	klog.V(5).Infof("GCEBetaRouters.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "Routers",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaRouters.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaRouters.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Beta.Routers.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -25374,12 +27169,16 @@ func (g *GCEBetaRouters) List(ctx context.Context, region string, fl *filter.F) 
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaRouters.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaRouters.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -25401,14 +27200,16 @@ func (g *GCEBetaRouters) Insert(ctx context.Context, key *meta.Key, obj *beta.Ro
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCEBetaRouters.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaRouters.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRouters.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -25417,7 +27218,10 @@ func (g *GCEBetaRouters) Insert(ctx context.Context, key *meta.Key, obj *beta.Ro
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaRouters.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -25436,14 +27240,15 @@ func (g *GCEBetaRouters) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCEBetaRouters.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRouters.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRouters.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -25451,7 +27256,10 @@ func (g *GCEBetaRouters) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaRouters.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -25467,15 +27275,16 @@ func (g *GCEBetaRouters) AggregatedList(ctx context.Context, fl *filter.F) (map[
 	klog.V(5).Infof("GCEBetaRouters.AggregatedList(%v, %v) called", ctx, fl)
 
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AggregatedList",
 		Version:   meta.Version("beta"),
 		Service:   "Routers",
 	}
 
-	klog.V(5).Infof("GCEBetaRouters.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRouters.AggregatedList(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(5).Infof("GCEBetaRouters.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
 		return nil, err
 	}
@@ -25495,7 +27304,9 @@ func (g *GCEBetaRouters) AggregatedList(ctx context.Context, fl *filter.F) (map[
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaRouters.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -25520,22 +27331,25 @@ func (g *GCEBetaRouters) GetRouterStatus(ctx context.Context, key *meta.Key) (*b
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetRouterStatus",
 		Version:   meta.Version("beta"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCEBetaRouters.GetRouterStatus(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRouters.GetRouterStatus(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRouters.GetRouterStatus(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Beta.Routers.GetRouterStatus(projectID, key.Region, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEBetaRouters.GetRouterStatus(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -25549,27 +27363,35 @@ func (g *GCEBetaRouters) Patch(ctx context.Context, key *meta.Key, arg0 *beta.Ro
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("beta"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCEBetaRouters.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRouters.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRouters.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.Routers.Patch(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaRouters.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaRouters.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -25583,22 +27405,25 @@ func (g *GCEBetaRouters) Preview(ctx context.Context, key *meta.Key, arg0 *beta.
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Preview",
 		Version:   meta.Version("beta"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCEBetaRouters.Preview(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRouters.Preview(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRouters.Preview(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Beta.Routers.Preview(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEBetaRouters.Preview(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -25612,22 +27437,25 @@ func (g *GCEBetaRouters) TestIamPermissions(ctx context.Context, key *meta.Key, 
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "TestIamPermissions",
 		Version:   meta.Version("beta"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCEBetaRouters.TestIamPermissions(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRouters.TestIamPermissions(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRouters.TestIamPermissions(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Beta.Routers.TestIamPermissions(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEBetaRouters.TestIamPermissions(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -25907,14 +27735,16 @@ func (g *GCERouters) Get(ctx context.Context, key *meta.Key) (*ga.Router, error)
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCERouters.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERouters.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERouters.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -25922,7 +27752,10 @@ func (g *GCERouters) Get(ctx context.Context, key *meta.Key) (*ga.Router, error)
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCERouters.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -25930,16 +27763,18 @@ func (g *GCERouters) Get(ctx context.Context, key *meta.Key) (*ga.Router, error)
 func (g *GCERouters) List(ctx context.Context, region string, fl *filter.F) ([]*ga.Router, error) {
 	klog.V(5).Infof("GCERouters.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "Routers",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCERouters.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCERouters.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.GA.Routers.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -25951,12 +27786,16 @@ func (g *GCERouters) List(ctx context.Context, region string, fl *filter.F) ([]*
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERouters.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCERouters.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -25978,14 +27817,16 @@ func (g *GCERouters) Insert(ctx context.Context, key *meta.Key, obj *ga.Router) 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCERouters.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERouters.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERouters.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -25994,7 +27835,10 @@ func (g *GCERouters) Insert(ctx context.Context, key *meta.Key, obj *ga.Router) 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERouters.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -26013,14 +27857,15 @@ func (g *GCERouters) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCERouters.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERouters.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERouters.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -26028,7 +27873,10 @@ func (g *GCERouters) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERouters.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -26044,15 +27892,16 @@ func (g *GCERouters) AggregatedList(ctx context.Context, fl *filter.F) (map[stri
 	klog.V(5).Infof("GCERouters.AggregatedList(%v, %v) called", ctx, fl)
 
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AggregatedList",
 		Version:   meta.Version("ga"),
 		Service:   "Routers",
 	}
 
-	klog.V(5).Infof("GCERouters.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERouters.AggregatedList(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(5).Infof("GCERouters.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
 		return nil, err
 	}
@@ -26072,7 +27921,9 @@ func (g *GCERouters) AggregatedList(ctx context.Context, fl *filter.F) (map[stri
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERouters.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -26097,22 +27948,25 @@ func (g *GCERouters) GetRouterStatus(ctx context.Context, key *meta.Key) (*ga.Ro
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetRouterStatus",
 		Version:   meta.Version("ga"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCERouters.GetRouterStatus(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERouters.GetRouterStatus(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERouters.GetRouterStatus(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.GA.Routers.GetRouterStatus(projectID, key.Region, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCERouters.GetRouterStatus(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -26126,27 +27980,35 @@ func (g *GCERouters) Patch(ctx context.Context, key *meta.Key, arg0 *ga.Router) 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("ga"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCERouters.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERouters.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERouters.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.Routers.Patch(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERouters.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCERouters.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -26160,22 +28022,25 @@ func (g *GCERouters) Preview(ctx context.Context, key *meta.Key, arg0 *ga.Router
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routers")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Preview",
 		Version:   meta.Version("ga"),
 		Service:   "Routers",
 	}
-	klog.V(5).Infof("GCERouters.Preview(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERouters.Preview(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERouters.Preview(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.GA.Routers.Preview(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCERouters.Preview(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -26384,14 +28249,16 @@ func (g *GCERoutes) Get(ctx context.Context, key *meta.Key) (*ga.Route, error) {
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routes")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "Routes",
 	}
-	klog.V(5).Infof("GCERoutes.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERoutes.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERoutes.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -26399,7 +28266,10 @@ func (g *GCERoutes) Get(ctx context.Context, key *meta.Key) (*ga.Route, error) {
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCERoutes.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -26407,16 +28277,18 @@ func (g *GCERoutes) Get(ctx context.Context, key *meta.Key) (*ga.Route, error) {
 func (g *GCERoutes) List(ctx context.Context, fl *filter.F) ([]*ga.Route, error) {
 	klog.V(5).Infof("GCERoutes.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routes")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "Routes",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCERoutes.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCERoutes.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.Routes.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -26428,12 +28300,16 @@ func (g *GCERoutes) List(ctx context.Context, fl *filter.F) ([]*ga.Route, error)
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERoutes.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCERoutes.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -26455,14 +28331,16 @@ func (g *GCERoutes) Insert(ctx context.Context, key *meta.Key, obj *ga.Route) er
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routes")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "Routes",
 	}
-	klog.V(5).Infof("GCERoutes.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERoutes.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERoutes.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -26471,7 +28349,10 @@ func (g *GCERoutes) Insert(ctx context.Context, key *meta.Key, obj *ga.Route) er
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERoutes.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -26490,14 +28371,15 @@ func (g *GCERoutes) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Routes")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "Routes",
 	}
-	klog.V(5).Infof("GCERoutes.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERoutes.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERoutes.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -26506,7 +28388,10 @@ func (g *GCERoutes) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERoutes.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -26771,14 +28656,16 @@ func (g *GCEBetaSecurityPolicies) Get(ctx context.Context, key *meta.Key) (*beta
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "SecurityPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "SecurityPolicies",
 	}
-	klog.V(5).Infof("GCEBetaSecurityPolicies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaSecurityPolicies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaSecurityPolicies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -26786,7 +28673,10 @@ func (g *GCEBetaSecurityPolicies) Get(ctx context.Context, key *meta.Key) (*beta
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaSecurityPolicies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -26794,16 +28684,18 @@ func (g *GCEBetaSecurityPolicies) Get(ctx context.Context, key *meta.Key) (*beta
 func (g *GCEBetaSecurityPolicies) List(ctx context.Context, fl *filter.F) ([]*beta.SecurityPolicy, error) {
 	klog.V(5).Infof("GCEBetaSecurityPolicies.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "SecurityPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "SecurityPolicies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaSecurityPolicies.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaSecurityPolicies.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Beta.SecurityPolicies.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -26815,12 +28707,16 @@ func (g *GCEBetaSecurityPolicies) List(ctx context.Context, fl *filter.F) ([]*be
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaSecurityPolicies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaSecurityPolicies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -26842,14 +28738,16 @@ func (g *GCEBetaSecurityPolicies) Insert(ctx context.Context, key *meta.Key, obj
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "SecurityPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "SecurityPolicies",
 	}
-	klog.V(5).Infof("GCEBetaSecurityPolicies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaSecurityPolicies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaSecurityPolicies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -26858,7 +28756,10 @@ func (g *GCEBetaSecurityPolicies) Insert(ctx context.Context, key *meta.Key, obj
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaSecurityPolicies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -26877,14 +28778,15 @@ func (g *GCEBetaSecurityPolicies) Delete(ctx context.Context, key *meta.Key) err
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "SecurityPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "SecurityPolicies",
 	}
-	klog.V(5).Infof("GCEBetaSecurityPolicies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaSecurityPolicies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaSecurityPolicies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -26893,7 +28795,10 @@ func (g *GCEBetaSecurityPolicies) Delete(ctx context.Context, key *meta.Key) err
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaSecurityPolicies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -26913,27 +28818,35 @@ func (g *GCEBetaSecurityPolicies) AddRule(ctx context.Context, key *meta.Key, ar
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "SecurityPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AddRule",
 		Version:   meta.Version("beta"),
 		Service:   "SecurityPolicies",
 	}
-	klog.V(5).Infof("GCEBetaSecurityPolicies.AddRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaSecurityPolicies.AddRule(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaSecurityPolicies.AddRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.SecurityPolicies.AddRule(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaSecurityPolicies.AddRule(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaSecurityPolicies.AddRule(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -26947,22 +28860,25 @@ func (g *GCEBetaSecurityPolicies) GetRule(ctx context.Context, key *meta.Key) (*
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "SecurityPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "GetRule",
 		Version:   meta.Version("beta"),
 		Service:   "SecurityPolicies",
 	}
-	klog.V(5).Infof("GCEBetaSecurityPolicies.GetRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaSecurityPolicies.GetRule(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaSecurityPolicies.GetRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
 	call := g.s.Beta.SecurityPolicies.GetRule(projectID, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("GCEBetaSecurityPolicies.GetRule(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 }
@@ -26976,27 +28892,35 @@ func (g *GCEBetaSecurityPolicies) Patch(ctx context.Context, key *meta.Key, arg0
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "SecurityPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("beta"),
 		Service:   "SecurityPolicies",
 	}
-	klog.V(5).Infof("GCEBetaSecurityPolicies.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaSecurityPolicies.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaSecurityPolicies.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.SecurityPolicies.Patch(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaSecurityPolicies.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaSecurityPolicies.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -27010,27 +28934,35 @@ func (g *GCEBetaSecurityPolicies) PatchRule(ctx context.Context, key *meta.Key, 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "SecurityPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "PatchRule",
 		Version:   meta.Version("beta"),
 		Service:   "SecurityPolicies",
 	}
-	klog.V(5).Infof("GCEBetaSecurityPolicies.PatchRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaSecurityPolicies.PatchRule(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaSecurityPolicies.PatchRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.SecurityPolicies.PatchRule(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaSecurityPolicies.PatchRule(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaSecurityPolicies.PatchRule(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -27044,27 +28976,35 @@ func (g *GCEBetaSecurityPolicies) RemoveRule(ctx context.Context, key *meta.Key)
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "SecurityPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "RemoveRule",
 		Version:   meta.Version("beta"),
 		Service:   "SecurityPolicies",
 	}
-	klog.V(5).Infof("GCEBetaSecurityPolicies.RemoveRule(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaSecurityPolicies.RemoveRule(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaSecurityPolicies.RemoveRule(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.SecurityPolicies.RemoveRule(projectID, key.Name)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaSecurityPolicies.RemoveRule(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaSecurityPolicies.RemoveRule(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -27286,14 +29226,16 @@ func (g *GCEServiceAttachments) Get(ctx context.Context, key *meta.Key) (*ga.Ser
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "ServiceAttachments")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "ServiceAttachments",
 	}
-	klog.V(5).Infof("GCEServiceAttachments.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEServiceAttachments.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEServiceAttachments.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -27301,7 +29243,10 @@ func (g *GCEServiceAttachments) Get(ctx context.Context, key *meta.Key) (*ga.Ser
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEServiceAttachments.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -27309,16 +29254,18 @@ func (g *GCEServiceAttachments) Get(ctx context.Context, key *meta.Key) (*ga.Ser
 func (g *GCEServiceAttachments) List(ctx context.Context, region string, fl *filter.F) ([]*ga.ServiceAttachment, error) {
 	klog.V(5).Infof("GCEServiceAttachments.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "ServiceAttachments")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "ServiceAttachments",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEServiceAttachments.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEServiceAttachments.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.GA.ServiceAttachments.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -27330,12 +29277,16 @@ func (g *GCEServiceAttachments) List(ctx context.Context, region string, fl *fil
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEServiceAttachments.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEServiceAttachments.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -27357,14 +29308,16 @@ func (g *GCEServiceAttachments) Insert(ctx context.Context, key *meta.Key, obj *
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "ServiceAttachments")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "ServiceAttachments",
 	}
-	klog.V(5).Infof("GCEServiceAttachments.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEServiceAttachments.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEServiceAttachments.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -27373,7 +29326,10 @@ func (g *GCEServiceAttachments) Insert(ctx context.Context, key *meta.Key, obj *
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEServiceAttachments.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -27392,14 +29348,15 @@ func (g *GCEServiceAttachments) Delete(ctx context.Context, key *meta.Key) error
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "ServiceAttachments")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "ServiceAttachments",
 	}
-	klog.V(5).Infof("GCEServiceAttachments.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEServiceAttachments.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEServiceAttachments.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -27407,7 +29364,10 @@ func (g *GCEServiceAttachments) Delete(ctx context.Context, key *meta.Key) error
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEServiceAttachments.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -27427,27 +29387,35 @@ func (g *GCEServiceAttachments) Patch(ctx context.Context, key *meta.Key, arg0 *
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "ServiceAttachments")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("ga"),
 		Service:   "ServiceAttachments",
 	}
-	klog.V(5).Infof("GCEServiceAttachments.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEServiceAttachments.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEServiceAttachments.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.ServiceAttachments.Patch(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEServiceAttachments.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEServiceAttachments.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -27669,14 +29637,16 @@ func (g *GCEBetaServiceAttachments) Get(ctx context.Context, key *meta.Key) (*be
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "ServiceAttachments")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "ServiceAttachments",
 	}
-	klog.V(5).Infof("GCEBetaServiceAttachments.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaServiceAttachments.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaServiceAttachments.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -27684,7 +29654,10 @@ func (g *GCEBetaServiceAttachments) Get(ctx context.Context, key *meta.Key) (*be
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaServiceAttachments.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -27692,16 +29665,18 @@ func (g *GCEBetaServiceAttachments) Get(ctx context.Context, key *meta.Key) (*be
 func (g *GCEBetaServiceAttachments) List(ctx context.Context, region string, fl *filter.F) ([]*beta.ServiceAttachment, error) {
 	klog.V(5).Infof("GCEBetaServiceAttachments.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "ServiceAttachments")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "ServiceAttachments",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaServiceAttachments.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaServiceAttachments.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Beta.ServiceAttachments.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -27713,12 +29688,16 @@ func (g *GCEBetaServiceAttachments) List(ctx context.Context, region string, fl 
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaServiceAttachments.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaServiceAttachments.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -27740,14 +29719,16 @@ func (g *GCEBetaServiceAttachments) Insert(ctx context.Context, key *meta.Key, o
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "ServiceAttachments")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "ServiceAttachments",
 	}
-	klog.V(5).Infof("GCEBetaServiceAttachments.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaServiceAttachments.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaServiceAttachments.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -27756,7 +29737,10 @@ func (g *GCEBetaServiceAttachments) Insert(ctx context.Context, key *meta.Key, o
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaServiceAttachments.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -27775,14 +29759,15 @@ func (g *GCEBetaServiceAttachments) Delete(ctx context.Context, key *meta.Key) e
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "ServiceAttachments")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "ServiceAttachments",
 	}
-	klog.V(5).Infof("GCEBetaServiceAttachments.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaServiceAttachments.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaServiceAttachments.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -27790,7 +29775,10 @@ func (g *GCEBetaServiceAttachments) Delete(ctx context.Context, key *meta.Key) e
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaServiceAttachments.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -27810,27 +29798,35 @@ func (g *GCEBetaServiceAttachments) Patch(ctx context.Context, key *meta.Key, ar
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "ServiceAttachments")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("beta"),
 		Service:   "ServiceAttachments",
 	}
-	klog.V(5).Infof("GCEBetaServiceAttachments.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaServiceAttachments.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaServiceAttachments.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.ServiceAttachments.Patch(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaServiceAttachments.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaServiceAttachments.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -28052,14 +30048,16 @@ func (g *GCEAlphaServiceAttachments) Get(ctx context.Context, key *meta.Key) (*a
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ServiceAttachments")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "ServiceAttachments",
 	}
-	klog.V(5).Infof("GCEAlphaServiceAttachments.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaServiceAttachments.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaServiceAttachments.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -28067,7 +30065,10 @@ func (g *GCEAlphaServiceAttachments) Get(ctx context.Context, key *meta.Key) (*a
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaServiceAttachments.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -28075,16 +30076,18 @@ func (g *GCEAlphaServiceAttachments) Get(ctx context.Context, key *meta.Key) (*a
 func (g *GCEAlphaServiceAttachments) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.ServiceAttachment, error) {
 	klog.V(5).Infof("GCEAlphaServiceAttachments.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ServiceAttachments")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "ServiceAttachments",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaServiceAttachments.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaServiceAttachments.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Alpha.ServiceAttachments.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -28096,12 +30099,16 @@ func (g *GCEAlphaServiceAttachments) List(ctx context.Context, region string, fl
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaServiceAttachments.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaServiceAttachments.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -28123,14 +30130,16 @@ func (g *GCEAlphaServiceAttachments) Insert(ctx context.Context, key *meta.Key, 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ServiceAttachments")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "ServiceAttachments",
 	}
-	klog.V(5).Infof("GCEAlphaServiceAttachments.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaServiceAttachments.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaServiceAttachments.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -28139,7 +30148,10 @@ func (g *GCEAlphaServiceAttachments) Insert(ctx context.Context, key *meta.Key, 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaServiceAttachments.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -28158,14 +30170,15 @@ func (g *GCEAlphaServiceAttachments) Delete(ctx context.Context, key *meta.Key) 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ServiceAttachments")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "ServiceAttachments",
 	}
-	klog.V(5).Infof("GCEAlphaServiceAttachments.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaServiceAttachments.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaServiceAttachments.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -28173,7 +30186,10 @@ func (g *GCEAlphaServiceAttachments) Delete(ctx context.Context, key *meta.Key) 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaServiceAttachments.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -28193,27 +30209,35 @@ func (g *GCEAlphaServiceAttachments) Patch(ctx context.Context, key *meta.Key, a
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "ServiceAttachments")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("alpha"),
 		Service:   "ServiceAttachments",
 	}
-	klog.V(5).Infof("GCEAlphaServiceAttachments.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaServiceAttachments.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaServiceAttachments.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.ServiceAttachments.Patch(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaServiceAttachments.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaServiceAttachments.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -28422,14 +30446,16 @@ func (g *GCESslCertificates) Get(ctx context.Context, key *meta.Key) (*ga.SslCer
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "SslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "SslCertificates",
 	}
-	klog.V(5).Infof("GCESslCertificates.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCESslCertificates.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCESslCertificates.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -28437,7 +30463,10 @@ func (g *GCESslCertificates) Get(ctx context.Context, key *meta.Key) (*ga.SslCer
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCESslCertificates.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -28445,16 +30474,18 @@ func (g *GCESslCertificates) Get(ctx context.Context, key *meta.Key) (*ga.SslCer
 func (g *GCESslCertificates) List(ctx context.Context, fl *filter.F) ([]*ga.SslCertificate, error) {
 	klog.V(5).Infof("GCESslCertificates.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "SslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "SslCertificates",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCESslCertificates.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCESslCertificates.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.SslCertificates.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -28466,12 +30497,16 @@ func (g *GCESslCertificates) List(ctx context.Context, fl *filter.F) ([]*ga.SslC
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCESslCertificates.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCESslCertificates.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -28493,14 +30528,16 @@ func (g *GCESslCertificates) Insert(ctx context.Context, key *meta.Key, obj *ga.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "SslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "SslCertificates",
 	}
-	klog.V(5).Infof("GCESslCertificates.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCESslCertificates.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCESslCertificates.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -28509,7 +30546,10 @@ func (g *GCESslCertificates) Insert(ctx context.Context, key *meta.Key, obj *ga.
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCESslCertificates.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -28528,14 +30568,15 @@ func (g *GCESslCertificates) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "SslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "SslCertificates",
 	}
-	klog.V(5).Infof("GCESslCertificates.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCESslCertificates.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCESslCertificates.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -28544,7 +30585,10 @@ func (g *GCESslCertificates) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCESslCertificates.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -28759,14 +30803,16 @@ func (g *GCEBetaSslCertificates) Get(ctx context.Context, key *meta.Key) (*beta.
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "SslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "SslCertificates",
 	}
-	klog.V(5).Infof("GCEBetaSslCertificates.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaSslCertificates.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaSslCertificates.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -28774,7 +30820,10 @@ func (g *GCEBetaSslCertificates) Get(ctx context.Context, key *meta.Key) (*beta.
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaSslCertificates.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -28782,16 +30831,18 @@ func (g *GCEBetaSslCertificates) Get(ctx context.Context, key *meta.Key) (*beta.
 func (g *GCEBetaSslCertificates) List(ctx context.Context, fl *filter.F) ([]*beta.SslCertificate, error) {
 	klog.V(5).Infof("GCEBetaSslCertificates.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "SslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "SslCertificates",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaSslCertificates.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaSslCertificates.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Beta.SslCertificates.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -28803,12 +30854,16 @@ func (g *GCEBetaSslCertificates) List(ctx context.Context, fl *filter.F) ([]*bet
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaSslCertificates.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaSslCertificates.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -28830,14 +30885,16 @@ func (g *GCEBetaSslCertificates) Insert(ctx context.Context, key *meta.Key, obj 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "SslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "SslCertificates",
 	}
-	klog.V(5).Infof("GCEBetaSslCertificates.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaSslCertificates.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaSslCertificates.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -28846,7 +30903,10 @@ func (g *GCEBetaSslCertificates) Insert(ctx context.Context, key *meta.Key, obj 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaSslCertificates.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -28865,14 +30925,15 @@ func (g *GCEBetaSslCertificates) Delete(ctx context.Context, key *meta.Key) erro
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "SslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "SslCertificates",
 	}
-	klog.V(5).Infof("GCEBetaSslCertificates.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaSslCertificates.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaSslCertificates.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -28881,7 +30942,10 @@ func (g *GCEBetaSslCertificates) Delete(ctx context.Context, key *meta.Key) erro
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -29096,14 +31160,16 @@ func (g *GCEAlphaSslCertificates) Get(ctx context.Context, key *meta.Key) (*alph
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "SslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "SslCertificates",
 	}
-	klog.V(5).Infof("GCEAlphaSslCertificates.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaSslCertificates.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaSslCertificates.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -29111,7 +31177,10 @@ func (g *GCEAlphaSslCertificates) Get(ctx context.Context, key *meta.Key) (*alph
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaSslCertificates.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -29119,16 +31188,18 @@ func (g *GCEAlphaSslCertificates) Get(ctx context.Context, key *meta.Key) (*alph
 func (g *GCEAlphaSslCertificates) List(ctx context.Context, fl *filter.F) ([]*alpha.SslCertificate, error) {
 	klog.V(5).Infof("GCEAlphaSslCertificates.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "SslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "SslCertificates",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaSslCertificates.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaSslCertificates.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Alpha.SslCertificates.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -29140,12 +31211,16 @@ func (g *GCEAlphaSslCertificates) List(ctx context.Context, fl *filter.F) ([]*al
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaSslCertificates.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaSslCertificates.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -29167,14 +31242,16 @@ func (g *GCEAlphaSslCertificates) Insert(ctx context.Context, key *meta.Key, obj
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "SslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "SslCertificates",
 	}
-	klog.V(5).Infof("GCEAlphaSslCertificates.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaSslCertificates.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaSslCertificates.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -29183,7 +31260,10 @@ func (g *GCEAlphaSslCertificates) Insert(ctx context.Context, key *meta.Key, obj
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaSslCertificates.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -29202,14 +31282,15 @@ func (g *GCEAlphaSslCertificates) Delete(ctx context.Context, key *meta.Key) err
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "SslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "SslCertificates",
 	}
-	klog.V(5).Infof("GCEAlphaSslCertificates.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaSslCertificates.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaSslCertificates.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -29218,7 +31299,10 @@ func (g *GCEAlphaSslCertificates) Delete(ctx context.Context, key *meta.Key) err
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -29436,14 +31520,16 @@ func (g *GCEAlphaRegionSslCertificates) Get(ctx context.Context, key *meta.Key) 
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionSslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionSslCertificates",
 	}
-	klog.V(5).Infof("GCEAlphaRegionSslCertificates.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaRegionSslCertificates.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionSslCertificates.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -29451,7 +31537,10 @@ func (g *GCEAlphaRegionSslCertificates) Get(ctx context.Context, key *meta.Key) 
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaRegionSslCertificates.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -29459,16 +31548,18 @@ func (g *GCEAlphaRegionSslCertificates) Get(ctx context.Context, key *meta.Key) 
 func (g *GCEAlphaRegionSslCertificates) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.SslCertificate, error) {
 	klog.V(5).Infof("GCEAlphaRegionSslCertificates.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionSslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionSslCertificates",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaRegionSslCertificates.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaRegionSslCertificates.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Alpha.RegionSslCertificates.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -29480,12 +31571,16 @@ func (g *GCEAlphaRegionSslCertificates) List(ctx context.Context, region string,
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionSslCertificates.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaRegionSslCertificates.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -29507,14 +31602,16 @@ func (g *GCEAlphaRegionSslCertificates) Insert(ctx context.Context, key *meta.Ke
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionSslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionSslCertificates",
 	}
-	klog.V(5).Infof("GCEAlphaRegionSslCertificates.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaRegionSslCertificates.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionSslCertificates.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -29523,7 +31620,10 @@ func (g *GCEAlphaRegionSslCertificates) Insert(ctx context.Context, key *meta.Ke
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaRegionSslCertificates.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -29542,14 +31642,15 @@ func (g *GCEAlphaRegionSslCertificates) Delete(ctx context.Context, key *meta.Ke
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionSslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionSslCertificates",
 	}
-	klog.V(5).Infof("GCEAlphaRegionSslCertificates.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionSslCertificates.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionSslCertificates.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -29557,7 +31658,10 @@ func (g *GCEAlphaRegionSslCertificates) Delete(ctx context.Context, key *meta.Ke
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaRegionSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -29775,14 +31879,16 @@ func (g *GCEBetaRegionSslCertificates) Get(ctx context.Context, key *meta.Key) (
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionSslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "RegionSslCertificates",
 	}
-	klog.V(5).Infof("GCEBetaRegionSslCertificates.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaRegionSslCertificates.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionSslCertificates.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -29790,7 +31896,10 @@ func (g *GCEBetaRegionSslCertificates) Get(ctx context.Context, key *meta.Key) (
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaRegionSslCertificates.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -29798,16 +31907,18 @@ func (g *GCEBetaRegionSslCertificates) Get(ctx context.Context, key *meta.Key) (
 func (g *GCEBetaRegionSslCertificates) List(ctx context.Context, region string, fl *filter.F) ([]*beta.SslCertificate, error) {
 	klog.V(5).Infof("GCEBetaRegionSslCertificates.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionSslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "RegionSslCertificates",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaRegionSslCertificates.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaRegionSslCertificates.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Beta.RegionSslCertificates.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -29819,12 +31930,16 @@ func (g *GCEBetaRegionSslCertificates) List(ctx context.Context, region string, 
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaRegionSslCertificates.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaRegionSslCertificates.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -29846,14 +31961,16 @@ func (g *GCEBetaRegionSslCertificates) Insert(ctx context.Context, key *meta.Key
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionSslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "RegionSslCertificates",
 	}
-	klog.V(5).Infof("GCEBetaRegionSslCertificates.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaRegionSslCertificates.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionSslCertificates.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -29862,7 +31979,10 @@ func (g *GCEBetaRegionSslCertificates) Insert(ctx context.Context, key *meta.Key
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaRegionSslCertificates.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -29881,14 +32001,15 @@ func (g *GCEBetaRegionSslCertificates) Delete(ctx context.Context, key *meta.Key
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionSslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "RegionSslCertificates",
 	}
-	klog.V(5).Infof("GCEBetaRegionSslCertificates.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRegionSslCertificates.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionSslCertificates.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -29896,7 +32017,10 @@ func (g *GCEBetaRegionSslCertificates) Delete(ctx context.Context, key *meta.Key
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaRegionSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -30114,14 +32238,16 @@ func (g *GCERegionSslCertificates) Get(ctx context.Context, key *meta.Key) (*ga.
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionSslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "RegionSslCertificates",
 	}
-	klog.V(5).Infof("GCERegionSslCertificates.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERegionSslCertificates.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionSslCertificates.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -30129,7 +32255,10 @@ func (g *GCERegionSslCertificates) Get(ctx context.Context, key *meta.Key) (*ga.
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCERegionSslCertificates.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -30137,16 +32266,18 @@ func (g *GCERegionSslCertificates) Get(ctx context.Context, key *meta.Key) (*ga.
 func (g *GCERegionSslCertificates) List(ctx context.Context, region string, fl *filter.F) ([]*ga.SslCertificate, error) {
 	klog.V(5).Infof("GCERegionSslCertificates.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionSslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "RegionSslCertificates",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCERegionSslCertificates.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCERegionSslCertificates.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.GA.RegionSslCertificates.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -30158,12 +32289,16 @@ func (g *GCERegionSslCertificates) List(ctx context.Context, region string, fl *
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERegionSslCertificates.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCERegionSslCertificates.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -30185,14 +32320,16 @@ func (g *GCERegionSslCertificates) Insert(ctx context.Context, key *meta.Key, ob
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionSslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "RegionSslCertificates",
 	}
-	klog.V(5).Infof("GCERegionSslCertificates.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERegionSslCertificates.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionSslCertificates.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -30201,7 +32338,10 @@ func (g *GCERegionSslCertificates) Insert(ctx context.Context, key *meta.Key, ob
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERegionSslCertificates.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -30220,14 +32360,15 @@ func (g *GCERegionSslCertificates) Delete(ctx context.Context, key *meta.Key) er
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionSslCertificates")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "RegionSslCertificates",
 	}
-	klog.V(5).Infof("GCERegionSslCertificates.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERegionSslCertificates.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionSslCertificates.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -30235,7 +32376,10 @@ func (g *GCERegionSslCertificates) Delete(ctx context.Context, key *meta.Key) er
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERegionSslCertificates.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -30416,14 +32560,16 @@ func (g *GCESslPolicies) Get(ctx context.Context, key *meta.Key) (*ga.SslPolicy,
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "SslPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "SslPolicies",
 	}
-	klog.V(5).Infof("GCESslPolicies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCESslPolicies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCESslPolicies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -30431,7 +32577,10 @@ func (g *GCESslPolicies) Get(ctx context.Context, key *meta.Key) (*ga.SslPolicy,
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCESslPolicies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -30443,14 +32592,16 @@ func (g *GCESslPolicies) Insert(ctx context.Context, key *meta.Key, obj *ga.SslP
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "SslPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "SslPolicies",
 	}
-	klog.V(5).Infof("GCESslPolicies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCESslPolicies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCESslPolicies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -30459,7 +32610,10 @@ func (g *GCESslPolicies) Insert(ctx context.Context, key *meta.Key, obj *ga.SslP
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCESslPolicies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -30478,14 +32632,15 @@ func (g *GCESslPolicies) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "SslPolicies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "SslPolicies",
 	}
-	klog.V(5).Infof("GCESslPolicies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCESslPolicies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCESslPolicies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -30494,7 +32649,10 @@ func (g *GCESslPolicies) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCESslPolicies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -30761,14 +32919,16 @@ func (g *GCEAlphaSubnetworks) Get(ctx context.Context, key *meta.Key) (*alpha.Su
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "Subnetworks",
 	}
-	klog.V(5).Infof("GCEAlphaSubnetworks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaSubnetworks.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaSubnetworks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -30776,7 +32936,10 @@ func (g *GCEAlphaSubnetworks) Get(ctx context.Context, key *meta.Key) (*alpha.Su
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaSubnetworks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -30784,16 +32947,18 @@ func (g *GCEAlphaSubnetworks) Get(ctx context.Context, key *meta.Key) (*alpha.Su
 func (g *GCEAlphaSubnetworks) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.Subnetwork, error) {
 	klog.V(5).Infof("GCEAlphaSubnetworks.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "Subnetworks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaSubnetworks.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaSubnetworks.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Alpha.Subnetworks.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -30805,12 +32970,16 @@ func (g *GCEAlphaSubnetworks) List(ctx context.Context, region string, fl *filte
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaSubnetworks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaSubnetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -30832,14 +33001,16 @@ func (g *GCEAlphaSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *al
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "Subnetworks",
 	}
-	klog.V(5).Infof("GCEAlphaSubnetworks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaSubnetworks.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaSubnetworks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -30848,7 +33019,10 @@ func (g *GCEAlphaSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *al
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaSubnetworks.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -30867,14 +33041,15 @@ func (g *GCEAlphaSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "Subnetworks",
 	}
-	klog.V(5).Infof("GCEAlphaSubnetworks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaSubnetworks.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaSubnetworks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -30882,7 +33057,10 @@ func (g *GCEAlphaSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -30897,16 +33075,18 @@ func (g *GCEAlphaSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 func (g *GCEAlphaSubnetworks) ListUsable(ctx context.Context, fl *filter.F) ([]*alpha.UsableSubnetwork, error) {
 	klog.V(5).Infof("GCEAlphaSubnetworks.ListUsable(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "ListUsable",
 		Version:   meta.Version("alpha"),
 		Service:   "Subnetworks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaSubnetworks.ListUsable(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+
+	klog.V(5).Infof("GCEAlphaSubnetworks.ListUsable(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Alpha.Subnetworks.ListUsable(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -30918,7 +33098,9 @@ func (g *GCEAlphaSubnetworks) ListUsable(ctx context.Context, fl *filter.F) ([]*
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaSubnetworks.ListUsable(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -30945,27 +33127,35 @@ func (g *GCEAlphaSubnetworks) Patch(ctx context.Context, key *meta.Key, arg0 *al
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("alpha"),
 		Service:   "Subnetworks",
 	}
-	klog.V(5).Infof("GCEAlphaSubnetworks.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaSubnetworks.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaSubnetworks.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.Subnetworks.Patch(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaSubnetworks.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaSubnetworks.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -31226,14 +33416,16 @@ func (g *GCEBetaSubnetworks) Get(ctx context.Context, key *meta.Key) (*beta.Subn
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "Subnetworks",
 	}
-	klog.V(5).Infof("GCEBetaSubnetworks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaSubnetworks.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaSubnetworks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -31241,7 +33433,10 @@ func (g *GCEBetaSubnetworks) Get(ctx context.Context, key *meta.Key) (*beta.Subn
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaSubnetworks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -31249,16 +33444,18 @@ func (g *GCEBetaSubnetworks) Get(ctx context.Context, key *meta.Key) (*beta.Subn
 func (g *GCEBetaSubnetworks) List(ctx context.Context, region string, fl *filter.F) ([]*beta.Subnetwork, error) {
 	klog.V(5).Infof("GCEBetaSubnetworks.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "Subnetworks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaSubnetworks.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaSubnetworks.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Beta.Subnetworks.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -31270,12 +33467,16 @@ func (g *GCEBetaSubnetworks) List(ctx context.Context, region string, fl *filter
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaSubnetworks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaSubnetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -31297,14 +33498,16 @@ func (g *GCEBetaSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *bet
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "Subnetworks",
 	}
-	klog.V(5).Infof("GCEBetaSubnetworks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaSubnetworks.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaSubnetworks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -31313,7 +33516,10 @@ func (g *GCEBetaSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *bet
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaSubnetworks.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -31332,14 +33538,15 @@ func (g *GCEBetaSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "Subnetworks",
 	}
-	klog.V(5).Infof("GCEBetaSubnetworks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaSubnetworks.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaSubnetworks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -31347,7 +33554,10 @@ func (g *GCEBetaSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaSubnetworks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -31362,16 +33572,18 @@ func (g *GCEBetaSubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 func (g *GCEBetaSubnetworks) ListUsable(ctx context.Context, fl *filter.F) ([]*beta.UsableSubnetwork, error) {
 	klog.V(5).Infof("GCEBetaSubnetworks.ListUsable(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "ListUsable",
 		Version:   meta.Version("beta"),
 		Service:   "Subnetworks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaSubnetworks.ListUsable(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+
+	klog.V(5).Infof("GCEBetaSubnetworks.ListUsable(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Beta.Subnetworks.ListUsable(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -31383,7 +33595,9 @@ func (g *GCEBetaSubnetworks) ListUsable(ctx context.Context, fl *filter.F) ([]*b
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaSubnetworks.ListUsable(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -31410,27 +33624,35 @@ func (g *GCEBetaSubnetworks) Patch(ctx context.Context, key *meta.Key, arg0 *bet
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("beta"),
 		Service:   "Subnetworks",
 	}
-	klog.V(5).Infof("GCEBetaSubnetworks.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaSubnetworks.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaSubnetworks.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.Subnetworks.Patch(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaSubnetworks.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaSubnetworks.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -31691,14 +33913,16 @@ func (g *GCESubnetworks) Get(ctx context.Context, key *meta.Key) (*ga.Subnetwork
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "Subnetworks",
 	}
-	klog.V(5).Infof("GCESubnetworks.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCESubnetworks.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCESubnetworks.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -31706,7 +33930,10 @@ func (g *GCESubnetworks) Get(ctx context.Context, key *meta.Key) (*ga.Subnetwork
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCESubnetworks.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -31714,16 +33941,18 @@ func (g *GCESubnetworks) Get(ctx context.Context, key *meta.Key) (*ga.Subnetwork
 func (g *GCESubnetworks) List(ctx context.Context, region string, fl *filter.F) ([]*ga.Subnetwork, error) {
 	klog.V(5).Infof("GCESubnetworks.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "Subnetworks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCESubnetworks.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCESubnetworks.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.GA.Subnetworks.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -31735,12 +33964,16 @@ func (g *GCESubnetworks) List(ctx context.Context, region string, fl *filter.F) 
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCESubnetworks.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCESubnetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -31762,14 +33995,16 @@ func (g *GCESubnetworks) Insert(ctx context.Context, key *meta.Key, obj *ga.Subn
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "Subnetworks",
 	}
-	klog.V(5).Infof("GCESubnetworks.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCESubnetworks.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCESubnetworks.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -31778,7 +34013,10 @@ func (g *GCESubnetworks) Insert(ctx context.Context, key *meta.Key, obj *ga.Subn
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCESubnetworks.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -31797,14 +34035,15 @@ func (g *GCESubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "Subnetworks",
 	}
-	klog.V(5).Infof("GCESubnetworks.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCESubnetworks.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCESubnetworks.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -31812,7 +34051,10 @@ func (g *GCESubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCESubnetworks.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -31827,16 +34069,18 @@ func (g *GCESubnetworks) Delete(ctx context.Context, key *meta.Key) error {
 func (g *GCESubnetworks) ListUsable(ctx context.Context, fl *filter.F) ([]*ga.UsableSubnetwork, error) {
 	klog.V(5).Infof("GCESubnetworks.ListUsable(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "ListUsable",
 		Version:   meta.Version("ga"),
 		Service:   "Subnetworks",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCESubnetworks.ListUsable(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+
+	klog.V(5).Infof("GCESubnetworks.ListUsable(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.Subnetworks.ListUsable(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -31848,7 +34092,9 @@ func (g *GCESubnetworks) ListUsable(ctx context.Context, fl *filter.F) ([]*ga.Us
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCESubnetworks.ListUsable(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -31875,27 +34121,35 @@ func (g *GCESubnetworks) Patch(ctx context.Context, key *meta.Key, arg0 *ga.Subn
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Subnetworks")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Patch",
 		Version:   meta.Version("ga"),
 		Service:   "Subnetworks",
 	}
-	klog.V(5).Infof("GCESubnetworks.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCESubnetworks.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCESubnetworks.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.Subnetworks.Patch(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCESubnetworks.Patch(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCESubnetworks.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -32114,14 +34368,16 @@ func (g *GCEAlphaTargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*al
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetHttpProxies",
 	}
-	klog.V(5).Infof("GCEAlphaTargetHttpProxies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaTargetHttpProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaTargetHttpProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -32129,7 +34385,10 @@ func (g *GCEAlphaTargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*al
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaTargetHttpProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -32137,16 +34396,18 @@ func (g *GCEAlphaTargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*al
 func (g *GCEAlphaTargetHttpProxies) List(ctx context.Context, fl *filter.F) ([]*alpha.TargetHttpProxy, error) {
 	klog.V(5).Infof("GCEAlphaTargetHttpProxies.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetHttpProxies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaTargetHttpProxies.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaTargetHttpProxies.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Alpha.TargetHttpProxies.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -32158,12 +34419,16 @@ func (g *GCEAlphaTargetHttpProxies) List(ctx context.Context, fl *filter.F) ([]*
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaTargetHttpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaTargetHttpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -32185,14 +34450,16 @@ func (g *GCEAlphaTargetHttpProxies) Insert(ctx context.Context, key *meta.Key, o
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetHttpProxies",
 	}
-	klog.V(5).Infof("GCEAlphaTargetHttpProxies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaTargetHttpProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaTargetHttpProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -32201,7 +34468,10 @@ func (g *GCEAlphaTargetHttpProxies) Insert(ctx context.Context, key *meta.Key, o
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaTargetHttpProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -32220,14 +34490,15 @@ func (g *GCEAlphaTargetHttpProxies) Delete(ctx context.Context, key *meta.Key) e
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetHttpProxies",
 	}
-	klog.V(5).Infof("GCEAlphaTargetHttpProxies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaTargetHttpProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaTargetHttpProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -32236,7 +34507,10 @@ func (g *GCEAlphaTargetHttpProxies) Delete(ctx context.Context, key *meta.Key) e
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaTargetHttpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -32256,27 +34530,35 @@ func (g *GCEAlphaTargetHttpProxies) SetUrlMap(ctx context.Context, key *meta.Key
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetUrlMap",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetHttpProxies",
 	}
-	klog.V(5).Infof("GCEAlphaTargetHttpProxies.SetUrlMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaTargetHttpProxies.SetUrlMap(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaTargetHttpProxies.SetUrlMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.TargetHttpProxies.SetUrlMap(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaTargetHttpProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaTargetHttpProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -32495,14 +34777,16 @@ func (g *GCEBetaTargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*bet
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "TargetHttpProxies",
 	}
-	klog.V(5).Infof("GCEBetaTargetHttpProxies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaTargetHttpProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaTargetHttpProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -32510,7 +34794,10 @@ func (g *GCEBetaTargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*bet
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaTargetHttpProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -32518,16 +34805,18 @@ func (g *GCEBetaTargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*bet
 func (g *GCEBetaTargetHttpProxies) List(ctx context.Context, fl *filter.F) ([]*beta.TargetHttpProxy, error) {
 	klog.V(5).Infof("GCEBetaTargetHttpProxies.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "TargetHttpProxies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaTargetHttpProxies.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaTargetHttpProxies.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Beta.TargetHttpProxies.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -32539,12 +34828,16 @@ func (g *GCEBetaTargetHttpProxies) List(ctx context.Context, fl *filter.F) ([]*b
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaTargetHttpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaTargetHttpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -32566,14 +34859,16 @@ func (g *GCEBetaTargetHttpProxies) Insert(ctx context.Context, key *meta.Key, ob
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "TargetHttpProxies",
 	}
-	klog.V(5).Infof("GCEBetaTargetHttpProxies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaTargetHttpProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaTargetHttpProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -32582,7 +34877,10 @@ func (g *GCEBetaTargetHttpProxies) Insert(ctx context.Context, key *meta.Key, ob
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaTargetHttpProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -32601,14 +34899,15 @@ func (g *GCEBetaTargetHttpProxies) Delete(ctx context.Context, key *meta.Key) er
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "TargetHttpProxies",
 	}
-	klog.V(5).Infof("GCEBetaTargetHttpProxies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaTargetHttpProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaTargetHttpProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -32617,7 +34916,10 @@ func (g *GCEBetaTargetHttpProxies) Delete(ctx context.Context, key *meta.Key) er
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaTargetHttpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -32637,27 +34939,35 @@ func (g *GCEBetaTargetHttpProxies) SetUrlMap(ctx context.Context, key *meta.Key,
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetUrlMap",
 		Version:   meta.Version("beta"),
 		Service:   "TargetHttpProxies",
 	}
-	klog.V(5).Infof("GCEBetaTargetHttpProxies.SetUrlMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaTargetHttpProxies.SetUrlMap(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaTargetHttpProxies.SetUrlMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.TargetHttpProxies.SetUrlMap(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaTargetHttpProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaTargetHttpProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -32876,14 +35186,16 @@ func (g *GCETargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*ga.Targ
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "TargetHttpProxies",
 	}
-	klog.V(5).Infof("GCETargetHttpProxies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCETargetHttpProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetHttpProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -32891,7 +35203,10 @@ func (g *GCETargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*ga.Targ
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCETargetHttpProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -32899,16 +35214,18 @@ func (g *GCETargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*ga.Targ
 func (g *GCETargetHttpProxies) List(ctx context.Context, fl *filter.F) ([]*ga.TargetHttpProxy, error) {
 	klog.V(5).Infof("GCETargetHttpProxies.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "TargetHttpProxies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCETargetHttpProxies.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCETargetHttpProxies.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.TargetHttpProxies.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -32920,12 +35237,16 @@ func (g *GCETargetHttpProxies) List(ctx context.Context, fl *filter.F) ([]*ga.Ta
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCETargetHttpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCETargetHttpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -32947,14 +35268,16 @@ func (g *GCETargetHttpProxies) Insert(ctx context.Context, key *meta.Key, obj *g
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "TargetHttpProxies",
 	}
-	klog.V(5).Infof("GCETargetHttpProxies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCETargetHttpProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetHttpProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -32963,7 +35286,10 @@ func (g *GCETargetHttpProxies) Insert(ctx context.Context, key *meta.Key, obj *g
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCETargetHttpProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -32982,14 +35308,15 @@ func (g *GCETargetHttpProxies) Delete(ctx context.Context, key *meta.Key) error 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "TargetHttpProxies",
 	}
-	klog.V(5).Infof("GCETargetHttpProxies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCETargetHttpProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetHttpProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -32998,7 +35325,10 @@ func (g *GCETargetHttpProxies) Delete(ctx context.Context, key *meta.Key) error 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCETargetHttpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -33018,27 +35348,35 @@ func (g *GCETargetHttpProxies) SetUrlMap(ctx context.Context, key *meta.Key, arg
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetUrlMap",
 		Version:   meta.Version("ga"),
 		Service:   "TargetHttpProxies",
 	}
-	klog.V(5).Infof("GCETargetHttpProxies.SetUrlMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCETargetHttpProxies.SetUrlMap(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetHttpProxies.SetUrlMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.TargetHttpProxies.SetUrlMap(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCETargetHttpProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCETargetHttpProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -33260,14 +35598,16 @@ func (g *GCEAlphaRegionTargetHttpProxies) Get(ctx context.Context, key *meta.Key
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionTargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionTargetHttpProxies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionTargetHttpProxies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaRegionTargetHttpProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -33275,7 +35615,10 @@ func (g *GCEAlphaRegionTargetHttpProxies) Get(ctx context.Context, key *meta.Key
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaRegionTargetHttpProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -33283,16 +35626,18 @@ func (g *GCEAlphaRegionTargetHttpProxies) Get(ctx context.Context, key *meta.Key
 func (g *GCEAlphaRegionTargetHttpProxies) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.TargetHttpProxy, error) {
 	klog.V(5).Infof("GCEAlphaRegionTargetHttpProxies.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionTargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionTargetHttpProxies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaRegionTargetHttpProxies.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaRegionTargetHttpProxies.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Alpha.RegionTargetHttpProxies.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -33304,12 +35649,16 @@ func (g *GCEAlphaRegionTargetHttpProxies) List(ctx context.Context, region strin
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -33331,14 +35680,16 @@ func (g *GCEAlphaRegionTargetHttpProxies) Insert(ctx context.Context, key *meta.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionTargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionTargetHttpProxies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionTargetHttpProxies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaRegionTargetHttpProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -33347,7 +35698,10 @@ func (g *GCEAlphaRegionTargetHttpProxies) Insert(ctx context.Context, key *meta.
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -33366,14 +35720,15 @@ func (g *GCEAlphaRegionTargetHttpProxies) Delete(ctx context.Context, key *meta.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionTargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionTargetHttpProxies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionTargetHttpProxies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionTargetHttpProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -33381,7 +35736,10 @@ func (g *GCEAlphaRegionTargetHttpProxies) Delete(ctx context.Context, key *meta.
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -33401,27 +35759,35 @@ func (g *GCEAlphaRegionTargetHttpProxies) SetUrlMap(ctx context.Context, key *me
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionTargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetUrlMap",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionTargetHttpProxies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionTargetHttpProxies.SetUrlMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionTargetHttpProxies.SetUrlMap(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpProxies.SetUrlMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.RegionTargetHttpProxies.SetUrlMap(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaRegionTargetHttpProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -33643,14 +36009,16 @@ func (g *GCEBetaRegionTargetHttpProxies) Get(ctx context.Context, key *meta.Key)
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionTargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "RegionTargetHttpProxies",
 	}
-	klog.V(5).Infof("GCEBetaRegionTargetHttpProxies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaRegionTargetHttpProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionTargetHttpProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -33658,7 +36026,10 @@ func (g *GCEBetaRegionTargetHttpProxies) Get(ctx context.Context, key *meta.Key)
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaRegionTargetHttpProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -33666,16 +36037,18 @@ func (g *GCEBetaRegionTargetHttpProxies) Get(ctx context.Context, key *meta.Key)
 func (g *GCEBetaRegionTargetHttpProxies) List(ctx context.Context, region string, fl *filter.F) ([]*beta.TargetHttpProxy, error) {
 	klog.V(5).Infof("GCEBetaRegionTargetHttpProxies.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionTargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "RegionTargetHttpProxies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaRegionTargetHttpProxies.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaRegionTargetHttpProxies.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Beta.RegionTargetHttpProxies.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -33687,12 +36060,16 @@ func (g *GCEBetaRegionTargetHttpProxies) List(ctx context.Context, region string
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaRegionTargetHttpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaRegionTargetHttpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -33714,14 +36091,16 @@ func (g *GCEBetaRegionTargetHttpProxies) Insert(ctx context.Context, key *meta.K
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionTargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "RegionTargetHttpProxies",
 	}
-	klog.V(5).Infof("GCEBetaRegionTargetHttpProxies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaRegionTargetHttpProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionTargetHttpProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -33730,7 +36109,10 @@ func (g *GCEBetaRegionTargetHttpProxies) Insert(ctx context.Context, key *meta.K
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaRegionTargetHttpProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -33749,14 +36131,15 @@ func (g *GCEBetaRegionTargetHttpProxies) Delete(ctx context.Context, key *meta.K
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionTargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "RegionTargetHttpProxies",
 	}
-	klog.V(5).Infof("GCEBetaRegionTargetHttpProxies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRegionTargetHttpProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionTargetHttpProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -33764,7 +36147,10 @@ func (g *GCEBetaRegionTargetHttpProxies) Delete(ctx context.Context, key *meta.K
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaRegionTargetHttpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -33784,27 +36170,35 @@ func (g *GCEBetaRegionTargetHttpProxies) SetUrlMap(ctx context.Context, key *met
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionTargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetUrlMap",
 		Version:   meta.Version("beta"),
 		Service:   "RegionTargetHttpProxies",
 	}
-	klog.V(5).Infof("GCEBetaRegionTargetHttpProxies.SetUrlMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRegionTargetHttpProxies.SetUrlMap(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionTargetHttpProxies.SetUrlMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.RegionTargetHttpProxies.SetUrlMap(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaRegionTargetHttpProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaRegionTargetHttpProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -34026,14 +36420,16 @@ func (g *GCERegionTargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*g
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionTargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "RegionTargetHttpProxies",
 	}
-	klog.V(5).Infof("GCERegionTargetHttpProxies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERegionTargetHttpProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionTargetHttpProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -34041,7 +36437,10 @@ func (g *GCERegionTargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*g
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCERegionTargetHttpProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -34049,16 +36448,18 @@ func (g *GCERegionTargetHttpProxies) Get(ctx context.Context, key *meta.Key) (*g
 func (g *GCERegionTargetHttpProxies) List(ctx context.Context, region string, fl *filter.F) ([]*ga.TargetHttpProxy, error) {
 	klog.V(5).Infof("GCERegionTargetHttpProxies.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionTargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "RegionTargetHttpProxies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCERegionTargetHttpProxies.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCERegionTargetHttpProxies.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.GA.RegionTargetHttpProxies.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -34070,12 +36471,16 @@ func (g *GCERegionTargetHttpProxies) List(ctx context.Context, region string, fl
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERegionTargetHttpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCERegionTargetHttpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -34097,14 +36502,16 @@ func (g *GCERegionTargetHttpProxies) Insert(ctx context.Context, key *meta.Key, 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionTargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "RegionTargetHttpProxies",
 	}
-	klog.V(5).Infof("GCERegionTargetHttpProxies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERegionTargetHttpProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionTargetHttpProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -34113,7 +36520,10 @@ func (g *GCERegionTargetHttpProxies) Insert(ctx context.Context, key *meta.Key, 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERegionTargetHttpProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -34132,14 +36542,15 @@ func (g *GCERegionTargetHttpProxies) Delete(ctx context.Context, key *meta.Key) 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionTargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "RegionTargetHttpProxies",
 	}
-	klog.V(5).Infof("GCERegionTargetHttpProxies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERegionTargetHttpProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionTargetHttpProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -34147,7 +36558,10 @@ func (g *GCERegionTargetHttpProxies) Delete(ctx context.Context, key *meta.Key) 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERegionTargetHttpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -34167,27 +36581,35 @@ func (g *GCERegionTargetHttpProxies) SetUrlMap(ctx context.Context, key *meta.Ke
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionTargetHttpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetUrlMap",
 		Version:   meta.Version("ga"),
 		Service:   "RegionTargetHttpProxies",
 	}
-	klog.V(5).Infof("GCERegionTargetHttpProxies.SetUrlMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERegionTargetHttpProxies.SetUrlMap(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionTargetHttpProxies.SetUrlMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.RegionTargetHttpProxies.SetUrlMap(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERegionTargetHttpProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCERegionTargetHttpProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -34436,14 +36858,16 @@ func (g *GCETargetHttpsProxies) Get(ctx context.Context, key *meta.Key) (*ga.Tar
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCETargetHttpsProxies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCETargetHttpsProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetHttpsProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -34451,7 +36875,10 @@ func (g *GCETargetHttpsProxies) Get(ctx context.Context, key *meta.Key) (*ga.Tar
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCETargetHttpsProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -34459,16 +36886,18 @@ func (g *GCETargetHttpsProxies) Get(ctx context.Context, key *meta.Key) (*ga.Tar
 func (g *GCETargetHttpsProxies) List(ctx context.Context, fl *filter.F) ([]*ga.TargetHttpsProxy, error) {
 	klog.V(5).Infof("GCETargetHttpsProxies.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "TargetHttpsProxies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCETargetHttpsProxies.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCETargetHttpsProxies.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.TargetHttpsProxies.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -34480,12 +36909,16 @@ func (g *GCETargetHttpsProxies) List(ctx context.Context, fl *filter.F) ([]*ga.T
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCETargetHttpsProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCETargetHttpsProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -34507,14 +36940,16 @@ func (g *GCETargetHttpsProxies) Insert(ctx context.Context, key *meta.Key, obj *
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCETargetHttpsProxies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCETargetHttpsProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetHttpsProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -34523,7 +36958,10 @@ func (g *GCETargetHttpsProxies) Insert(ctx context.Context, key *meta.Key, obj *
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCETargetHttpsProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -34542,14 +36980,15 @@ func (g *GCETargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) error
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCETargetHttpsProxies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCETargetHttpsProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetHttpsProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -34558,7 +36997,10 @@ func (g *GCETargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) error
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCETargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -34578,27 +37020,35 @@ func (g *GCETargetHttpsProxies) SetCertificateMap(ctx context.Context, key *meta
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetCertificateMap",
 		Version:   meta.Version("ga"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCETargetHttpsProxies.SetCertificateMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCETargetHttpsProxies.SetCertificateMap(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetHttpsProxies.SetCertificateMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.TargetHttpsProxies.SetCertificateMap(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCETargetHttpsProxies.SetCertificateMap(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCETargetHttpsProxies.SetCertificateMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -34612,27 +37062,35 @@ func (g *GCETargetHttpsProxies) SetSslCertificates(ctx context.Context, key *met
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetSslCertificates",
 		Version:   meta.Version("ga"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCETargetHttpsProxies.SetSslCertificates(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCETargetHttpsProxies.SetSslCertificates(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetHttpsProxies.SetSslCertificates(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.TargetHttpsProxies.SetSslCertificates(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCETargetHttpsProxies.SetSslCertificates(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCETargetHttpsProxies.SetSslCertificates(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -34646,27 +37104,35 @@ func (g *GCETargetHttpsProxies) SetSslPolicy(ctx context.Context, key *meta.Key,
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetSslPolicy",
 		Version:   meta.Version("ga"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCETargetHttpsProxies.SetSslPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCETargetHttpsProxies.SetSslPolicy(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetHttpsProxies.SetSslPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.TargetHttpsProxies.SetSslPolicy(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCETargetHttpsProxies.SetSslPolicy(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCETargetHttpsProxies.SetSslPolicy(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -34680,27 +37146,35 @@ func (g *GCETargetHttpsProxies) SetUrlMap(ctx context.Context, key *meta.Key, ar
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetUrlMap",
 		Version:   meta.Version("ga"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCETargetHttpsProxies.SetUrlMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCETargetHttpsProxies.SetUrlMap(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetHttpsProxies.SetUrlMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.TargetHttpsProxies.SetUrlMap(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCETargetHttpsProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCETargetHttpsProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -34949,14 +37423,16 @@ func (g *GCEAlphaTargetHttpsProxies) Get(ctx context.Context, key *meta.Key) (*a
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaTargetHttpsProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -34964,7 +37440,10 @@ func (g *GCEAlphaTargetHttpsProxies) Get(ctx context.Context, key *meta.Key) (*a
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaTargetHttpsProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -34972,16 +37451,18 @@ func (g *GCEAlphaTargetHttpsProxies) Get(ctx context.Context, key *meta.Key) (*a
 func (g *GCEAlphaTargetHttpsProxies) List(ctx context.Context, fl *filter.F) ([]*alpha.TargetHttpsProxy, error) {
 	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetHttpsProxies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Alpha.TargetHttpsProxies.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -34993,12 +37474,16 @@ func (g *GCEAlphaTargetHttpsProxies) List(ctx context.Context, fl *filter.F) ([]
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaTargetHttpsProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaTargetHttpsProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -35020,14 +37505,16 @@ func (g *GCEAlphaTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key, 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaTargetHttpsProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -35036,7 +37523,10 @@ func (g *GCEAlphaTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key, 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaTargetHttpsProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -35055,14 +37545,15 @@ func (g *GCEAlphaTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaTargetHttpsProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -35071,7 +37562,10 @@ func (g *GCEAlphaTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaTargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -35091,27 +37585,35 @@ func (g *GCEAlphaTargetHttpsProxies) SetCertificateMap(ctx context.Context, key 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetCertificateMap",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.SetCertificateMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.SetCertificateMap(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaTargetHttpsProxies.SetCertificateMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.TargetHttpsProxies.SetCertificateMap(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaTargetHttpsProxies.SetCertificateMap(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaTargetHttpsProxies.SetCertificateMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -35125,27 +37627,35 @@ func (g *GCEAlphaTargetHttpsProxies) SetSslCertificates(ctx context.Context, key
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetSslCertificates",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.SetSslCertificates(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.SetSslCertificates(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaTargetHttpsProxies.SetSslCertificates(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.TargetHttpsProxies.SetSslCertificates(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaTargetHttpsProxies.SetSslCertificates(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaTargetHttpsProxies.SetSslCertificates(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -35159,27 +37669,35 @@ func (g *GCEAlphaTargetHttpsProxies) SetSslPolicy(ctx context.Context, key *meta
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetSslPolicy",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.SetSslPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.SetSslPolicy(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaTargetHttpsProxies.SetSslPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.TargetHttpsProxies.SetSslPolicy(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaTargetHttpsProxies.SetSslPolicy(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaTargetHttpsProxies.SetSslPolicy(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -35193,27 +37711,35 @@ func (g *GCEAlphaTargetHttpsProxies) SetUrlMap(ctx context.Context, key *meta.Ke
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetUrlMap",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.SetUrlMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.SetUrlMap(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaTargetHttpsProxies.SetUrlMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.TargetHttpsProxies.SetUrlMap(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaTargetHttpsProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaTargetHttpsProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -35462,14 +37988,16 @@ func (g *GCEBetaTargetHttpsProxies) Get(ctx context.Context, key *meta.Key) (*be
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEBetaTargetHttpsProxies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaTargetHttpsProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaTargetHttpsProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -35477,7 +38005,10 @@ func (g *GCEBetaTargetHttpsProxies) Get(ctx context.Context, key *meta.Key) (*be
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaTargetHttpsProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -35485,16 +38016,18 @@ func (g *GCEBetaTargetHttpsProxies) Get(ctx context.Context, key *meta.Key) (*be
 func (g *GCEBetaTargetHttpsProxies) List(ctx context.Context, fl *filter.F) ([]*beta.TargetHttpsProxy, error) {
 	klog.V(5).Infof("GCEBetaTargetHttpsProxies.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "TargetHttpsProxies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaTargetHttpsProxies.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaTargetHttpsProxies.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Beta.TargetHttpsProxies.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -35506,12 +38039,16 @@ func (g *GCEBetaTargetHttpsProxies) List(ctx context.Context, fl *filter.F) ([]*
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaTargetHttpsProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaTargetHttpsProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -35533,14 +38070,16 @@ func (g *GCEBetaTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key, o
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEBetaTargetHttpsProxies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaTargetHttpsProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaTargetHttpsProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -35549,7 +38088,10 @@ func (g *GCEBetaTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key, o
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaTargetHttpsProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -35568,14 +38110,15 @@ func (g *GCEBetaTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) e
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEBetaTargetHttpsProxies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaTargetHttpsProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaTargetHttpsProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -35584,7 +38127,10 @@ func (g *GCEBetaTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key) e
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaTargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -35604,27 +38150,35 @@ func (g *GCEBetaTargetHttpsProxies) SetCertificateMap(ctx context.Context, key *
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetCertificateMap",
 		Version:   meta.Version("beta"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEBetaTargetHttpsProxies.SetCertificateMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaTargetHttpsProxies.SetCertificateMap(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetCertificateMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.TargetHttpsProxies.SetCertificateMap(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetCertificateMap(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetCertificateMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -35638,27 +38192,35 @@ func (g *GCEBetaTargetHttpsProxies) SetSslCertificates(ctx context.Context, key 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetSslCertificates",
 		Version:   meta.Version("beta"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEBetaTargetHttpsProxies.SetSslCertificates(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaTargetHttpsProxies.SetSslCertificates(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetSslCertificates(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.TargetHttpsProxies.SetSslCertificates(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetSslCertificates(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetSslCertificates(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -35672,27 +38234,35 @@ func (g *GCEBetaTargetHttpsProxies) SetSslPolicy(ctx context.Context, key *meta.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetSslPolicy",
 		Version:   meta.Version("beta"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEBetaTargetHttpsProxies.SetSslPolicy(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaTargetHttpsProxies.SetSslPolicy(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetSslPolicy(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.TargetHttpsProxies.SetSslPolicy(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetSslPolicy(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetSslPolicy(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -35706,27 +38276,35 @@ func (g *GCEBetaTargetHttpsProxies) SetUrlMap(ctx context.Context, key *meta.Key
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetUrlMap",
 		Version:   meta.Version("beta"),
 		Service:   "TargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEBetaTargetHttpsProxies.SetUrlMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaTargetHttpsProxies.SetUrlMap(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetUrlMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.TargetHttpsProxies.SetUrlMap(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaTargetHttpsProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -35958,14 +38536,16 @@ func (g *GCEAlphaRegionTargetHttpsProxies) Get(ctx context.Context, key *meta.Ke
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionTargetHttpsProxies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaRegionTargetHttpsProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -35973,7 +38553,10 @@ func (g *GCEAlphaRegionTargetHttpsProxies) Get(ctx context.Context, key *meta.Ke
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -35981,16 +38564,18 @@ func (g *GCEAlphaRegionTargetHttpsProxies) Get(ctx context.Context, key *meta.Ke
 func (g *GCEAlphaRegionTargetHttpsProxies) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.TargetHttpsProxy, error) {
 	klog.V(5).Infof("GCEAlphaRegionTargetHttpsProxies.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaRegionTargetHttpsProxies.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaRegionTargetHttpsProxies.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Alpha.RegionTargetHttpsProxies.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -36002,12 +38587,16 @@ func (g *GCEAlphaRegionTargetHttpsProxies) List(ctx context.Context, region stri
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -36029,14 +38618,16 @@ func (g *GCEAlphaRegionTargetHttpsProxies) Insert(ctx context.Context, key *meta
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionTargetHttpsProxies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaRegionTargetHttpsProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -36045,7 +38636,10 @@ func (g *GCEAlphaRegionTargetHttpsProxies) Insert(ctx context.Context, key *meta
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -36064,14 +38658,15 @@ func (g *GCEAlphaRegionTargetHttpsProxies) Delete(ctx context.Context, key *meta
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionTargetHttpsProxies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionTargetHttpsProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -36079,7 +38674,10 @@ func (g *GCEAlphaRegionTargetHttpsProxies) Delete(ctx context.Context, key *meta
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -36099,27 +38697,35 @@ func (g *GCEAlphaRegionTargetHttpsProxies) SetSslCertificates(ctx context.Contex
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetSslCertificates",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionTargetHttpsProxies.SetSslCertificates(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionTargetHttpsProxies.SetSslCertificates(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.SetSslCertificates(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.RegionTargetHttpsProxies.SetSslCertificates(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.SetSslCertificates(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.SetSslCertificates(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -36133,27 +38739,35 @@ func (g *GCEAlphaRegionTargetHttpsProxies) SetUrlMap(ctx context.Context, key *m
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetUrlMap",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEAlphaRegionTargetHttpsProxies.SetUrlMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionTargetHttpsProxies.SetUrlMap(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.SetUrlMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.RegionTargetHttpsProxies.SetUrlMap(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -36385,14 +38999,16 @@ func (g *GCEBetaRegionTargetHttpsProxies) Get(ctx context.Context, key *meta.Key
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEBetaRegionTargetHttpsProxies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaRegionTargetHttpsProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -36400,7 +39016,10 @@ func (g *GCEBetaRegionTargetHttpsProxies) Get(ctx context.Context, key *meta.Key
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -36408,16 +39027,18 @@ func (g *GCEBetaRegionTargetHttpsProxies) Get(ctx context.Context, key *meta.Key
 func (g *GCEBetaRegionTargetHttpsProxies) List(ctx context.Context, region string, fl *filter.F) ([]*beta.TargetHttpsProxy, error) {
 	klog.V(5).Infof("GCEBetaRegionTargetHttpsProxies.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaRegionTargetHttpsProxies.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaRegionTargetHttpsProxies.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Beta.RegionTargetHttpsProxies.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -36429,12 +39050,16 @@ func (g *GCEBetaRegionTargetHttpsProxies) List(ctx context.Context, region strin
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -36456,14 +39081,16 @@ func (g *GCEBetaRegionTargetHttpsProxies) Insert(ctx context.Context, key *meta.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEBetaRegionTargetHttpsProxies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaRegionTargetHttpsProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -36472,7 +39099,10 @@ func (g *GCEBetaRegionTargetHttpsProxies) Insert(ctx context.Context, key *meta.
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -36491,14 +39121,15 @@ func (g *GCEBetaRegionTargetHttpsProxies) Delete(ctx context.Context, key *meta.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEBetaRegionTargetHttpsProxies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRegionTargetHttpsProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -36506,7 +39137,10 @@ func (g *GCEBetaRegionTargetHttpsProxies) Delete(ctx context.Context, key *meta.
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -36526,27 +39160,35 @@ func (g *GCEBetaRegionTargetHttpsProxies) SetSslCertificates(ctx context.Context
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetSslCertificates",
 		Version:   meta.Version("beta"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEBetaRegionTargetHttpsProxies.SetSslCertificates(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRegionTargetHttpsProxies.SetSslCertificates(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.SetSslCertificates(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.RegionTargetHttpsProxies.SetSslCertificates(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.SetSslCertificates(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.SetSslCertificates(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -36560,27 +39202,35 @@ func (g *GCEBetaRegionTargetHttpsProxies) SetUrlMap(ctx context.Context, key *me
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetUrlMap",
 		Version:   meta.Version("beta"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCEBetaRegionTargetHttpsProxies.SetUrlMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRegionTargetHttpsProxies.SetUrlMap(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.SetUrlMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.RegionTargetHttpsProxies.SetUrlMap(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -36812,14 +39462,16 @@ func (g *GCERegionTargetHttpsProxies) Get(ctx context.Context, key *meta.Key) (*
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCERegionTargetHttpsProxies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERegionTargetHttpsProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionTargetHttpsProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -36827,7 +39479,10 @@ func (g *GCERegionTargetHttpsProxies) Get(ctx context.Context, key *meta.Key) (*
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCERegionTargetHttpsProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -36835,16 +39490,18 @@ func (g *GCERegionTargetHttpsProxies) Get(ctx context.Context, key *meta.Key) (*
 func (g *GCERegionTargetHttpsProxies) List(ctx context.Context, region string, fl *filter.F) ([]*ga.TargetHttpsProxy, error) {
 	klog.V(5).Infof("GCERegionTargetHttpsProxies.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCERegionTargetHttpsProxies.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCERegionTargetHttpsProxies.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.GA.RegionTargetHttpsProxies.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -36856,12 +39513,16 @@ func (g *GCERegionTargetHttpsProxies) List(ctx context.Context, region string, f
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERegionTargetHttpsProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCERegionTargetHttpsProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -36883,14 +39544,16 @@ func (g *GCERegionTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key,
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCERegionTargetHttpsProxies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERegionTargetHttpsProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionTargetHttpsProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -36899,7 +39562,10 @@ func (g *GCERegionTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key,
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERegionTargetHttpsProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -36918,14 +39584,15 @@ func (g *GCERegionTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key)
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCERegionTargetHttpsProxies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERegionTargetHttpsProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionTargetHttpsProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -36933,7 +39600,10 @@ func (g *GCERegionTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key)
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERegionTargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -36953,27 +39623,35 @@ func (g *GCERegionTargetHttpsProxies) SetSslCertificates(ctx context.Context, ke
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetSslCertificates",
 		Version:   meta.Version("ga"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCERegionTargetHttpsProxies.SetSslCertificates(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERegionTargetHttpsProxies.SetSslCertificates(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionTargetHttpsProxies.SetSslCertificates(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.RegionTargetHttpsProxies.SetSslCertificates(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERegionTargetHttpsProxies.SetSslCertificates(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCERegionTargetHttpsProxies.SetSslCertificates(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -36987,27 +39665,35 @@ func (g *GCERegionTargetHttpsProxies) SetUrlMap(ctx context.Context, key *meta.K
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionTargetHttpsProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetUrlMap",
 		Version:   meta.Version("ga"),
 		Service:   "RegionTargetHttpsProxies",
 	}
-	klog.V(5).Infof("GCERegionTargetHttpsProxies.SetUrlMap(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERegionTargetHttpsProxies.SetUrlMap(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionTargetHttpsProxies.SetUrlMap(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.RegionTargetHttpsProxies.SetUrlMap(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERegionTargetHttpsProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCERegionTargetHttpsProxies.SetUrlMap(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -37239,14 +39925,16 @@ func (g *GCETargetPools) Get(ctx context.Context, key *meta.Key) (*ga.TargetPool
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetPools")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "TargetPools",
 	}
-	klog.V(5).Infof("GCETargetPools.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCETargetPools.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetPools.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -37254,7 +39942,10 @@ func (g *GCETargetPools) Get(ctx context.Context, key *meta.Key) (*ga.TargetPool
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCETargetPools.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -37262,16 +39953,18 @@ func (g *GCETargetPools) Get(ctx context.Context, key *meta.Key) (*ga.TargetPool
 func (g *GCETargetPools) List(ctx context.Context, region string, fl *filter.F) ([]*ga.TargetPool, error) {
 	klog.V(5).Infof("GCETargetPools.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetPools")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "TargetPools",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCETargetPools.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCETargetPools.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.GA.TargetPools.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -37283,12 +39976,16 @@ func (g *GCETargetPools) List(ctx context.Context, region string, fl *filter.F) 
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCETargetPools.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCETargetPools.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -37310,14 +40007,16 @@ func (g *GCETargetPools) Insert(ctx context.Context, key *meta.Key, obj *ga.Targ
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetPools")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "TargetPools",
 	}
-	klog.V(5).Infof("GCETargetPools.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCETargetPools.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetPools.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -37326,7 +40025,10 @@ func (g *GCETargetPools) Insert(ctx context.Context, key *meta.Key, obj *ga.Targ
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCETargetPools.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -37345,14 +40047,15 @@ func (g *GCETargetPools) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetPools")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "TargetPools",
 	}
-	klog.V(5).Infof("GCETargetPools.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCETargetPools.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetPools.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -37360,7 +40063,10 @@ func (g *GCETargetPools) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCETargetPools.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -37380,27 +40086,35 @@ func (g *GCETargetPools) AddInstance(ctx context.Context, key *meta.Key, arg0 *g
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetPools")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AddInstance",
 		Version:   meta.Version("ga"),
 		Service:   "TargetPools",
 	}
-	klog.V(5).Infof("GCETargetPools.AddInstance(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCETargetPools.AddInstance(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetPools.AddInstance(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.TargetPools.AddInstance(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCETargetPools.AddInstance(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCETargetPools.AddInstance(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -37414,27 +40128,35 @@ func (g *GCETargetPools) RemoveInstance(ctx context.Context, key *meta.Key, arg0
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetPools")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "RemoveInstance",
 		Version:   meta.Version("ga"),
 		Service:   "TargetPools",
 	}
-	klog.V(5).Infof("GCETargetPools.RemoveInstance(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCETargetPools.RemoveInstance(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetPools.RemoveInstance(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.TargetPools.RemoveInstance(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCETargetPools.RemoveInstance(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCETargetPools.RemoveInstance(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -37653,14 +40375,16 @@ func (g *GCEAlphaTargetTcpProxies) Get(ctx context.Context, key *meta.Key) (*alp
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetTcpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetTcpProxies",
 	}
-	klog.V(5).Infof("GCEAlphaTargetTcpProxies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaTargetTcpProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaTargetTcpProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -37668,7 +40392,10 @@ func (g *GCEAlphaTargetTcpProxies) Get(ctx context.Context, key *meta.Key) (*alp
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaTargetTcpProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -37676,16 +40403,18 @@ func (g *GCEAlphaTargetTcpProxies) Get(ctx context.Context, key *meta.Key) (*alp
 func (g *GCEAlphaTargetTcpProxies) List(ctx context.Context, fl *filter.F) ([]*alpha.TargetTcpProxy, error) {
 	klog.V(5).Infof("GCEAlphaTargetTcpProxies.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetTcpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetTcpProxies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaTargetTcpProxies.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaTargetTcpProxies.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Alpha.TargetTcpProxies.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -37697,12 +40426,16 @@ func (g *GCEAlphaTargetTcpProxies) List(ctx context.Context, fl *filter.F) ([]*a
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaTargetTcpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaTargetTcpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -37724,14 +40457,16 @@ func (g *GCEAlphaTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, ob
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetTcpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetTcpProxies",
 	}
-	klog.V(5).Infof("GCEAlphaTargetTcpProxies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaTargetTcpProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaTargetTcpProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -37740,7 +40475,10 @@ func (g *GCEAlphaTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, ob
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaTargetTcpProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -37759,14 +40497,15 @@ func (g *GCEAlphaTargetTcpProxies) Delete(ctx context.Context, key *meta.Key) er
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetTcpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetTcpProxies",
 	}
-	klog.V(5).Infof("GCEAlphaTargetTcpProxies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaTargetTcpProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaTargetTcpProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -37775,7 +40514,10 @@ func (g *GCEAlphaTargetTcpProxies) Delete(ctx context.Context, key *meta.Key) er
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -37795,27 +40537,35 @@ func (g *GCEAlphaTargetTcpProxies) SetBackendService(ctx context.Context, key *m
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "TargetTcpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetBackendService",
 		Version:   meta.Version("alpha"),
 		Service:   "TargetTcpProxies",
 	}
-	klog.V(5).Infof("GCEAlphaTargetTcpProxies.SetBackendService(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaTargetTcpProxies.SetBackendService(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaTargetTcpProxies.SetBackendService(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.TargetTcpProxies.SetBackendService(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaTargetTcpProxies.SetBackendService(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaTargetTcpProxies.SetBackendService(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -38034,14 +40784,16 @@ func (g *GCEBetaTargetTcpProxies) Get(ctx context.Context, key *meta.Key) (*beta
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetTcpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "TargetTcpProxies",
 	}
-	klog.V(5).Infof("GCEBetaTargetTcpProxies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaTargetTcpProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaTargetTcpProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -38049,7 +40801,10 @@ func (g *GCEBetaTargetTcpProxies) Get(ctx context.Context, key *meta.Key) (*beta
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaTargetTcpProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -38057,16 +40812,18 @@ func (g *GCEBetaTargetTcpProxies) Get(ctx context.Context, key *meta.Key) (*beta
 func (g *GCEBetaTargetTcpProxies) List(ctx context.Context, fl *filter.F) ([]*beta.TargetTcpProxy, error) {
 	klog.V(5).Infof("GCEBetaTargetTcpProxies.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetTcpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "TargetTcpProxies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaTargetTcpProxies.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaTargetTcpProxies.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Beta.TargetTcpProxies.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -38078,12 +40835,16 @@ func (g *GCEBetaTargetTcpProxies) List(ctx context.Context, fl *filter.F) ([]*be
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaTargetTcpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaTargetTcpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -38105,14 +40866,16 @@ func (g *GCEBetaTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, obj
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetTcpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "TargetTcpProxies",
 	}
-	klog.V(5).Infof("GCEBetaTargetTcpProxies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaTargetTcpProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaTargetTcpProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -38121,7 +40884,10 @@ func (g *GCEBetaTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, obj
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaTargetTcpProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -38140,14 +40906,15 @@ func (g *GCEBetaTargetTcpProxies) Delete(ctx context.Context, key *meta.Key) err
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetTcpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "TargetTcpProxies",
 	}
-	klog.V(5).Infof("GCEBetaTargetTcpProxies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaTargetTcpProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaTargetTcpProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -38156,7 +40923,10 @@ func (g *GCEBetaTargetTcpProxies) Delete(ctx context.Context, key *meta.Key) err
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -38176,27 +40946,35 @@ func (g *GCEBetaTargetTcpProxies) SetBackendService(ctx context.Context, key *me
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "TargetTcpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetBackendService",
 		Version:   meta.Version("beta"),
 		Service:   "TargetTcpProxies",
 	}
-	klog.V(5).Infof("GCEBetaTargetTcpProxies.SetBackendService(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaTargetTcpProxies.SetBackendService(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaTargetTcpProxies.SetBackendService(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.TargetTcpProxies.SetBackendService(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaTargetTcpProxies.SetBackendService(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaTargetTcpProxies.SetBackendService(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -38415,14 +41193,16 @@ func (g *GCETargetTcpProxies) Get(ctx context.Context, key *meta.Key) (*ga.Targe
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetTcpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "TargetTcpProxies",
 	}
-	klog.V(5).Infof("GCETargetTcpProxies.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCETargetTcpProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetTcpProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -38430,7 +41210,10 @@ func (g *GCETargetTcpProxies) Get(ctx context.Context, key *meta.Key) (*ga.Targe
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCETargetTcpProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -38438,16 +41221,18 @@ func (g *GCETargetTcpProxies) Get(ctx context.Context, key *meta.Key) (*ga.Targe
 func (g *GCETargetTcpProxies) List(ctx context.Context, fl *filter.F) ([]*ga.TargetTcpProxy, error) {
 	klog.V(5).Infof("GCETargetTcpProxies.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetTcpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "TargetTcpProxies",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCETargetTcpProxies.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCETargetTcpProxies.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.TargetTcpProxies.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -38459,12 +41244,16 @@ func (g *GCETargetTcpProxies) List(ctx context.Context, fl *filter.F) ([]*ga.Tar
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCETargetTcpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCETargetTcpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -38486,14 +41275,16 @@ func (g *GCETargetTcpProxies) Insert(ctx context.Context, key *meta.Key, obj *ga
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetTcpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "TargetTcpProxies",
 	}
-	klog.V(5).Infof("GCETargetTcpProxies.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCETargetTcpProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetTcpProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -38502,7 +41293,10 @@ func (g *GCETargetTcpProxies) Insert(ctx context.Context, key *meta.Key, obj *ga
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCETargetTcpProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -38521,14 +41315,15 @@ func (g *GCETargetTcpProxies) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetTcpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "TargetTcpProxies",
 	}
-	klog.V(5).Infof("GCETargetTcpProxies.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCETargetTcpProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetTcpProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -38537,7 +41332,10 @@ func (g *GCETargetTcpProxies) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCETargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -38557,27 +41355,35 @@ func (g *GCETargetTcpProxies) SetBackendService(ctx context.Context, key *meta.K
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "TargetTcpProxies")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "SetBackendService",
 		Version:   meta.Version("ga"),
 		Service:   "TargetTcpProxies",
 	}
-	klog.V(5).Infof("GCETargetTcpProxies.SetBackendService(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCETargetTcpProxies.SetBackendService(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCETargetTcpProxies.SetBackendService(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.TargetTcpProxies.SetBackendService(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCETargetTcpProxies.SetBackendService(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCETargetTcpProxies.SetBackendService(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -38796,14 +41602,16 @@ func (g *GCEAlphaUrlMaps) Get(ctx context.Context, key *meta.Key) (*alpha.UrlMap
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "UrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "UrlMaps",
 	}
-	klog.V(5).Infof("GCEAlphaUrlMaps.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaUrlMaps.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaUrlMaps.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -38811,7 +41619,10 @@ func (g *GCEAlphaUrlMaps) Get(ctx context.Context, key *meta.Key) (*alpha.UrlMap
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaUrlMaps.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -38819,16 +41630,18 @@ func (g *GCEAlphaUrlMaps) Get(ctx context.Context, key *meta.Key) (*alpha.UrlMap
 func (g *GCEAlphaUrlMaps) List(ctx context.Context, fl *filter.F) ([]*alpha.UrlMap, error) {
 	klog.V(5).Infof("GCEAlphaUrlMaps.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "UrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "UrlMaps",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaUrlMaps.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaUrlMaps.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Alpha.UrlMaps.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -38840,12 +41653,16 @@ func (g *GCEAlphaUrlMaps) List(ctx context.Context, fl *filter.F) ([]*alpha.UrlM
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaUrlMaps.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaUrlMaps.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -38867,14 +41684,16 @@ func (g *GCEAlphaUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *alpha.
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "UrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "UrlMaps",
 	}
-	klog.V(5).Infof("GCEAlphaUrlMaps.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaUrlMaps.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaUrlMaps.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -38883,7 +41702,10 @@ func (g *GCEAlphaUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *alpha.
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaUrlMaps.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -38902,14 +41724,15 @@ func (g *GCEAlphaUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "UrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "UrlMaps",
 	}
-	klog.V(5).Infof("GCEAlphaUrlMaps.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaUrlMaps.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaUrlMaps.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -38918,7 +41741,10 @@ func (g *GCEAlphaUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaUrlMaps.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -38938,27 +41764,35 @@ func (g *GCEAlphaUrlMaps) Update(ctx context.Context, key *meta.Key, arg0 *alpha
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "UrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("alpha"),
 		Service:   "UrlMaps",
 	}
-	klog.V(5).Infof("GCEAlphaUrlMaps.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaUrlMaps.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaUrlMaps.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.UrlMaps.Update(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaUrlMaps.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaUrlMaps.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -39177,14 +42011,16 @@ func (g *GCEBetaUrlMaps) Get(ctx context.Context, key *meta.Key) (*beta.UrlMap, 
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "UrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "UrlMaps",
 	}
-	klog.V(5).Infof("GCEBetaUrlMaps.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaUrlMaps.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaUrlMaps.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -39192,7 +42028,10 @@ func (g *GCEBetaUrlMaps) Get(ctx context.Context, key *meta.Key) (*beta.UrlMap, 
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaUrlMaps.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -39200,16 +42039,18 @@ func (g *GCEBetaUrlMaps) Get(ctx context.Context, key *meta.Key) (*beta.UrlMap, 
 func (g *GCEBetaUrlMaps) List(ctx context.Context, fl *filter.F) ([]*beta.UrlMap, error) {
 	klog.V(5).Infof("GCEBetaUrlMaps.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "UrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "UrlMaps",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaUrlMaps.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaUrlMaps.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.Beta.UrlMaps.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -39221,12 +42062,16 @@ func (g *GCEBetaUrlMaps) List(ctx context.Context, fl *filter.F) ([]*beta.UrlMap
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaUrlMaps.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaUrlMaps.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -39248,14 +42093,16 @@ func (g *GCEBetaUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *beta.Ur
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "UrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "UrlMaps",
 	}
-	klog.V(5).Infof("GCEBetaUrlMaps.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaUrlMaps.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaUrlMaps.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -39264,7 +42111,10 @@ func (g *GCEBetaUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *beta.Ur
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaUrlMaps.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -39283,14 +42133,15 @@ func (g *GCEBetaUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "UrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "UrlMaps",
 	}
-	klog.V(5).Infof("GCEBetaUrlMaps.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaUrlMaps.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaUrlMaps.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -39299,7 +42150,10 @@ func (g *GCEBetaUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaUrlMaps.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -39319,27 +42173,35 @@ func (g *GCEBetaUrlMaps) Update(ctx context.Context, key *meta.Key, arg0 *beta.U
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "UrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("beta"),
 		Service:   "UrlMaps",
 	}
-	klog.V(5).Infof("GCEBetaUrlMaps.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaUrlMaps.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaUrlMaps.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.UrlMaps.Update(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaUrlMaps.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaUrlMaps.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -39558,14 +42420,16 @@ func (g *GCEUrlMaps) Get(ctx context.Context, key *meta.Key) (*ga.UrlMap, error)
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "UrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "UrlMaps",
 	}
-	klog.V(5).Infof("GCEUrlMaps.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEUrlMaps.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEUrlMaps.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -39573,7 +42437,10 @@ func (g *GCEUrlMaps) Get(ctx context.Context, key *meta.Key) (*ga.UrlMap, error)
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEUrlMaps.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -39581,16 +42448,18 @@ func (g *GCEUrlMaps) Get(ctx context.Context, key *meta.Key) (*ga.UrlMap, error)
 func (g *GCEUrlMaps) List(ctx context.Context, fl *filter.F) ([]*ga.UrlMap, error) {
 	klog.V(5).Infof("GCEUrlMaps.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "UrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "UrlMaps",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEUrlMaps.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEUrlMaps.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.UrlMaps.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -39602,12 +42471,16 @@ func (g *GCEUrlMaps) List(ctx context.Context, fl *filter.F) ([]*ga.UrlMap, erro
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEUrlMaps.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEUrlMaps.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -39629,14 +42502,16 @@ func (g *GCEUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *ga.UrlMap) 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "UrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "UrlMaps",
 	}
-	klog.V(5).Infof("GCEUrlMaps.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEUrlMaps.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEUrlMaps.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -39645,7 +42520,10 @@ func (g *GCEUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *ga.UrlMap) 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEUrlMaps.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -39664,14 +42542,15 @@ func (g *GCEUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "UrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "UrlMaps",
 	}
-	klog.V(5).Infof("GCEUrlMaps.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEUrlMaps.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEUrlMaps.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -39680,7 +42559,10 @@ func (g *GCEUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEUrlMaps.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -39700,27 +42582,35 @@ func (g *GCEUrlMaps) Update(ctx context.Context, key *meta.Key, arg0 *ga.UrlMap)
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "UrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("ga"),
 		Service:   "UrlMaps",
 	}
-	klog.V(5).Infof("GCEUrlMaps.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEUrlMaps.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEUrlMaps.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.UrlMaps.Update(projectID, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEUrlMaps.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEUrlMaps.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -39942,14 +42832,16 @@ func (g *GCEAlphaRegionUrlMaps) Get(ctx context.Context, key *meta.Key) (*alpha.
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionUrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionUrlMaps",
 	}
-	klog.V(5).Infof("GCEAlphaRegionUrlMaps.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaRegionUrlMaps.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionUrlMaps.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -39957,7 +42849,10 @@ func (g *GCEAlphaRegionUrlMaps) Get(ctx context.Context, key *meta.Key) (*alpha.
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaRegionUrlMaps.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -39965,16 +42860,18 @@ func (g *GCEAlphaRegionUrlMaps) Get(ctx context.Context, key *meta.Key) (*alpha.
 func (g *GCEAlphaRegionUrlMaps) List(ctx context.Context, region string, fl *filter.F) ([]*alpha.UrlMap, error) {
 	klog.V(5).Infof("GCEAlphaRegionUrlMaps.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionUrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionUrlMaps",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaRegionUrlMaps.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEAlphaRegionUrlMaps.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Alpha.RegionUrlMaps.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -39986,12 +42883,16 @@ func (g *GCEAlphaRegionUrlMaps) List(ctx context.Context, region string, fl *fil
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionUrlMaps.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEAlphaRegionUrlMaps.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -40013,14 +42914,16 @@ func (g *GCEAlphaRegionUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionUrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionUrlMaps",
 	}
-	klog.V(5).Infof("GCEAlphaRegionUrlMaps.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEAlphaRegionUrlMaps.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionUrlMaps.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -40029,7 +42932,10 @@ func (g *GCEAlphaRegionUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaRegionUrlMaps.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -40048,14 +42954,15 @@ func (g *GCEAlphaRegionUrlMaps) Delete(ctx context.Context, key *meta.Key) error
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionUrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionUrlMaps",
 	}
-	klog.V(5).Infof("GCEAlphaRegionUrlMaps.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionUrlMaps.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionUrlMaps.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -40063,7 +42970,10 @@ func (g *GCEAlphaRegionUrlMaps) Delete(ctx context.Context, key *meta.Key) error
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEAlphaRegionUrlMaps.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -40083,27 +42993,35 @@ func (g *GCEAlphaRegionUrlMaps) Update(ctx context.Context, key *meta.Key, arg0 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionUrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionUrlMaps",
 	}
-	klog.V(5).Infof("GCEAlphaRegionUrlMaps.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEAlphaRegionUrlMaps.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEAlphaRegionUrlMaps.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Alpha.RegionUrlMaps.Update(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEAlphaRegionUrlMaps.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEAlphaRegionUrlMaps.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -40325,14 +43243,16 @@ func (g *GCEBetaRegionUrlMaps) Get(ctx context.Context, key *meta.Key) (*beta.Ur
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionUrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "RegionUrlMaps",
 	}
-	klog.V(5).Infof("GCEBetaRegionUrlMaps.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaRegionUrlMaps.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionUrlMaps.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -40340,7 +43260,10 @@ func (g *GCEBetaRegionUrlMaps) Get(ctx context.Context, key *meta.Key) (*beta.Ur
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaRegionUrlMaps.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -40348,16 +43271,18 @@ func (g *GCEBetaRegionUrlMaps) Get(ctx context.Context, key *meta.Key) (*beta.Ur
 func (g *GCEBetaRegionUrlMaps) List(ctx context.Context, region string, fl *filter.F) ([]*beta.UrlMap, error) {
 	klog.V(5).Infof("GCEBetaRegionUrlMaps.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionUrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "RegionUrlMaps",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaRegionUrlMaps.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCEBetaRegionUrlMaps.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.Beta.RegionUrlMaps.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -40369,12 +43294,16 @@ func (g *GCEBetaRegionUrlMaps) List(ctx context.Context, region string, fl *filt
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaRegionUrlMaps.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEBetaRegionUrlMaps.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -40396,14 +43325,16 @@ func (g *GCEBetaRegionUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *b
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionUrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "RegionUrlMaps",
 	}
-	klog.V(5).Infof("GCEBetaRegionUrlMaps.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEBetaRegionUrlMaps.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionUrlMaps.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -40412,7 +43343,10 @@ func (g *GCEBetaRegionUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *b
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaRegionUrlMaps.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -40431,14 +43365,15 @@ func (g *GCEBetaRegionUrlMaps) Delete(ctx context.Context, key *meta.Key) error 
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionUrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "RegionUrlMaps",
 	}
-	klog.V(5).Infof("GCEBetaRegionUrlMaps.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRegionUrlMaps.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionUrlMaps.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -40446,7 +43381,10 @@ func (g *GCEBetaRegionUrlMaps) Delete(ctx context.Context, key *meta.Key) error 
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCEBetaRegionUrlMaps.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -40466,27 +43404,35 @@ func (g *GCEBetaRegionUrlMaps) Update(ctx context.Context, key *meta.Key, arg0 *
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionUrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("beta"),
 		Service:   "RegionUrlMaps",
 	}
-	klog.V(5).Infof("GCEBetaRegionUrlMaps.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCEBetaRegionUrlMaps.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEBetaRegionUrlMaps.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.Beta.RegionUrlMaps.Update(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEBetaRegionUrlMaps.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCEBetaRegionUrlMaps.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -40708,14 +43654,16 @@ func (g *GCERegionUrlMaps) Get(ctx context.Context, key *meta.Key) (*ga.UrlMap, 
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionUrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "RegionUrlMaps",
 	}
-	klog.V(5).Infof("GCERegionUrlMaps.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERegionUrlMaps.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionUrlMaps.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -40723,7 +43671,10 @@ func (g *GCERegionUrlMaps) Get(ctx context.Context, key *meta.Key) (*ga.UrlMap, 
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCERegionUrlMaps.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -40731,16 +43682,18 @@ func (g *GCERegionUrlMaps) Get(ctx context.Context, key *meta.Key) (*ga.UrlMap, 
 func (g *GCERegionUrlMaps) List(ctx context.Context, region string, fl *filter.F) ([]*ga.UrlMap, error) {
 	klog.V(5).Infof("GCERegionUrlMaps.List(%v, %v, %v) called", ctx, region, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionUrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "RegionUrlMaps",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCERegionUrlMaps.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("GCERegionUrlMaps.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.GA.RegionUrlMaps.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -40752,12 +43705,16 @@ func (g *GCERegionUrlMaps) List(ctx context.Context, region string, fl *filter.F
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERegionUrlMaps.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCERegionUrlMaps.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -40779,14 +43736,16 @@ func (g *GCERegionUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *ga.Ur
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionUrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "RegionUrlMaps",
 	}
-	klog.V(5).Infof("GCERegionUrlMaps.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCERegionUrlMaps.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionUrlMaps.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -40795,7 +43754,10 @@ func (g *GCERegionUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *ga.Ur
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERegionUrlMaps.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -40814,14 +43776,15 @@ func (g *GCERegionUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionUrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "RegionUrlMaps",
 	}
-	klog.V(5).Infof("GCERegionUrlMaps.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERegionUrlMaps.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionUrlMaps.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
@@ -40829,7 +43792,10 @@ func (g *GCERegionUrlMaps) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("GCERegionUrlMaps.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -40849,27 +43815,35 @@ func (g *GCERegionUrlMaps) Update(ctx context.Context, key *meta.Key, arg0 *ga.U
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionUrlMaps")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Update",
 		Version:   meta.Version("ga"),
 		Service:   "RegionUrlMaps",
 	}
-	klog.V(5).Infof("GCERegionUrlMaps.Update(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("GCERegionUrlMaps.Update(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCERegionUrlMaps.Update(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	call := g.s.GA.RegionUrlMaps.Update(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCERegionUrlMaps.Update(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("GCERegionUrlMaps.Update(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
@@ -41000,14 +43974,16 @@ func (g *GCEZones) Get(ctx context.Context, key *meta.Key) (*ga.Zone, error) {
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Zones")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "Zones",
 	}
-	klog.V(5).Infof("GCEZones.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("GCEZones.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("GCEZones.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
@@ -41015,7 +43991,10 @@ func (g *GCEZones) Get(ctx context.Context, key *meta.Key) (*ga.Zone, error) {
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEZones.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 
@@ -41023,16 +44002,18 @@ func (g *GCEZones) Get(ctx context.Context, key *meta.Key) (*ga.Zone, error) {
 func (g *GCEZones) List(ctx context.Context, fl *filter.F) ([]*ga.Zone, error) {
 	klog.V(5).Infof("GCEZones.List(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "Zones")
-	rk := &RateLimitKey{
+	ck := &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "Zones",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEZones.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("GCEZones.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.GA.Zones.List(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -41044,12 +44025,16 @@ func (g *GCEZones) List(ctx context.Context, fl *filter.F) ([]*ga.Zone, error) {
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("GCEZones.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("GCEZones.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {

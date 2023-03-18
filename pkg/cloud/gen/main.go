@@ -708,17 +708,20 @@ func (g *{{.GCEWrapType}}) Get(ctx context.Context, key *meta.Key) (*{{.FQObject
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Service}}")
-	rk := &RateLimitKey{
+	ck:= &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
 		Version: meta.Version("{{.Version}}"),
 		Service: "{{.Service}}",
 	}
-	klog.V(5).Infof("{{.GCEWrapType}}.Get(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("{{.GCEWrapType}}.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("{{.GCEWrapType}}.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
+
 {{- if .KeyIsGlobal}}
 	call := g.s.{{.VersionTitle}}.{{.Service}}.Get(projectID, key.Name)
 {{- end -}}
@@ -731,7 +734,10 @@ func (g *{{.GCEWrapType}}) Get(ctx context.Context, key *meta.Key) (*{{.FQObject
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("{{.GCEWrapType}}.Get(%v, %v) = %+v, %v", ctx, key, v, err)
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	return v, err
 }
 {{- end}}
@@ -751,25 +757,28 @@ func (g *{{.GCEWrapType}}) List(ctx context.Context, zone string, fl *filter.F) 
 	klog.V(5).Infof("{{.GCEWrapType}}.List(%v, %v, %v) called", ctx, zone, fl)
 {{- end}}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Service}}")
-	rk := &RateLimitKey{
+	ck:= &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
 		Version: meta.Version("{{.Version}}"),
 		Service: "{{.Service}}",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
+
 {{- if .KeyIsGlobal}}
-	klog.V(5).Infof("{{.GCEWrapType}}.List(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+	klog.V(5).Infof("{{.GCEWrapType}}.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.{{.VersionTitle}}.{{.Service}}.List(projectID)
 {{- end -}}
 {{- if .KeyIsRegional}}
-	klog.V(5).Infof("{{.GCEWrapType}}.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, region, fl, projectID, rk)
+	klog.V(5).Infof("{{.GCEWrapType}}.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
 	call := g.s.{{.VersionTitle}}.{{.Service}}.List(projectID, region)
 {{- end -}}
 {{- if .KeyIsZonal}}
-	klog.V(5).Infof("{{.GCEWrapType}}.List(%v, %v, %v): projectID = %v, rk = %+v", ctx, zone, fl, projectID, rk)
+	klog.V(5).Infof("{{.GCEWrapType}}.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, zone, fl, projectID, ck)
 	call := g.s.{{.VersionTitle}}.{{.Service}}.List(projectID, zone)
 {{- end}}
 	if fl != filter.None {
@@ -782,12 +791,16 @@ func (g *{{.GCEWrapType}}) List(ctx context.Context, zone string, fl *filter.F) 
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("{{.GCEWrapType}}.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
 
-	g.s.RateLimiter.Observe(ctx, nil, rk)
+    callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("{{.GCEWrapType}}.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if klog.V(5).Enabled() {
@@ -811,18 +824,21 @@ func (g *{{.GCEWrapType}}) Insert(ctx context.Context, key *meta.Key, obj *{{.FQ
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Service}}")
-	rk := &RateLimitKey{
+	ck:= &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
 		Version: meta.Version("{{.Version}}"),
 		Service: "{{.Service}}",
 	}
-	klog.V(5).Infof("{{.GCEWrapType}}.Insert(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+
+	klog.V(5).Infof("{{.GCEWrapType}}.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("{{.GCEWrapType}}.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
 	obj.Name = key.Name
+
 {{- if .KeyIsGlobal}}
 	call := g.s.{{.VersionTitle}}.{{.Service}}.Insert(projectID, obj)
 {{- end -}}
@@ -835,7 +851,10 @@ func (g *{{.GCEWrapType}}) Insert(ctx context.Context, key *meta.Key, obj *{{.FQ
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("{{.GCEWrapType}}.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
@@ -856,17 +875,19 @@ func (g *{{.GCEWrapType}}) Delete(ctx context.Context, key *meta.Key) error {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Service}}")
-	rk := &RateLimitKey{
+	ck:= &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
 		Version: meta.Version("{{.Version}}"),
 		Service: "{{.Service}}",
 	}
-	klog.V(5).Infof("{{.GCEWrapType}}.Delete(%v, %v): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("{{.GCEWrapType}}.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("{{.GCEWrapType}}.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
+
 {{- if .KeyIsGlobal}}
 	call := g.s.{{.VersionTitle}}.{{.Service}}.Delete(projectID, key.Name)
 {{end -}}
@@ -879,7 +900,10 @@ func (g *{{.GCEWrapType}}) Delete(ctx context.Context, key *meta.Key) error {
 	call.Context(ctx)
 
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	if err != nil {
 		klog.V(4).Infof("{{.GCEWrapType}}.Delete(%v, %v) = %v", ctx, key, err)
 		return err
@@ -897,15 +921,16 @@ func (g *{{.GCEWrapType}}) AggregatedList(ctx context.Context, fl *filter.F) (ma
 	klog.V(5).Infof("{{.GCEWrapType}}.AggregatedList(%v, %v) called", ctx, fl)
 
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Service}}")
-	rk := &RateLimitKey{
+	ck:= &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AggregatedList",
 		Version: meta.Version("{{.Version}}"),
 		Service: "{{.Service}}",
 	}
 
-	klog.V(5).Infof("{{.GCEWrapType}}.AggregatedList(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("{{.GCEWrapType}}.AggregatedList(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(5).Infof("{{.GCEWrapType}}.AggregatedList(%v, %v): RateLimiter error: %v", ctx, fl, err)
 		return nil, err
 	}
@@ -925,7 +950,9 @@ func (g *{{.GCEWrapType}}) AggregatedList(ctx context.Context, fl *filter.F) (ma
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("{{.GCEWrapType}}.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -947,16 +974,18 @@ func (g *{{.GCEWrapType}}) AggregatedList(ctx context.Context, fl *filter.F) (ma
 func (g *{{.GCEWrapType}}) ListUsable(ctx context.Context, fl *filter.F) ([]*{{.FQListUsableObjectType}}, error) {
 	klog.V(5).Infof("{{.GCEWrapType}}.ListUsable(%v, %v) called", ctx, fl)
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Service}}")
-	rk := &RateLimitKey{
+	ck:= &CallContextKey{
 		ProjectID: projectID,
 		Operation: "ListUsable",
 		Version: meta.Version("{{.Version}}"),
 		Service: "{{.Service}}",
 	}
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+    callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("{{.GCEWrapType}}.ListUsable(%v, %v): projectID = %v, rk = %+v", ctx, fl, projectID, rk)
+
+	klog.V(5).Infof("{{.GCEWrapType}}.ListUsable(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
 	call := g.s.{{.VersionTitle}}.{{.Service}}.ListUsable(projectID)
 	if fl != filter.None {
 		call.Filter(fl.String())
@@ -968,7 +997,9 @@ func (g *{{.GCEWrapType}}) ListUsable(ctx context.Context, fl *filter.F) ([]*{{.
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("{{.GCEWrapType}}.ListUsable(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
@@ -1004,15 +1035,15 @@ func (g *{{.GCEWrapType}}) {{.FcnArgs}} {
 {{- end}}
 	}
 	projectID := g.s.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Service}}")
-	rk := &RateLimitKey{
+	ck:= &CallContextKey{
 		ProjectID: projectID,
 		Operation: "{{.Name}}",
 		Version: meta.Version("{{.Version}}"),
 		Service: "{{.Service}}",
 	}
-	klog.V(5).Infof("{{.GCEWrapType}}.{{.Name}}(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
-
-	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+	klog.V(5).Infof("{{.GCEWrapType}}.{{.Name}}(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		klog.V(4).Infof("{{.GCEWrapType}}.{{.Name}}(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 	{{- if .IsOperation}}
 		return err
@@ -1020,6 +1051,7 @@ func (g *{{.GCEWrapType}}) {{.FcnArgs}} {
 		return nil, err
 	{{- end}}
 	}
+
 {{- if .KeyIsGlobal}}
 	call := g.s.{{.VersionTitle}}.{{.Service}}.{{.Name}}(projectID, key.Name {{.CallArgs}})
 {{- end -}}
@@ -1032,18 +1064,29 @@ func (g *{{.GCEWrapType}}) {{.FcnArgs}} {
 {{- if .IsOperation}}
 	call.Context(ctx)
 	op, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
 	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("{{.GCEWrapType}}.{{.Name}}(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
+
 	err = g.s.WaitForCompletion(ctx, op)
+
+    callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
 	klog.V(4).Infof("{{.GCEWrapType}}.{{.Name}}(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 {{- else if .IsGet}}
 	call.Context(ctx)
 	v, err := call.Do()
-	g.s.RateLimiter.Observe(ctx, err, rk)
+
+    callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
 	klog.V(4).Infof("{{.GCEWrapType}}.{{.Name}}(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
 {{- else if .IsPaged}}
@@ -1054,10 +1097,16 @@ func (g *{{.GCEWrapType}}) {{.FcnArgs}} {
 		return nil
 	}
 	if err := call.Pages(ctx, f); err != nil {
-		g.s.RateLimiter.Observe(ctx, err, rk)
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
 		klog.V(4).Infof("{{.GCEWrapType}}.{{.Name}}(%v, %v, ...) = %v, %v", ctx, key, nil, err)
 		return nil, err
 	}
+
+    callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if klog.V(4).Enabled() {
 		klog.V(4).Infof("{{.GCEWrapType}}.{{.Name}}(%v, %v, ...) = [%v items], %v", ctx, key, len(all), nil)
 	} else if klog.V(5).Enabled() {

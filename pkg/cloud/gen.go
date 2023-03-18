@@ -5854,6 +5854,7 @@ type BetaBackendServices interface {
 	AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*beta.BackendService, error)
 	AddSignedUrlKey(context.Context, *meta.Key, *beta.SignedUrlKey) error
 	DeleteSignedUrlKey(context.Context, *meta.Key, string) error
+	Patch(context.Context, *meta.Key, *beta.BackendService) error
 	SetSecurityPolicy(context.Context, *meta.Key, *beta.SecurityPolicyReference) error
 	Update(context.Context, *meta.Key, *beta.BackendService) error
 }
@@ -5899,6 +5900,7 @@ type MockBetaBackendServices struct {
 	AggregatedListHook     func(ctx context.Context, fl *filter.F, m *MockBetaBackendServices) (bool, map[string][]*beta.BackendService, error)
 	AddSignedUrlKeyHook    func(context.Context, *meta.Key, *beta.SignedUrlKey, *MockBetaBackendServices) error
 	DeleteSignedUrlKeyHook func(context.Context, *meta.Key, string, *MockBetaBackendServices) error
+	PatchHook              func(context.Context, *meta.Key, *beta.BackendService, *MockBetaBackendServices) error
 	SetSecurityPolicyHook  func(context.Context, *meta.Key, *beta.SecurityPolicyReference, *MockBetaBackendServices) error
 	UpdateHook             func(context.Context, *meta.Key, *beta.BackendService, *MockBetaBackendServices) error
 
@@ -6093,6 +6095,14 @@ func (m *MockBetaBackendServices) AddSignedUrlKey(ctx context.Context, key *meta
 func (m *MockBetaBackendServices) DeleteSignedUrlKey(ctx context.Context, key *meta.Key, arg0 string) error {
 	if m.DeleteSignedUrlKeyHook != nil {
 		return m.DeleteSignedUrlKeyHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockBetaBackendServices) Patch(ctx context.Context, key *meta.Key, arg0 *beta.BackendService) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
 	}
 	return nil
 }
@@ -6377,6 +6387,40 @@ func (g *GCEBetaBackendServices) DeleteSignedUrlKey(ctx context.Context, key *me
 	return err
 }
 
+// Patch is a method on GCEBetaBackendServices.
+func (g *GCEBetaBackendServices) Patch(ctx context.Context, key *meta.Key, arg0 *beta.BackendService) error {
+	klog.V(5).Infof("GCEBetaBackendServices.Patch(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaBackendServices.Patch(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "BackendServices")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("beta"),
+		Service:   "BackendServices",
+	}
+	klog.V(5).Infof("GCEBetaBackendServices.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaBackendServices.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.BackendServices.Patch(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	g.s.RateLimiter.Observe(ctx, err, rk)
+	if err != nil {
+		klog.V(4).Infof("GCEBetaBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // SetSecurityPolicy is a method on GCEBetaBackendServices.
 func (g *GCEBetaBackendServices) SetSecurityPolicy(ctx context.Context, key *meta.Key, arg0 *beta.SecurityPolicyReference) error {
 	klog.V(5).Infof("GCEBetaBackendServices.SetSecurityPolicy(%v, %v, ...): called", ctx, key)
@@ -6454,6 +6498,7 @@ type AlphaBackendServices interface {
 	AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*alpha.BackendService, error)
 	AddSignedUrlKey(context.Context, *meta.Key, *alpha.SignedUrlKey) error
 	DeleteSignedUrlKey(context.Context, *meta.Key, string) error
+	Patch(context.Context, *meta.Key, *alpha.BackendService) error
 	SetSecurityPolicy(context.Context, *meta.Key, *alpha.SecurityPolicyReference) error
 	Update(context.Context, *meta.Key, *alpha.BackendService) error
 }
@@ -6499,6 +6544,7 @@ type MockAlphaBackendServices struct {
 	AggregatedListHook     func(ctx context.Context, fl *filter.F, m *MockAlphaBackendServices) (bool, map[string][]*alpha.BackendService, error)
 	AddSignedUrlKeyHook    func(context.Context, *meta.Key, *alpha.SignedUrlKey, *MockAlphaBackendServices) error
 	DeleteSignedUrlKeyHook func(context.Context, *meta.Key, string, *MockAlphaBackendServices) error
+	PatchHook              func(context.Context, *meta.Key, *alpha.BackendService, *MockAlphaBackendServices) error
 	SetSecurityPolicyHook  func(context.Context, *meta.Key, *alpha.SecurityPolicyReference, *MockAlphaBackendServices) error
 	UpdateHook             func(context.Context, *meta.Key, *alpha.BackendService, *MockAlphaBackendServices) error
 
@@ -6693,6 +6739,14 @@ func (m *MockAlphaBackendServices) AddSignedUrlKey(ctx context.Context, key *met
 func (m *MockAlphaBackendServices) DeleteSignedUrlKey(ctx context.Context, key *meta.Key, arg0 string) error {
 	if m.DeleteSignedUrlKeyHook != nil {
 		return m.DeleteSignedUrlKeyHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockAlphaBackendServices) Patch(ctx context.Context, key *meta.Key, arg0 *alpha.BackendService) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
 	}
 	return nil
 }
@@ -6977,6 +7031,40 @@ func (g *GCEAlphaBackendServices) DeleteSignedUrlKey(ctx context.Context, key *m
 	return err
 }
 
+// Patch is a method on GCEAlphaBackendServices.
+func (g *GCEAlphaBackendServices) Patch(ctx context.Context, key *meta.Key, arg0 *alpha.BackendService) error {
+	klog.V(5).Infof("GCEAlphaBackendServices.Patch(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaBackendServices.Patch(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "BackendServices")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("alpha"),
+		Service:   "BackendServices",
+	}
+	klog.V(5).Infof("GCEAlphaBackendServices.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaBackendServices.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.BackendServices.Patch(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	g.s.RateLimiter.Observe(ctx, err, rk)
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // SetSecurityPolicy is a method on GCEAlphaBackendServices.
 func (g *GCEAlphaBackendServices) SetSecurityPolicy(ctx context.Context, key *meta.Key, arg0 *alpha.SecurityPolicyReference) error {
 	klog.V(5).Infof("GCEAlphaBackendServices.SetSecurityPolicy(%v, %v, ...): called", ctx, key)
@@ -7052,6 +7140,7 @@ type RegionBackendServices interface {
 	Insert(ctx context.Context, key *meta.Key, obj *ga.BackendService) error
 	Delete(ctx context.Context, key *meta.Key) error
 	GetHealth(context.Context, *meta.Key, *ga.ResourceGroupReference) (*ga.BackendServiceGroupHealth, error)
+	Patch(context.Context, *meta.Key, *ga.BackendService) error
 	Update(context.Context, *meta.Key, *ga.BackendService) error
 }
 
@@ -7093,6 +7182,7 @@ type MockRegionBackendServices struct {
 	InsertHook    func(ctx context.Context, key *meta.Key, obj *ga.BackendService, m *MockRegionBackendServices) (bool, error)
 	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockRegionBackendServices) (bool, error)
 	GetHealthHook func(context.Context, *meta.Key, *ga.ResourceGroupReference, *MockRegionBackendServices) (*ga.BackendServiceGroupHealth, error)
+	PatchHook     func(context.Context, *meta.Key, *ga.BackendService, *MockRegionBackendServices) error
 	UpdateHook    func(context.Context, *meta.Key, *ga.BackendService, *MockRegionBackendServices) error
 
 	// X is extra state that can be used as part of the mock. Generated code
@@ -7248,6 +7338,14 @@ func (m *MockRegionBackendServices) GetHealth(ctx context.Context, key *meta.Key
 		return m.GetHealthHook(ctx, key, arg0, m)
 	}
 	return nil, fmt.Errorf("GetHealthHook must be set")
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockRegionBackendServices) Patch(ctx context.Context, key *meta.Key, arg0 *ga.BackendService) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // Update is a mock for the corresponding method.
@@ -7433,6 +7531,40 @@ func (g *GCERegionBackendServices) GetHealth(ctx context.Context, key *meta.Key,
 	return v, err
 }
 
+// Patch is a method on GCERegionBackendServices.
+func (g *GCERegionBackendServices) Patch(ctx context.Context, key *meta.Key, arg0 *ga.BackendService) error {
+	klog.V(5).Infof("GCERegionBackendServices.Patch(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCERegionBackendServices.Patch(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionBackendServices")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("ga"),
+		Service:   "RegionBackendServices",
+	}
+	klog.V(5).Infof("GCERegionBackendServices.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCERegionBackendServices.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.RegionBackendServices.Patch(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	g.s.RateLimiter.Observe(ctx, err, rk)
+	if err != nil {
+		klog.V(4).Infof("GCERegionBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCERegionBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // Update is a method on GCERegionBackendServices.
 func (g *GCERegionBackendServices) Update(ctx context.Context, key *meta.Key, arg0 *ga.BackendService) error {
 	klog.V(5).Infof("GCERegionBackendServices.Update(%v, %v, ...): called", ctx, key)
@@ -7474,6 +7606,7 @@ type AlphaRegionBackendServices interface {
 	Insert(ctx context.Context, key *meta.Key, obj *alpha.BackendService) error
 	Delete(ctx context.Context, key *meta.Key) error
 	GetHealth(context.Context, *meta.Key, *alpha.ResourceGroupReference) (*alpha.BackendServiceGroupHealth, error)
+	Patch(context.Context, *meta.Key, *alpha.BackendService) error
 	Update(context.Context, *meta.Key, *alpha.BackendService) error
 }
 
@@ -7515,6 +7648,7 @@ type MockAlphaRegionBackendServices struct {
 	InsertHook    func(ctx context.Context, key *meta.Key, obj *alpha.BackendService, m *MockAlphaRegionBackendServices) (bool, error)
 	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockAlphaRegionBackendServices) (bool, error)
 	GetHealthHook func(context.Context, *meta.Key, *alpha.ResourceGroupReference, *MockAlphaRegionBackendServices) (*alpha.BackendServiceGroupHealth, error)
+	PatchHook     func(context.Context, *meta.Key, *alpha.BackendService, *MockAlphaRegionBackendServices) error
 	UpdateHook    func(context.Context, *meta.Key, *alpha.BackendService, *MockAlphaRegionBackendServices) error
 
 	// X is extra state that can be used as part of the mock. Generated code
@@ -7670,6 +7804,14 @@ func (m *MockAlphaRegionBackendServices) GetHealth(ctx context.Context, key *met
 		return m.GetHealthHook(ctx, key, arg0, m)
 	}
 	return nil, fmt.Errorf("GetHealthHook must be set")
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockAlphaRegionBackendServices) Patch(ctx context.Context, key *meta.Key, arg0 *alpha.BackendService) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // Update is a mock for the corresponding method.
@@ -7855,6 +7997,40 @@ func (g *GCEAlphaRegionBackendServices) GetHealth(ctx context.Context, key *meta
 	return v, err
 }
 
+// Patch is a method on GCEAlphaRegionBackendServices.
+func (g *GCEAlphaRegionBackendServices) Patch(ctx context.Context, key *meta.Key, arg0 *alpha.BackendService) error {
+	klog.V(5).Infof("GCEAlphaRegionBackendServices.Patch(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionBackendServices.Patch(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionBackendServices")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionBackendServices",
+	}
+	klog.V(5).Infof("GCEAlphaRegionBackendServices.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionBackendServices.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.RegionBackendServices.Patch(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	g.s.RateLimiter.Observe(ctx, err, rk)
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaRegionBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaRegionBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // Update is a method on GCEAlphaRegionBackendServices.
 func (g *GCEAlphaRegionBackendServices) Update(ctx context.Context, key *meta.Key, arg0 *alpha.BackendService) error {
 	klog.V(5).Infof("GCEAlphaRegionBackendServices.Update(%v, %v, ...): called", ctx, key)
@@ -7896,6 +8072,7 @@ type BetaRegionBackendServices interface {
 	Insert(ctx context.Context, key *meta.Key, obj *beta.BackendService) error
 	Delete(ctx context.Context, key *meta.Key) error
 	GetHealth(context.Context, *meta.Key, *beta.ResourceGroupReference) (*beta.BackendServiceGroupHealth, error)
+	Patch(context.Context, *meta.Key, *beta.BackendService) error
 	Update(context.Context, *meta.Key, *beta.BackendService) error
 }
 
@@ -7937,6 +8114,7 @@ type MockBetaRegionBackendServices struct {
 	InsertHook    func(ctx context.Context, key *meta.Key, obj *beta.BackendService, m *MockBetaRegionBackendServices) (bool, error)
 	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockBetaRegionBackendServices) (bool, error)
 	GetHealthHook func(context.Context, *meta.Key, *beta.ResourceGroupReference, *MockBetaRegionBackendServices) (*beta.BackendServiceGroupHealth, error)
+	PatchHook     func(context.Context, *meta.Key, *beta.BackendService, *MockBetaRegionBackendServices) error
 	UpdateHook    func(context.Context, *meta.Key, *beta.BackendService, *MockBetaRegionBackendServices) error
 
 	// X is extra state that can be used as part of the mock. Generated code
@@ -8092,6 +8270,14 @@ func (m *MockBetaRegionBackendServices) GetHealth(ctx context.Context, key *meta
 		return m.GetHealthHook(ctx, key, arg0, m)
 	}
 	return nil, fmt.Errorf("GetHealthHook must be set")
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockBetaRegionBackendServices) Patch(ctx context.Context, key *meta.Key, arg0 *beta.BackendService) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // Update is a mock for the corresponding method.
@@ -8275,6 +8461,40 @@ func (g *GCEBetaRegionBackendServices) GetHealth(ctx context.Context, key *meta.
 	g.s.RateLimiter.Observe(ctx, err, rk)
 	klog.V(4).Infof("GCEBetaRegionBackendServices.GetHealth(%v, %v, ...) = %+v, %v", ctx, key, v, err)
 	return v, err
+}
+
+// Patch is a method on GCEBetaRegionBackendServices.
+func (g *GCEBetaRegionBackendServices) Patch(ctx context.Context, key *meta.Key, arg0 *beta.BackendService) error {
+	klog.V(5).Infof("GCEBetaRegionBackendServices.Patch(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaRegionBackendServices.Patch(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionBackendServices")
+	rk := &RateLimitKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("beta"),
+		Service:   "RegionBackendServices",
+	}
+	klog.V(5).Infof("GCEBetaRegionBackendServices.Patch(%v, %v, ...): projectID = %v, rk = %+v", ctx, key, projectID, rk)
+
+	if err := g.s.RateLimiter.Accept(ctx, rk); err != nil {
+		klog.V(4).Infof("GCEBetaRegionBackendServices.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.RegionBackendServices.Patch(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	g.s.RateLimiter.Observe(ctx, err, rk)
+	if err != nil {
+		klog.V(4).Infof("GCEBetaRegionBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaRegionBackendServices.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
 }
 
 // Update is a method on GCEBetaRegionBackendServices.

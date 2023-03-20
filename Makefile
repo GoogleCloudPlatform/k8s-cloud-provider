@@ -18,6 +18,8 @@ all: gen build test
 gen:
 	go run pkg/cloud/gen/main.go > pkg/cloud/gen.go
 	go run pkg/cloud/gen/main.go -mode test > pkg/cloud/gen_test.go
+	gofmt -w pkg/cloud/gen.go
+	gofmt -w pkg/cloud/gen_test.go
 
 .PHONY: build
 build: gen

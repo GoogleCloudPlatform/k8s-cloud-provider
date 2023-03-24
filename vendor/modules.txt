@@ -28,6 +28,12 @@ github.com/googleapis/gax-go/v2
 github.com/googleapis/gax-go/v2/apierror
 github.com/googleapis/gax-go/v2/apierror/internal/proto
 github.com/googleapis/gax-go/v2/internal
+# github.com/kr/pretty v0.1.0
+## explicit
+github.com/kr/pretty
+# github.com/kr/text v0.1.0
+## explicit
+github.com/kr/text
 # go.opencensus.io v0.23.0
 ## explicit; go 1.13
 go.opencensus.io

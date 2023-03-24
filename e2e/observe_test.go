@@ -58,16 +58,19 @@ func TestObserve(t *testing.T) {
 
 	wantCK := cloud.CallContextKey{
 		Operation: "Get",
-		Version:   meta.VersionAlpha,
+		Version:   meta.VersionGA,
 		Service:   "Zones",
 	}
 
+	// Ignore differences in ProjectID as they could change when run manually
+	// running manually.
 	o.startCK.ProjectID = ""
-	o.startCK.ProjectID = ""
-	if reflect.DeepEqual(o.startCK, wantCK) {
+	o.endCK.ProjectID = ""
+
+	if !reflect.DeepEqual(o.startCK, wantCK) {
 		t.Fatalf("o.startCK = %+v, want %+v", o.startCK, wantCK)
 	}
-	if reflect.DeepEqual(o.endCK, wantCK) {
+	if !reflect.DeepEqual(o.endCK, wantCK) {
 		t.Fatalf("o.endCK = %+v, want %+v", o.endCK, wantCK)
 	}
 	if o.err == nil {

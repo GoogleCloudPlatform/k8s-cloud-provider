@@ -77,7 +77,7 @@ func TestAddresses(t *testing.T) {
 	}
 
 	// Delete
-	err = theCloud.Addresses().Delete(context.Background(), addr1Key)
+	err = theCloud.Addresses().Delete(ctx, addr1Key)
 	if err != nil {
 		t.Fatalf("Addresses.Delete(addr1) = %v", err)
 	}
@@ -118,7 +118,7 @@ func TestGlobalAddresses(t *testing.T) {
 	}
 
 	// Delete
-	err = theCloud.GlobalAddresses().Delete(context.Background(), addr1Key)
+	err = theCloud.GlobalAddresses().Delete(ctx, addr1Key)
 	if err != nil {
 		t.Fatalf("GlobalAddresses.Delete(addr1) = %v", err)
 	}

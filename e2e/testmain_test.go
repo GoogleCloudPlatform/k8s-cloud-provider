@@ -116,9 +116,3 @@ func checkErrCode(t *testing.T, err error, wantCode int, fmtStr string, args ...
 		t.Fatalf("%s: got code %d, want %d (err: %v)", fmt.Sprintf(fmtStr, args...), gerr.Code, wantCode, err)
 	}
 }
-
-// deleteAllResources attempts to remove all resources that may have
-// been left by a test.
-func deleteAllResources() {
-
-}

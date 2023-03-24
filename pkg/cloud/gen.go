@@ -36,6 +36,10 @@ import (
 	ga "google.golang.org/api/compute/v1"
 )
 
+func kLogEnabled(level klog.Level) bool {
+	return klog.V(level).Enabled() == true
+}
+
 // Cloud is an interface for the GCE compute API.
 type Cloud interface {
 	Addresses() Addresses
@@ -3179,9 +3183,9 @@ func (g *GCEAddresses) List(ctx context.Context, region string, fl *filter.F) ([
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAddresses.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -3310,9 +3314,9 @@ func (g *GCEAddresses) AggregatedList(ctx context.Context, fl *filter.F) (map[st
 		klog.V(4).Infof("GCEAddresses.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAddresses.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -3628,9 +3632,9 @@ func (g *GCEAlphaAddresses) List(ctx context.Context, region string, fl *filter.
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaAddresses.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -3759,9 +3763,9 @@ func (g *GCEAlphaAddresses) AggregatedList(ctx context.Context, fl *filter.F) (m
 		klog.V(4).Infof("GCEAlphaAddresses.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaAddresses.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -4077,9 +4081,9 @@ func (g *GCEBetaAddresses) List(ctx context.Context, region string, fl *filter.F
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaAddresses.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -4208,9 +4212,9 @@ func (g *GCEBetaAddresses) AggregatedList(ctx context.Context, fl *filter.F) (ma
 		klog.V(4).Infof("GCEBetaAddresses.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaAddresses.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -4485,9 +4489,9 @@ func (g *GCEAlphaGlobalAddresses) List(ctx context.Context, fl *filter.F) ([]*al
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaGlobalAddresses.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -4842,9 +4846,9 @@ func (g *GCEBetaGlobalAddresses) List(ctx context.Context, fl *filter.F) ([]*bet
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaGlobalAddresses.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -5199,9 +5203,9 @@ func (g *GCEGlobalAddresses) List(ctx context.Context, fl *filter.F) ([]*ga.Addr
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEGlobalAddresses.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -5654,9 +5658,9 @@ func (g *GCEBackendServices) List(ctx context.Context, fl *filter.F) ([]*ga.Back
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBackendServices.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -5786,9 +5790,9 @@ func (g *GCEBackendServices) AggregatedList(ctx context.Context, fl *filter.F) (
 		klog.V(4).Infof("GCEBackendServices.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBackendServices.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -6393,9 +6397,9 @@ func (g *GCEBetaBackendServices) List(ctx context.Context, fl *filter.F) ([]*bet
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaBackendServices.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -6525,9 +6529,9 @@ func (g *GCEBetaBackendServices) AggregatedList(ctx context.Context, fl *filter.
 		klog.V(4).Infof("GCEBetaBackendServices.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaBackendServices.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -7100,9 +7104,9 @@ func (g *GCEAlphaBackendServices) List(ctx context.Context, fl *filter.F) ([]*al
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaBackendServices.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -7232,9 +7236,9 @@ func (g *GCEAlphaBackendServices) AggregatedList(ctx context.Context, fl *filter
 		klog.V(4).Infof("GCEAlphaBackendServices.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaBackendServices.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -7752,9 +7756,9 @@ func (g *GCERegionBackendServices) List(ctx context.Context, region string, fl *
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCERegionBackendServices.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -8257,9 +8261,9 @@ func (g *GCEAlphaRegionBackendServices) List(ctx context.Context, region string,
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaRegionBackendServices.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -8762,9 +8766,9 @@ func (g *GCEBetaRegionBackendServices) List(ctx context.Context, region string, 
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaRegionBackendServices.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -9247,9 +9251,9 @@ func (g *GCEDisks) List(ctx context.Context, zone string, fl *filter.F) ([]*ga.D
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEDisks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -9658,9 +9662,9 @@ func (g *GCERegionDisks) List(ctx context.Context, region string, fl *filter.F) 
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCERegionDisks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -10076,9 +10080,9 @@ func (g *GCEAlphaFirewalls) List(ctx context.Context, fl *filter.F) ([]*alpha.Fi
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaFirewalls.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -10537,9 +10541,9 @@ func (g *GCEBetaFirewalls) List(ctx context.Context, fl *filter.F) ([]*beta.Fire
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaFirewalls.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -10998,9 +11002,9 @@ func (g *GCEFirewalls) List(ctx context.Context, fl *filter.F) ([]*ga.Firewall, 
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEFirewalls.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -11559,9 +11563,9 @@ func (g *GCEAlphaNetworkFirewallPolicies) List(ctx context.Context, fl *filter.F
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaNetworkFirewallPolicies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -12493,9 +12497,9 @@ func (g *GCEAlphaRegionNetworkFirewallPolicies) List(ctx context.Context, region
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaRegionNetworkFirewallPolicies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -13326,9 +13330,9 @@ func (g *GCEForwardingRules) List(ctx context.Context, region string, fl *filter
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEForwardingRules.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -13789,9 +13793,9 @@ func (g *GCEAlphaForwardingRules) List(ctx context.Context, region string, fl *f
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaForwardingRules.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -14252,9 +14256,9 @@ func (g *GCEBetaForwardingRules) List(ctx context.Context, region string, fl *fi
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaForwardingRules.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -14712,9 +14716,9 @@ func (g *GCEAlphaGlobalForwardingRules) List(ctx context.Context, fl *filter.F) 
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -15173,9 +15177,9 @@ func (g *GCEBetaGlobalForwardingRules) List(ctx context.Context, fl *filter.F) (
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaGlobalForwardingRules.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -15634,9 +15638,9 @@ func (g *GCEGlobalForwardingRules) List(ctx context.Context, fl *filter.F) ([]*g
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEGlobalForwardingRules.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -16085,9 +16089,9 @@ func (g *GCEHealthChecks) List(ctx context.Context, fl *filter.F) ([]*ga.HealthC
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -16494,9 +16498,9 @@ func (g *GCEAlphaHealthChecks) List(ctx context.Context, fl *filter.F) ([]*alpha
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -16903,9 +16907,9 @@ func (g *GCEBetaHealthChecks) List(ctx context.Context, fl *filter.F) ([]*beta.H
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -17315,9 +17319,9 @@ func (g *GCEAlphaRegionHealthChecks) List(ctx context.Context, region string, fl
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaRegionHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -17726,9 +17730,9 @@ func (g *GCEBetaRegionHealthChecks) List(ctx context.Context, region string, fl 
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaRegionHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -18137,9 +18141,9 @@ func (g *GCERegionHealthChecks) List(ctx context.Context, region string, fl *fil
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCERegionHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -18545,9 +18549,9 @@ func (g *GCEHttpHealthChecks) List(ctx context.Context, fl *filter.F) ([]*ga.Htt
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEHttpHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -18954,9 +18958,9 @@ func (g *GCEHttpsHealthChecks) List(ctx context.Context, fl *filter.F) ([]*ga.Ht
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEHttpsHealthChecks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -19396,9 +19400,9 @@ func (g *GCEInstanceGroups) List(ctx context.Context, zone string, fl *filter.F)
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEInstanceGroups.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -19568,9 +19572,9 @@ func (g *GCEInstanceGroups) ListInstances(ctx context.Context, key *meta.Key, ar
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEInstanceGroups.ListInstances(%v, %v, ...) = [%v items], %v", ctx, key, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -19952,9 +19956,9 @@ func (g *GCEInstances) List(ctx context.Context, zone string, fl *filter.F) ([]*
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEInstances.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -20425,9 +20429,9 @@ func (g *GCEBetaInstances) List(ctx context.Context, zone string, fl *filter.F) 
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaInstances.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -20940,9 +20944,9 @@ func (g *GCEAlphaInstances) List(ctx context.Context, zone string, fl *filter.F)
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaInstances.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -21482,9 +21486,9 @@ func (g *GCEImages) List(ctx context.Context, fl *filter.F) ([]*ga.Image, error)
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEImages.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -22111,9 +22115,9 @@ func (g *GCEBetaImages) List(ctx context.Context, fl *filter.F) ([]*beta.Image, 
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaImages.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -22740,9 +22744,9 @@ func (g *GCEAlphaImages) List(ctx context.Context, fl *filter.F) ([]*alpha.Image
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaImages.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -23309,9 +23313,9 @@ func (g *GCEAlphaNetworks) List(ctx context.Context, fl *filter.F) ([]*alpha.Net
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaNetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -23666,9 +23670,9 @@ func (g *GCEBetaNetworks) List(ctx context.Context, fl *filter.F) ([]*beta.Netwo
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaNetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -24023,9 +24027,9 @@ func (g *GCENetworks) List(ctx context.Context, fl *filter.F) ([]*ga.Network, er
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCENetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -24451,9 +24455,9 @@ func (g *GCEAlphaNetworkEndpointGroups) List(ctx context.Context, zone string, f
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -24582,9 +24586,9 @@ func (g *GCEAlphaNetworkEndpointGroups) AggregatedList(ctx context.Context, fl *
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -24717,9 +24721,9 @@ func (g *GCEAlphaNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = [%v items], %v", ctx, key, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -25065,9 +25069,9 @@ func (g *GCEBetaNetworkEndpointGroups) List(ctx context.Context, zone string, fl
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -25196,9 +25200,9 @@ func (g *GCEBetaNetworkEndpointGroups) AggregatedList(ctx context.Context, fl *f
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -25331,9 +25335,9 @@ func (g *GCEBetaNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context,
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = [%v items], %v", ctx, key, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -25679,9 +25683,9 @@ func (g *GCENetworkEndpointGroups) List(ctx context.Context, zone string, fl *fi
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCENetworkEndpointGroups.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -25810,9 +25814,9 @@ func (g *GCENetworkEndpointGroups) AggregatedList(ctx context.Context, fl *filte
 		klog.V(4).Infof("GCENetworkEndpointGroups.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCENetworkEndpointGroups.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -25945,9 +25949,9 @@ func (g *GCENetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCENetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = [%v items], %v", ctx, key, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -26193,9 +26197,9 @@ func (g *GCERegions) List(ctx context.Context, fl *filter.F) ([]*ga.Region, erro
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCERegions.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -26552,9 +26556,9 @@ func (g *GCEAlphaRouters) List(ctx context.Context, region string, fl *filter.F)
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaRouters.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -26683,9 +26687,9 @@ func (g *GCEAlphaRouters) AggregatedList(ctx context.Context, fl *filter.F) (map
 		klog.V(4).Infof("GCEAlphaRouters.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaRouters.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -27179,9 +27183,9 @@ func (g *GCEBetaRouters) List(ctx context.Context, region string, fl *filter.F) 
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaRouters.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -27310,9 +27314,9 @@ func (g *GCEBetaRouters) AggregatedList(ctx context.Context, fl *filter.F) (map[
 		klog.V(4).Infof("GCEBetaRouters.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaRouters.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -27796,9 +27800,9 @@ func (g *GCERouters) List(ctx context.Context, region string, fl *filter.F) ([]*
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCERouters.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -27927,9 +27931,9 @@ func (g *GCERouters) AggregatedList(ctx context.Context, fl *filter.F) (map[stri
 		klog.V(4).Infof("GCERouters.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCERouters.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -28310,9 +28314,9 @@ func (g *GCERoutes) List(ctx context.Context, fl *filter.F) ([]*ga.Route, error)
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCERoutes.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -28717,9 +28721,9 @@ func (g *GCEBetaSecurityPolicies) List(ctx context.Context, fl *filter.F) ([]*be
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaSecurityPolicies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -29287,9 +29291,9 @@ func (g *GCEServiceAttachments) List(ctx context.Context, region string, fl *fil
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEServiceAttachments.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -29698,9 +29702,9 @@ func (g *GCEBetaServiceAttachments) List(ctx context.Context, region string, fl 
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaServiceAttachments.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -30109,9 +30113,9 @@ func (g *GCEAlphaServiceAttachments) List(ctx context.Context, region string, fl
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaServiceAttachments.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -30507,9 +30511,9 @@ func (g *GCESslCertificates) List(ctx context.Context, fl *filter.F) ([]*ga.SslC
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCESslCertificates.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -30864,9 +30868,9 @@ func (g *GCEBetaSslCertificates) List(ctx context.Context, fl *filter.F) ([]*bet
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaSslCertificates.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -31221,9 +31225,9 @@ func (g *GCEAlphaSslCertificates) List(ctx context.Context, fl *filter.F) ([]*al
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaSslCertificates.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -31581,9 +31585,9 @@ func (g *GCEAlphaRegionSslCertificates) List(ctx context.Context, region string,
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaRegionSslCertificates.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -31940,9 +31944,9 @@ func (g *GCEBetaRegionSslCertificates) List(ctx context.Context, region string, 
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaRegionSslCertificates.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -32299,9 +32303,9 @@ func (g *GCERegionSslCertificates) List(ctx context.Context, region string, fl *
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCERegionSslCertificates.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -32980,9 +32984,9 @@ func (g *GCEAlphaSubnetworks) List(ctx context.Context, region string, fl *filte
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaSubnetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -33105,9 +33109,9 @@ func (g *GCEAlphaSubnetworks) ListUsable(ctx context.Context, fl *filter.F) ([]*
 		return nil, err
 	}
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaSubnetworks.ListUsable(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -33477,9 +33481,9 @@ func (g *GCEBetaSubnetworks) List(ctx context.Context, region string, fl *filter
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaSubnetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -33602,9 +33606,9 @@ func (g *GCEBetaSubnetworks) ListUsable(ctx context.Context, fl *filter.F) ([]*b
 		return nil, err
 	}
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaSubnetworks.ListUsable(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -33974,9 +33978,9 @@ func (g *GCESubnetworks) List(ctx context.Context, region string, fl *filter.F) 
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCESubnetworks.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -34099,9 +34103,9 @@ func (g *GCESubnetworks) ListUsable(ctx context.Context, fl *filter.F) ([]*ga.Us
 		return nil, err
 	}
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCESubnetworks.ListUsable(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -34429,9 +34433,9 @@ func (g *GCEAlphaTargetHttpProxies) List(ctx context.Context, fl *filter.F) ([]*
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaTargetHttpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -34838,9 +34842,9 @@ func (g *GCEBetaTargetHttpProxies) List(ctx context.Context, fl *filter.F) ([]*b
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaTargetHttpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -35247,9 +35251,9 @@ func (g *GCETargetHttpProxies) List(ctx context.Context, fl *filter.F) ([]*ga.Ta
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCETargetHttpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -35659,9 +35663,9 @@ func (g *GCEAlphaRegionTargetHttpProxies) List(ctx context.Context, region strin
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -36070,9 +36074,9 @@ func (g *GCEBetaRegionTargetHttpProxies) List(ctx context.Context, region string
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaRegionTargetHttpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -36481,9 +36485,9 @@ func (g *GCERegionTargetHttpProxies) List(ctx context.Context, region string, fl
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCERegionTargetHttpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -36919,9 +36923,9 @@ func (g *GCETargetHttpsProxies) List(ctx context.Context, fl *filter.F) ([]*ga.T
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCETargetHttpsProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -37484,9 +37488,9 @@ func (g *GCEAlphaTargetHttpsProxies) List(ctx context.Context, fl *filter.F) ([]
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaTargetHttpsProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -38049,9 +38053,9 @@ func (g *GCEBetaTargetHttpsProxies) List(ctx context.Context, fl *filter.F) ([]*
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaTargetHttpsProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -38597,9 +38601,9 @@ func (g *GCEAlphaRegionTargetHttpsProxies) List(ctx context.Context, region stri
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -39060,9 +39064,9 @@ func (g *GCEBetaRegionTargetHttpsProxies) List(ctx context.Context, region strin
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -39523,9 +39527,9 @@ func (g *GCERegionTargetHttpsProxies) List(ctx context.Context, region string, f
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCERegionTargetHttpsProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -39986,9 +39990,9 @@ func (g *GCETargetPools) List(ctx context.Context, region string, fl *filter.F) 
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCETargetPools.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -40436,9 +40440,9 @@ func (g *GCEAlphaTargetTcpProxies) List(ctx context.Context, fl *filter.F) ([]*a
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaTargetTcpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -40845,9 +40849,9 @@ func (g *GCEBetaTargetTcpProxies) List(ctx context.Context, fl *filter.F) ([]*be
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaTargetTcpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -41254,9 +41258,9 @@ func (g *GCETargetTcpProxies) List(ctx context.Context, fl *filter.F) ([]*ga.Tar
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCETargetTcpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -41663,9 +41667,9 @@ func (g *GCEAlphaUrlMaps) List(ctx context.Context, fl *filter.F) ([]*alpha.UrlM
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaUrlMaps.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -42072,9 +42076,9 @@ func (g *GCEBetaUrlMaps) List(ctx context.Context, fl *filter.F) ([]*beta.UrlMap
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaUrlMaps.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -42481,9 +42485,9 @@ func (g *GCEUrlMaps) List(ctx context.Context, fl *filter.F) ([]*ga.UrlMap, erro
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEUrlMaps.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -42893,9 +42897,9 @@ func (g *GCEAlphaRegionUrlMaps) List(ctx context.Context, region string, fl *fil
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEAlphaRegionUrlMaps.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -43304,9 +43308,9 @@ func (g *GCEBetaRegionUrlMaps) List(ctx context.Context, region string, fl *filt
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEBetaRegionUrlMaps.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -43715,9 +43719,9 @@ func (g *GCERegionUrlMaps) List(ctx context.Context, region string, fl *filter.F
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCERegionUrlMaps.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -44035,9 +44039,9 @@ func (g *GCEZones) List(ctx context.Context, fl *filter.F) ([]*ga.Zone, error) {
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEZones.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))

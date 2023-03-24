@@ -35,8 +35,17 @@ import (
 )
 
 const (
-	gofmt       = "gofmt"
-	packageRoot = "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
+	gofmt               = "gofmt"
+	packageRoot         = "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
+	googleAPIPackage    = "google.golang.org/api/googleapi"
+	kLogPackage         = "k8s.io/klog/v2"
+	alphaComputePackage = "google.golang.org/api/compute/v0.alpha"
+	betaComputePackage  = "google.golang.org/api/compute/v0.beta"
+	gaComputePackage    = "google.golang.org/api/compute/v1"
+	kLogEnabled         = ".Enabled()"
+
+	filterPackage = packageRoot + "/filter"
+	metaPackage   = packageRoot + "/meta"
 
 	// readOnly specifies that the given resource is read-only and should not
 	// have insert() or delete() methods generated for the wrapper.
@@ -98,17 +107,20 @@ import (
 	"net/http"
 	"sync"
 
-	"google.golang.org/api/googleapi"
-	"k8s.io/klog/v2"
+	"{{.GoogleAPIPackage}}"
+	"{{.KLogPackage}}"
 
-	"{{.PackageRoot}}/filter"
-	"{{.PackageRoot}}/meta"
+	"{{.FilterPackage}}"
+	"{{.MetaPackage}}"
 
 `
 	tmpl := template.Must(template.New("header").Parse(text))
 	values := map[string]string{
-		"Year":        fmt.Sprintf("%v", time.Now().Year()),
-		"PackageRoot": packageRoot,
+		"Year":             fmt.Sprintf("%v", time.Now().Year()),
+		"GoogleAPIPackage": googleAPIPackage,
+		"KLogPackage":      kLogPackage,
+		"FilterPackage":    filterPackage,
+		"MetaPackage":      metaPackage,
 	}
 	if err := tmpl.Execute(wr, values); err != nil {
 		panic(err)
@@ -126,15 +138,32 @@ import (
 		}
 	}
 	if hasAlpha {
-		fmt.Fprintln(wr, `	alpha "google.golang.org/api/compute/v0.alpha"`)
+		fmt.Fprintf(wr, "	alpha \"%s\"\n", alphaComputePackage)
 	}
 	if hasBeta {
-		fmt.Fprintln(wr, `	beta "google.golang.org/api/compute/v0.beta"`)
+		fmt.Fprintf(wr, "	beta \"%s\"\n", betaComputePackage)
 	}
 	if hasGA {
-		fmt.Fprintln(wr, `	ga "google.golang.org/api/compute/v1"`)
+		fmt.Fprintf(wr, "	ga \"%s\"\n", gaComputePackage)
 	}
+
 	fmt.Fprintf(wr, ")\n\n")
+
+	const kLogAdapter = `
+
+func kLogEnabled(level klog.Level) bool {
+	return klog.V(level){{.KLogEnabled}} == true
+}
+
+`
+
+	kLogAdapterTemplate := template.Must(template.New("klogadapter").Parse(kLogAdapter))
+	kLogTemplateValues := map[string]string{
+		"KLogEnabled": kLogEnabled,
+	}
+	if err := kLogAdapterTemplate.Execute(wr, kLogTemplateValues); err != nil {
+		panic(err)
+	}
 }
 
 // genStubs generates the interface and wrapper stubs.
@@ -801,9 +830,9 @@ func (g *{{.GCEWrapType}}) List(ctx context.Context, zone string, fl *filter.F) 
     callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("{{.GCEWrapType}}.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -956,9 +985,9 @@ func (g *{{.GCEWrapType}}) AggregatedList(ctx context.Context, fl *filter.F) (ma
 		klog.V(4).Infof("{{.GCEWrapType}}.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("{{.GCEWrapType}}.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -1004,9 +1033,9 @@ func (g *{{.GCEWrapType}}) ListUsable(ctx context.Context, fl *filter.F) ([]*{{.
 		return nil, err
 	}
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("{{.GCEWrapType}}.ListUsable(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -1107,9 +1136,9 @@ func (g *{{.GCEWrapType}}) {{.FcnArgs}} {
     callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("{{.GCEWrapType}}.{{.Name}}(%v, %v, ...) = [%v items], %v", ctx, key, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -1189,20 +1218,24 @@ import (
 	"reflect"
 	"testing"
 
-	alpha "google.golang.org/api/compute/v0.alpha"
-	beta "google.golang.org/api/compute/v0.beta"
-	ga "google.golang.org/api/compute/v1"
+	alpha "{{.AlphaComputePackage}}"
+	beta "{{.BetaComputePackage}}"
+	ga "{{.GaComputePackage}}"
 
-	"{{.PackageRoot}}/filter"
-	"{{.PackageRoot}}/meta"
+	"{{.FilterPackage}}"
+	"{{.MetaPackage}}"
 )
 
 const location = "location"
 `
 	tmpl := template.Must(template.New("header").Parse(text))
 	values := map[string]string{
-		"Year":        fmt.Sprintf("%v", time.Now().Year()),
-		"PackageRoot": packageRoot,
+		"Year":                fmt.Sprintf("%v", time.Now().Year()),
+		"FilterPackage":       filterPackage,
+		"MetaPackage":         metaPackage,
+		"AlphaComputePackage": alphaComputePackage,
+		"BetaComputePackage":  betaComputePackage,
+		"GaComputePackage":    gaComputePackage,
 	}
 	if err := tmpl.Execute(wr, values); err != nil {
 		panic(err)

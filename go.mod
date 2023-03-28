@@ -3,6 +3,7 @@ module github.com/GoogleCloudPlatform/k8s-cloud-provider
 go 1.20
 
 require (
+	github.com/kr/pretty v0.1.0
 	golang.org/x/oauth2 v0.0.0-20220622183110-fd043fe589d2
 	google.golang.org/api v0.89.0
 	k8s.io/klog/v2 v2.0.0
@@ -16,6 +17,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.1.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.4.0 // indirect
+	github.com/kr/text v0.1.0 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/net v0.0.0-20220624214902-1bab6f366d9e // indirect
 	golang.org/x/sys v0.0.0-20220624220833-87e55d714810 // indirect

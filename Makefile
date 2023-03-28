@@ -27,7 +27,7 @@ build: gen
 	mkdir -p bin
 
 .PHONY: test
-test:
+test: gen
 	# Test only the library. e2e must be run in a special environment,
 	# so is skipped.
 	go test ./pkg/...

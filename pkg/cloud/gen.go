@@ -21541,9 +21541,9 @@ func (g *GCEInstanceGroupManagers) List(ctx context.Context, zone string, fl *fi
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEInstanceGroupManagers.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))
@@ -22065,9 +22065,9 @@ func (g *GCEInstanceTemplates) List(ctx context.Context, fl *filter.F) ([]*ga.In
 	callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
-	if klog.V(4).Enabled() {
+	if kLogEnabled(4) {
 		klog.V(4).Infof("GCEInstanceTemplates.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
-	} else if klog.V(5).Enabled() {
+	} else if kLogEnabled(5) {
 		var asStr []string
 		for _, o := range all {
 			asStr = append(asStr, fmt.Sprintf("%+v", o))

@@ -27,11 +27,3 @@ require (
 	google.golang.org/grpc v1.47.0 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 )
-
-replace (
-	golang.org/x/net => golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420
-	golang.org/x/oauth2 => golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1
-	golang.org/x/sys => golang.org/x/sys v0.0.0-20200116001909-b77594299b42
-	google.golang.org/api => google.golang.org/api v0.89.0
-	google.golang.org/genproto => google.golang.org/genproto v0.0.0-20210909211513-a8c4777a87af
-)

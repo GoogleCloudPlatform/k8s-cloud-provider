@@ -31,7 +31,7 @@ const (
 	AlphaToBetaConversion
 	BetaToGAConversion
 	BetaToAlphaConversion
-	conversionContextCount
+	conversionContextCount // Sentinel value used to size arrays.
 )
 
 // ConversionError is returned from To*() methods. Inspect this error to get
@@ -46,14 +46,20 @@ func (e *ConversionError) hasErr() bool {
 	return len(e.MissingFields) > 0
 }
 
+// Error implements error.
 func (e *ConversionError) Error() string {
 	return fmt.Sprintf("ConversionError: missing fields %v", e.MissingFields)
 }
 
+// MissingField describes a field that was lost when converting between API
+// versions due to the field not being present in struct.
 type MissingField struct {
+	// Context gives the version to => from.
 	Context ConversionContext
-	Path    Path
-	Value   any
+	// Path of the field that is missing.
+	Path Path
+	// Value of the source field.
+	Value any
 }
 
 type conversionErrors struct {
@@ -74,9 +80,8 @@ type VersionedObject[GA any, Alpha any, Beta any] struct {
 	errors [conversionContextCount]conversionErrors
 }
 
-// cycleCheck that there are no cycles where a struct type appears 2+ times on
-// the same path. Our algorithms requires special handling for recursive
-// structures.
+// cycleCheck there are no cycles where a struct type appears 2+ times on the
+// same path. Our algorithms requires special handling for recursive structures.
 func cycleCheck(p Path, t reflect.Type, seen []string) error {
 	switch t.Kind() {
 	case reflect.Slice:
@@ -105,7 +110,7 @@ func cycleCheck(p Path, t reflect.Type, seen []string) error {
 	return nil
 }
 
-// typeCheck the type is something we can handle.
+// typeCheck the type is something we can handle. Assumes cycleCheck passed.
 func typeCheck(p Path, t reflect.Type) error {
 	// valid_type => basic | ...
 	if isBasicT(t) {

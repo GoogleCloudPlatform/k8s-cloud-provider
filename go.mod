@@ -3,6 +3,7 @@ module github.com/GoogleCloudPlatform/k8s-cloud-provider
 go 1.20
 
 require (
+	github.com/google/go-cmp v0.5.9
 	github.com/kr/pretty v0.1.0
 	golang.org/x/oauth2 v0.6.0
 	google.golang.org/api v0.114.0

@@ -126,9 +126,17 @@ func visitImpl(p Path, v reflect.Value, a acceptor) error {
 		if descend {
 			for _, mk := range v.MapKeys() {
 				mv := v.MapIndex(mk)
-				if err := visitImpl(p.MapIndex(mk), mv, a); err != nil {
+				// Create a temporary setable map
+				// value for cases where visitImpl
+				// wants to mutate the value in the
+				// map. This slightly inefficient for
+				// read-only operations.
+				setableMV := reflect.New(mv.Type()).Elem()
+				setableMV.Set(mv)
+				if err := visitImpl(p.MapIndex(mk), setableMV, a); err != nil {
 					return fmt.Errorf("visit %p: %w", p, err)
 				}
+				v.SetMapIndex(mk, setableMV)
 			}
 		}
 	}

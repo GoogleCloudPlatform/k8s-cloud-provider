@@ -19,7 +19,7 @@ package api
 import (
 	"testing"
 
-	"github.com/kr/pretty"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestFill(t *testing.T) {
@@ -28,11 +28,18 @@ func TestFill(t *testing.T) {
 	}
 
 	type st struct {
-		I   int
-		S   string
-		PS  *string
-		IS  inner
-		PIS *inner
+		I    int
+		S    string
+		PS   *string
+		IS   inner
+		PIS  *inner
+		LS   []string
+		LSt  []inner
+		LPS  []*string
+		LPSt []*inner
+		M    map[string]inner
+		MP   map[string]*inner
+		MLS  map[string][]string
 	}
 
 	var s st
@@ -41,21 +48,23 @@ func TestFill(t *testing.T) {
 		t.Fatalf("Fill() = %v, want nil", err)
 	}
 
-	// Check that there are no zeros.
-	switch {
-	case s.I == 0:
-		fallthrough
-	case s.S == "":
-		fallthrough
-	case s.PS == nil:
-		fallthrough
-	case *s.PS == "":
-		fallthrough
-	case s.IS.I == 0:
-		fallthrough
-	case s.PIS == nil:
-		fallthrough
-	case s.PIS.I == 0:
-		t.Errorf("Fill(), s = %s, had zero fields", pretty.Sprint(s))
+	zzzStr := "ZZZ"
+
+	want := st{
+		I:    111,
+		S:    "ZZZ",
+		PS:   &zzzStr,
+		IS:   inner{I: 111},
+		PIS:  &inner{I: 111},
+		LS:   []string{"ZZZ"},
+		LSt:  []inner{{I: 111}},
+		LPS:  []*string{&zzzStr},
+		LPSt: []*inner{&inner{I: 111}},
+		M:    map[string]inner{"ZZZ": {I: 111}},
+		MP:   map[string]*inner{"ZZZ": &inner{I: 111}},
+		MLS:  map[string][]string{"ZZZ": {"ZZZ"}},
+	}
+	if diff := cmp.Diff(s, want); diff != "" {
+		t.Errorf("Fill(); -got,+want = %s", diff)
 	}
 }

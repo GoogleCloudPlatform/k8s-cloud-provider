@@ -18,15 +18,60 @@ package api
 
 import (
 	"fmt"
-	"hash/fnv"
 	"reflect"
 )
+
+func staticFiller(t reflect.Type, p Path) any {
+	switch t.Kind() {
+	case reflect.Bool:
+		return true
+	case reflect.Int:
+		return int(111)
+	case reflect.Int8:
+		return int8(111)
+	case reflect.Int16:
+		return int16(111)
+	case reflect.Int32:
+		return int32(111)
+	case reflect.Int64:
+		return int64(111)
+	case reflect.Uint:
+		return uint(111)
+	case reflect.Uint8:
+		return uint8(111)
+	case reflect.Uint16:
+		return uint16(111)
+	case reflect.Uint32:
+		return uint32(111)
+	case reflect.Uint64:
+		return uint64(111)
+	case reflect.Float32:
+		return float32(11.1)
+	case reflect.Float64:
+		return float64(11.1)
+	case reflect.String:
+		return "ZZZ"
+	}
+	panic(fmt.Sprintf("invalid type %s", t))
+}
+
+// FillOption is an option to Fill().
+type FillOption func(*filler)
+
+// BasicFiller configures a different fill function for basic values in the
+// struct.
+func BasicFiller(fn func(reflect.Type, Path) any) FillOption {
+	return func(f *filler) { f.basicValue = fn }
+}
 
 // Fill obj with dummy values for testing. Slices and maps will have
 // one element in them so the linked objects will have non-zero
 // values.
-func Fill(obj any) error {
-	f := filler{}
+func Fill(obj any, options ...FillOption) error {
+	f := filler{basicValue: staticFiller}
+	for _, optFn := range options {
+		optFn(&f)
+	}
 	ac := &acceptorFuncs{
 		onBasicF:   f.doBasic,
 		onPointerF: f.doPointer,
@@ -37,56 +82,16 @@ func Fill(obj any) error {
 	return visit(reflect.ValueOf(obj), ac)
 }
 
-type filler struct{}
-
-func fillHash(p Path) uint64 {
-	h := fnv.New64()
-	h.Write([]byte(p.String()))
-	return h.Sum64()
-}
-
-func fillString(p Path) string {
-	// TODO
-	return p.String()
+type filler struct {
+	basicValue func(reflect.Type, Path) any
 }
 
 func (f *filler) doBasic(p Path, v reflect.Value) (bool, error) {
-	h := fillHash(p)
-
-	switch v.Kind() {
-	case reflect.Bool:
-		v.Set(reflect.ValueOf(true))
-	case reflect.String:
-		v.Set(reflect.ValueOf(fillString(p)))
-	case reflect.Int:
-		v.Set(reflect.ValueOf(int(h)))
-	case reflect.Int8:
-		v.Set(reflect.ValueOf(int8(h)))
-	case reflect.Int16:
-		v.Set(reflect.ValueOf(int16(h)))
-	case reflect.Int32:
-		v.Set(reflect.ValueOf(int32(h)))
-	case reflect.Int64:
-		v.Set(reflect.ValueOf(int64(h)))
-	case reflect.Uint:
-		v.Set(reflect.ValueOf(uint(h)))
-	case reflect.Uint8:
-		v.Set(reflect.ValueOf(uint8(h)))
-	case reflect.Uint16:
-		v.Set(reflect.ValueOf(uint16(h)))
-	case reflect.Uint32:
-		v.Set(reflect.ValueOf(uint32(h)))
-	case reflect.Uint64:
-		v.Set(reflect.ValueOf(uint64(h)))
-	case reflect.Float32:
-		v.Set(reflect.ValueOf(float32(h) / 10))
-	case reflect.Float64:
-		v.Set(reflect.ValueOf(float64(h) / 10))
-	default:
-		return false, fmt.Errorf("invalid type for doBasic: %s", v.Type())
+	if isBasicV(v) {
+		v.Set(reflect.ValueOf(f.basicValue(v.Type(), p)))
+		return true, nil
 	}
-
-	return true, nil
+	return false, fmt.Errorf("invalid type for doBasic: %s", v.Type())
 }
 
 func (f *filler) doPointer(p Path, v reflect.Value) (bool, error) {
@@ -120,12 +125,29 @@ func (f *filler) doSlice(p Path, v reflect.Value) (bool, error) {
 	if isNoFillPath(p) {
 		return false, nil
 	}
+	// Create a list with a single element in it.
 	v.Set(reflect.MakeSlice(v.Type(), 1, 1))
+	// Returning true will cause the visitor to descend into the
+	// list item and fill it with values.
 	return true, nil
 }
 
 func (f *filler) doMap(p Path, v reflect.Value) (bool, error) {
-	// TODO
+	kt := v.Type().Key()
+	kv := reflect.New(kt).Elem()
+	vt := v.Type().Elem()
+	// "x" is a placeholder for the key value.
+	f.doBasic(p.MapIndex("x"), kv)
+	newMap := reflect.MakeMapWithSize(v.Type(), 0)
+	v.Set(newMap)
 
-	return false, nil
+	if vt.Kind() == reflect.Pointer {
+		mv := reflect.New(vt.Elem())
+		v.SetMapIndex(kv, mv)
+	} else {
+		v.SetMapIndex(kv, reflect.New(vt).Elem())
+	}
+	// Returning true will cause the visitor to descend into the
+	// map and fill it with values.
+	return true, nil
 }

@@ -311,3 +311,33 @@ func (u *VersionedObject[GA, Alpha, Beta]) ToBeta() (*Beta, error) {
 	}
 	return &u.beta, nil
 }
+
+// Set the value to src.
+func (u *VersionedObject[GA, Alpha, Beta]) Set(src *GA) error {
+	var err error
+	u.Access(func(dest *GA) {
+		c := newCopier(u.copierOptions...)
+		err = c.do(reflect.ValueOf(dest), reflect.ValueOf(src))
+	})
+	return err
+}
+
+// SetAlpha the value to src.
+func (u *VersionedObject[GA, Alpha, Beta]) SetAlpha(src *Alpha) error {
+	var err error
+	u.AccessAlpha(func(dest *Alpha) {
+		c := newCopier(u.copierOptions...)
+		err = c.do(reflect.ValueOf(dest), reflect.ValueOf(src))
+	})
+	return err
+}
+
+// SetBeta the value to src.
+func (u *VersionedObject[GA, Alpha, Beta]) SetBeta(src *Beta) error {
+	var err error
+	u.AccessBeta(func(dest *Beta) {
+		c := newCopier(u.copierOptions...)
+		err = c.do(reflect.ValueOf(dest), reflect.ValueOf(src))
+	})
+	return err
+}

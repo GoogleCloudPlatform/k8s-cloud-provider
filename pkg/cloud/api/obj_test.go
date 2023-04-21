@@ -639,3 +639,85 @@ func TestVersionedObjectMissingMetaFields(t *testing.T) {
 		t.Error("ToBeta() = nil, want error")
 	}
 }
+
+func TestVersionedObjectSet(t *testing.T) {
+	type ga struct{ A int }
+	type al struct{ A, B, C int }
+	type be struct{ A, B, D int }
+	type vo = VersionedObject[ga, al, be]
+
+	for _, tc := range []struct {
+		name      string
+		src       any
+		wantGA    *ga
+		wantAlpha *al
+		wantBeta  *be
+
+		setErr                   bool
+		gaErr, alphaErr, betaErr bool
+	}{
+		{
+			name:      "Set",
+			src:       &ga{A: 13},
+			wantGA:    &ga{A: 13},
+			wantAlpha: &al{A: 13},
+			wantBeta:  &be{A: 13},
+		},
+		{
+			name:      "SetAlpha",
+			src:       &al{A: 10, B: 11, C: 101},
+			wantGA:    &ga{A: 10},
+			wantAlpha: &al{A: 10, B: 11, C: 101},
+			wantBeta:  &be{A: 10, B: 11},
+			gaErr:     true,
+			betaErr:   true,
+		},
+		{
+			name:      "SetBeta",
+			src:       &be{A: 13, B: 14, D: 15},
+			wantGA:    &ga{A: 13},
+			wantAlpha: &al{A: 13, B: 14},
+			wantBeta:  &be{A: 13, B: 14, D: 15},
+			gaErr:     true,
+			alphaErr:  true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			o := &vo{}
+			var err error
+			switch src := tc.src.(type) {
+			case *ga:
+				err = o.Set(src)
+			case *al:
+				err = o.SetAlpha(src)
+			case *be:
+				err = o.SetBeta(src)
+			}
+			if gotErr := err != nil; gotErr != tc.setErr {
+				t.Errorf("Set*() = %v; gotErr = %t, want %t", err, gotErr, tc.setErr)
+			}
+
+			gotGA, err := o.ToGA()
+			if gotErr := err != nil; gotErr != tc.gaErr {
+				t.Errorf("ToGA() = %v; gotErr = %t, want %t", err, gotErr, tc.gaErr)
+			}
+			if diff := cmp.Diff(gotGA, tc.wantGA); diff != "" {
+				t.Errorf("ToGA(); -got,+want: %s", diff)
+			}
+			gotAlpha, err := o.ToAlpha()
+			if gotErr := err != nil; gotErr != tc.alphaErr {
+				t.Errorf("ToAlpha() = %v; gotErr = %t, want %t", err, gotErr, tc.alphaErr)
+			}
+			if diff := cmp.Diff(gotAlpha, tc.wantAlpha); diff != "" {
+				t.Errorf("ToAlpha(); -got,+want: %s", diff)
+			}
+			gotBeta, err := o.ToBeta()
+			if gotErr := err != nil; gotErr != tc.betaErr {
+				t.Errorf("ToBeta() = %v; gotErr = %t, want %t", err, gotErr, tc.betaErr)
+			}
+			if diff := cmp.Diff(gotBeta, tc.wantBeta); diff != "" {
+				t.Errorf("ToBeta(); -got,+want: %s", diff)
+			}
+		})
+	}
+}

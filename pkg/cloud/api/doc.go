@@ -17,6 +17,9 @@ limitations under the License.
 // Package api are wrappers for working with the versioned API data types that
 // are part of the compute APIs.
 //
+// THIS PACKAGE IS EXPERIMENTAL AND THE APIS WILL LIKELY CHANGE IN FUTURE
+// RELEASES.
+//
 // # Working with versioned API types.
 //
 // VersionedObject is used to write version-agnostic code such as
@@ -66,12 +69,13 @@ limitations under the License.
 //   - Fields of the same name between version MUST be of the same basic, slice and
 //     map type. Struct can differ and are handled recusively.
 //
-// Exceptions to these rules can be handled by adding custom type conversions (see below).
+// Exceptions to these rules can be handled by adding custom type conversions
+// (see below).
 //
 // # Checking type assumptions with unit tests
 //
-// VersionedObject.CheckSchema() can be used to check if the types referenced meet
-// the above criteria.
+// VersionedObject.CheckSchema() can be used to check if the types referenced
+// meet the above criteria.
 //
 //	type Address = VersionedObject[compute.Address, alpha.Address, beta.Address]
 //	addr := Address{}

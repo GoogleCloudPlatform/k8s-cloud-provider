@@ -42,6 +42,16 @@ type acceptor interface {
 // and return the error.
 type acceptorFunc func(Path, reflect.Value) (bool, error)
 
+func newAcceptorFuncs() *acceptorFuncs {
+	return &acceptorFuncs{
+		onBasicF:   func(Path, reflect.Value) (bool, error) { return true, nil },
+		onPointerF: func(Path, reflect.Value) (bool, error) { return true, nil },
+		onStructF:  func(p Path, v reflect.Value) (bool, error) { return true, nil },
+		onSliceF:   func(Path, reflect.Value) (bool, error) { return true, nil },
+		onMapF:     func(Path, reflect.Value) (bool, error) { return true, nil },
+	}
+}
+
 type acceptorFuncs struct {
 	onBasicF   acceptorFunc
 	onPointerF acceptorFunc
@@ -78,50 +88,50 @@ func visitImpl(p Path, v reflect.Value, a acceptor) error {
 	switch {
 	case isBasicV(v):
 		if _, err := a.onBasic(p, v); err != nil {
-			return fmt.Errorf("visit %p: %w", p, err)
+			return fmt.Errorf("visit %s: %w", p, err)
 		}
 	case v.Type().Kind() == reflect.Pointer:
 		descend, err := a.onPointer(p, v)
 		if err != nil {
-			return fmt.Errorf("visit %p: %w", p, err)
+			return fmt.Errorf("visit %s: %w", p, err)
 		}
-		if descend {
+		if !v.IsZero() && descend {
 			err := visitImpl(p.Pointer(), v.Elem(), a)
 			if err != nil {
-				return fmt.Errorf("visit %p: %w", p, err)
+				return fmt.Errorf("visit %s: %w", p, err)
 			}
 		}
 	case v.Type().Kind() == reflect.Struct:
 		descend, err := a.onStruct(p, v)
 		if err != nil {
-			return fmt.Errorf("visit %p: %w", p, err)
+			return fmt.Errorf("visit %s: %w", p, err)
 		}
 		if descend {
 			for i := 0; i < v.NumField(); i++ {
 				fv := v.Field(i)
 				ft := v.Type().Field(i)
 				if err := visitImpl(p.Field(ft.Name), fv, a); err != nil {
-					return fmt.Errorf("visit %p: %w", p, err)
+					return fmt.Errorf("visit %s: %w", p, err)
 				}
 			}
 		}
 	case v.Type().Kind() == reflect.Slice:
 		descend, err := a.onSlice(p, v)
 		if err != nil {
-			return fmt.Errorf("visit %p: %w", p, err)
+			return fmt.Errorf("visit %s: %w", p, err)
 		}
 		if descend {
 			for i := 0; i < v.Len(); i++ {
 				sv := v.Index(i)
 				if err := visitImpl(p.Index(i), sv, a); err != nil {
-					return fmt.Errorf("visit %p: %w", p, err)
+					return fmt.Errorf("visit %s: %w", p, err)
 				}
 			}
 		}
 	case v.Type().Kind() == reflect.Map:
 		descend, err := a.onMap(p, v)
 		if err != nil {
-			return fmt.Errorf("visit %p: %w", p, err)
+			return fmt.Errorf("visit %s: %w", p, err)
 		}
 		if descend {
 			for _, mk := range v.MapKeys() {
@@ -134,7 +144,7 @@ func visitImpl(p Path, v reflect.Value, a acceptor) error {
 				setableMV := reflect.New(mv.Type()).Elem()
 				setableMV.Set(mv)
 				if err := visitImpl(p.MapIndex(mk), setableMV, a); err != nil {
-					return fmt.Errorf("visit %p: %w", p, err)
+					return fmt.Errorf("visit %s: %w", p, err)
 				}
 				v.SetMapIndex(mk, setableMV)
 			}

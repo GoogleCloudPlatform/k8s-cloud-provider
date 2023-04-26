@@ -59,3 +59,30 @@ func TestPathEqual(t *testing.T) {
 		}
 	}
 }
+
+func TestPathHasPrefix(t *testing.T) {
+	for _, tc := range []struct {
+		a, b Path
+		want bool
+	}{
+		{a: Path{}, b: Path{}, want: true},
+		{a: Path{}.Pointer(), b: Path{}, want: true},
+		{a: Path{}.Pointer(), b: Path{}.Pointer(), want: true},
+		{a: Path{}.Field("x"), b: Path{}.Field("y"), want: false},
+		{a: Path{}.Field("x").Field("y"), b: Path{}.Field("x").Field("y"), want: true},
+		{a: Path{}.Field("x").Field("y"), b: Path{}.Field("x").Field("z"), want: false},
+		{a: Path{}.Pointer(), b: Path{}.Pointer().Field("x"), want: false},
+		{a: Path{}.Pointer(), b: Path{}.Pointer().MapIndex("x"), want: false},
+		{a: Path{}.Pointer().MapIndex("x").Field("z"), b: Path{}.Pointer().MapIndex("x"), want: true},
+		{a: Path{}.Pointer(), b: Path{}.Pointer().Field("x"), want: false},
+		{a: Path{}.Pointer(), b: Path{}.Field("x"), want: false},
+		{a: Path{}.Pointer(), b: Path{}.Field("x").Field("x"), want: false},
+		{a: Path{}.Field("x").Field("x"), b: Path{}.Pointer(), want: false},
+		{a: Path{}.Field("x").Field("x"), b: Path{}.Field("x"), want: true},
+	} {
+		got := tc.a.HasPrefix(tc.b)
+		if got != tc.want {
+			t.Errorf("%q.HasPrefix(%q) = %t, want %t", tc.a, tc.b, got, tc.want)
+		}
+	}
+}

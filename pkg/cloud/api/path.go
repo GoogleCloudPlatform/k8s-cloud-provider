@@ -63,6 +63,27 @@ func (p Path) Equal(other Path) bool {
 	return true
 }
 
+// HasPrefix returns true if prefix is the prefix of this path.
+func (p Path) HasPrefix(prefix Path) bool {
+	if len(prefix) == 0 {
+		return true
+	}
+	if len(prefix) > len(p) {
+		return false
+	}
+
+	var i int
+	for i = range prefix {
+		if p[i] != prefix[i] {
+			return false
+		}
+	}
+	if i != len(prefix)-1 {
+		return false
+	}
+	return true
+}
+
 // String implements Stringer.
 func (p Path) String() string {
 	return strings.Join(p, "")

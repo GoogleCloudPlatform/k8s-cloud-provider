@@ -87,6 +87,10 @@ type filler struct {
 }
 
 func (f *filler) doBasic(p Path, v reflect.Value) (bool, error) {
+	if isNoFillPath(p) {
+		return false, nil
+	}
+
 	if isBasicV(v) {
 		v.Set(reflect.ValueOf(f.basicValue(v.Type(), p)))
 		return true, nil

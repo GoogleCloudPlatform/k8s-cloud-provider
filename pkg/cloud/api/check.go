@@ -26,28 +26,9 @@ import (
 func checkPostAccess(traits *FieldTraits, v reflect.Value) error {
 	acc := newAcceptorFuncs()
 	acc.onStructF = func(p Path, v reflect.Value) (bool, error) {
-		var nullFields, forceSendFields []string
-		if t, ok := v.Type().FieldByName("NullFields"); ok && t.Type.Kind() == reflect.Slice && t.Type.Elem().Kind() == reflect.String {
-			nullFields = v.FieldByName("NullFields").Interface().([]string)
-		}
-		if t, ok := v.Type().FieldByName("ForceSendFields"); ok && t.Type.Kind() == reflect.Slice && t.Type.Elem().Kind() == reflect.String {
-			forceSendFields = v.FieldByName("ForceSendFields").Interface().([]string)
-		}
-		inNull := func(f string) bool {
-			for _, x := range nullFields {
-				if f == x {
-					return true
-				}
-			}
-			return false
-		}
-		inForceSend := func(f string) bool {
-			for _, x := range forceSendFields {
-				if f == x {
-					return true
-				}
-			}
-			return false
+		acc, err := newMetafieldAccessor(v)
+		if err != nil {
+			return false, fmt.Errorf("checkPostAccess %v: %w", p, err)
 		}
 		for i := 0; i < v.NumField(); i++ {
 			ft := v.Type().Field(i)
@@ -69,9 +50,9 @@ func checkPostAccess(traits *FieldTraits, v reflect.Value) error {
 				}
 			case FieldTypeOrdinary:
 				switch {
-				case fv.IsZero() && !inNull(ft.Name) && !inForceSend(ft.Name):
+				case fv.IsZero() && !acc.inNull(ft.Name) && !acc.inForceSend(ft.Name):
 					return false, fmt.Errorf("%s is zero value but not in a NullFields or ForceSendFields %v %t", fp, fv.Interface(), fv.IsZero())
-				case !fv.IsZero() && inNull(ft.Name):
+				case !fv.IsZero() && acc.inNull(ft.Name):
 					return false, fmt.Errorf("%s is non-nil and also in NullFields", fp)
 				}
 			case FieldTypeAllowZeroValue:

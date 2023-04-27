@@ -17,6 +17,7 @@ limitations under the License.
 package api
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -97,5 +98,70 @@ func TestFill(t *testing.T) {
 	}
 	if diff := cmp.Diff(s, want); diff != "" {
 		t.Errorf("Fill(); -got,+want = %s", diff)
+	}
+}
+
+func TestFillNullAndForceSend(t *testing.T) {
+	t.Parallel()
+
+	type sti struct {
+		A               int
+		NullFields      []string
+		ForceSendFields []string
+	}
+	type st struct {
+		A               int
+		B               *string
+		C               string
+		D               *sti
+		NullFields      []string
+		ForceSendFields []string
+	}
+
+	for _, tc := range []struct {
+		name    string
+		ft      *FieldTraits
+		in      any
+		want    any
+		wantErr bool
+	}{
+		{
+			name: "fill with zero values",
+			ft:   NewFieldTraits(),
+			in:   &st{},
+			want: &st{
+				NullFields:      []string{"B", "D"},
+				ForceSendFields: []string{"A", "C"},
+			},
+		},
+		{
+			name: "fill no zeros",
+			ft:   NewFieldTraits(),
+			in:   &st{A: 5, B: new(string), C: "x", D: &sti{A: 2}},
+			want: &st{A: 5, B: new(string), C: "x", D: &sti{A: 2}},
+		},
+		{
+			name: "fill substruct",
+			ft:   NewFieldTraits(),
+			in:   &st{A: 5, D: &sti{}},
+			want: &st{
+				A:               5,
+				NullFields:      []string{"B"},
+				ForceSendFields: []string{"C"},
+				D: &sti{
+					ForceSendFields: []string{"A"},
+				},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := fillNullAndForceSend(tc.ft, reflect.ValueOf(tc.in))
+			if gotErr := err != nil; gotErr != tc.wantErr {
+				t.Fatalf("fillNullAndForceSend() = %v; gotErr = %t, want %t", err, gotErr, tc.wantErr)
+			}
+			if diff := cmp.Diff(tc.in, tc.want); diff != "" {
+				t.Error(diff)
+			}
+		})
 	}
 }

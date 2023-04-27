@@ -266,7 +266,7 @@ func TestCheckSchema(t *testing.T) {
 			err := checkSchema(tc.t)
 			gotErr := err != nil
 			if gotErr != tc.wantErr {
-				t.Errorf("versionedObjectCheck() = %v; gotErr = %t, want %T", err, gotErr, tc.wantErr)
+				t.Errorf("ChekcSchema() = %v; gotErr = %t, want %T", err, gotErr, tc.wantErr)
 			}
 		})
 	}

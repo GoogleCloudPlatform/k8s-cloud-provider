@@ -80,108 +80,19 @@ type VersionedObject[GA any, Alpha any, Beta any] struct {
 	errors [conversionContextCount]conversionErrors
 }
 
-// cycleCheck there are no cycles where a struct type appears 2+ times on the
-// same path. Our algorithms requires special handling for recursive structures.
-func cycleCheck(p Path, t reflect.Type, seen []string) error {
-	switch t.Kind() {
-	case reflect.Slice:
-		return cycleCheck(p.Index(0), t.Elem(), seen)
-	case reflect.Pointer:
-		return cycleCheck(p.Pointer(), t.Elem(), seen)
-	case reflect.Map:
-		// Use "x" as the placeholder for the map key in the Path for debugging
-		// output purposes.
-		return cycleCheck(p.MapIndex("x"), t.Elem(), seen)
-	case reflect.Struct:
-		typeName := fmt.Sprintf("%s/%s", t.PkgPath(), t.Name())
-		for _, seenTypeName := range seen {
-			if typeName == seenTypeName {
-				return fmt.Errorf("recursive type found at %s: %s", p, typeName)
-			}
-		}
-		// Add this struct type to the list of types seen on this path.
-		seen = append(seen, fmt.Sprintf("%s/%s", t.PkgPath(), t.Name()))
-		for i := 0; i < t.NumField(); i++ {
-			if err := cycleCheck(p.Field(t.Field(i).Name), t.Field(i).Type, seen); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// typeCheck the type is something we can handle. Assumes cycleCheck passed.
-func typeCheck(p Path, t reflect.Type) error {
-	// valid_type => basic | ...
-	if isBasicT(t) {
-		return nil
-	}
-	switch t.Kind() {
-	case reflect.Pointer:
-		if err := typeCheck(p, t.Elem()); err != nil {
-			return err
-		}
-	case reflect.Struct:
-		// struct => {all fields are valid_type}
-		for i := 0; i < t.NumField(); i++ {
-			tf := t.Field(i)
-			if err := typeCheck(p.Field(tf.Name), tf.Type); err != nil {
-				return err
-			}
-		}
-	case reflect.Slice:
-		// slice => {elements => valid_type}
-		if err := typeCheck(p.Index(0), t.Elem()); err != nil {
-			return err
-		}
-	case reflect.Map:
-		// map => key is basic type; value is valid_type
-		if !isBasicT(t.Key()) {
-			return fmt.Errorf("map key must be basic type %s: %v", p.Pointer(), t)
-		}
-		// Supported value types.
-		if !isBasicT(t.Elem()) {
-			switch t.Elem().Kind() {
-			case reflect.Slice, reflect.Struct:
-			default:
-				return fmt.Errorf("unsupported value type %s: %v", p, t)
-			}
-			// Use "x" as the placeholder for the map key in the Path for debugging
-			// output purposes.
-			if err := typeCheck(p.MapIndex("x"), t.Elem()); err != nil {
-				return err
-			}
-		}
-	default:
-		return fmt.Errorf("unsupported type %s: %v", p, t)
-	}
-	return nil
-}
-
-func versionedObjectCheck(t reflect.Type) error {
-	// Run cycleCheck first, other checks will blow up if there are cycles.
-	if err := cycleCheck(Path{}, t, []string{}); err != nil {
-		return err
-	}
-	if err := typeCheck(Path{}, t); err != nil {
-		return err
-	}
-	return nil
-}
-
 // CheckSchema should be called in init() to ensure that the resource being
 // wrapped by VersionedObject meets the assumptions we are making for this the
 // transformations to work.
 func (u *VersionedObject[GA, Alpha, Beta]) CheckSchema() error {
-	err := versionedObjectCheck(reflect.TypeOf(u.ga))
+	err := checkSchema(reflect.TypeOf(u.ga))
 	if err != nil {
 		return err
 	}
-	err = versionedObjectCheck(reflect.TypeOf(u.alpha))
+	err = checkSchema(reflect.TypeOf(u.alpha))
 	if err != nil {
 		return err
 	}
-	err = versionedObjectCheck(reflect.TypeOf(u.beta))
+	err = checkSchema(reflect.TypeOf(u.beta))
 	if err != nil {
 		return err
 	}

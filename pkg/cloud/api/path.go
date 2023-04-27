@@ -18,6 +18,7 @@ package api
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -30,24 +31,31 @@ import (
 // - "*" is a pointer deref.
 type Path []string
 
+const (
+	pathField      = '.'
+	pathSliceIndex = '!'
+	pathMapIndex   = ':'
+	pathPointer    = '*'
+)
+
 // Field returns the path extended with a struct field reference.
 func (p Path) Field(name string) Path {
-	return append(p, "."+name)
+	return append(p, string(pathField)+name)
 }
 
 // Field returns the path extended with a slice dereference.
 func (p Path) Index(i int) Path {
-	return append(p, fmt.Sprintf("!%d", i))
+	return append(p, fmt.Sprintf("%c%d", pathSliceIndex, i))
 }
 
 // MapIndex returns the path extended with a map index.
 func (p Path) MapIndex(k any) Path {
-	return append(p, fmt.Sprintf(":%v", k))
+	return append(p, fmt.Sprintf("%c%v", pathMapIndex, k))
 }
 
 // Pointer returns the path extended with a pointer dereference.
 func (p Path) Pointer() Path {
-	return append(p, "*")
+	return append(p, string(pathPointer))
 }
 
 // Equal returns true if other is the same path.
@@ -87,4 +95,41 @@ func (p Path) HasPrefix(prefix Path) bool {
 // String implements Stringer.
 func (p Path) String() string {
 	return strings.Join(p, "")
+}
+
+// ResolveType will attempt to traverse the type with the Path and return the
+// type of the field.
+func (p Path) ResolveType(t reflect.Type) (reflect.Type, error) {
+	for i, x := range p {
+		switch x[0] {
+		case pathField:
+			if t.Kind() != reflect.Struct {
+				return nil, fmt.Errorf("at %s element %d, expected struct, got %s", p, i, t)
+			}
+			fieldName := x[1:]
+			sf, ok := t.FieldByName(fieldName)
+			if !ok {
+				return nil, fmt.Errorf("at %s element %d, no field named %q", p, i, fieldName)
+			}
+			t = sf.Type
+		case pathSliceIndex:
+			if t.Kind() != reflect.Slice {
+				return nil, fmt.Errorf("at %s element %d, expected slice, got %s", p, i, t)
+			}
+			t = t.Elem()
+		case pathMapIndex:
+			if t.Kind() != reflect.Map {
+				return nil, fmt.Errorf("at %s element %d, expected map, got %s", p, i, t)
+			}
+			t = t.Elem()
+		case pathPointer:
+			if t.Kind() != reflect.Pointer {
+				return nil, fmt.Errorf("at %s element %d, expected pointer, got %s", p, i, t)
+			}
+			t = t.Elem()
+		default:
+			return nil, fmt.Errorf("at %s element %d, invalid path type %q", p, i, x[0])
+		}
+	}
+	return t, nil
 }

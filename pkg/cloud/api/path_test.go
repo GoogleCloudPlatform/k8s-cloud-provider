@@ -16,7 +16,10 @@ limitations under the License.
 
 package api
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestPath(t *testing.T) {
 	var p Path
@@ -84,5 +87,117 @@ func TestPathHasPrefix(t *testing.T) {
 		if got != tc.want {
 			t.Errorf("%q.HasPrefix(%q) = %t, want %t", tc.a, tc.b, got, tc.want)
 		}
+	}
+}
+
+func TestResolveType(t *testing.T) {
+	type st struct {
+		A int
+		B []string
+		C map[string]int
+		D *float32
+
+		S struct {
+			A int
+			S struct {
+				A int
+			}
+		}
+		P *struct {
+			A int
+		}
+	}
+
+	for _, tc := range []struct {
+		name     string
+		in       any
+		p        Path
+		wantType reflect.Type
+		wantErr  bool
+	}{
+		{
+			name:     "st.A",
+			in:       &st{},
+			p:        Path{}.Pointer().Field("A"),
+			wantType: reflect.TypeOf(int(1)),
+		},
+		{
+			name:     "st.B",
+			in:       &st{},
+			p:        Path{}.Pointer().Field("B").Index(0),
+			wantType: reflect.TypeOf("x"),
+		},
+		{
+			name:     "st.C",
+			in:       &st{},
+			p:        Path{}.Pointer().Field("C").MapIndex("x"),
+			wantType: reflect.TypeOf(int(1)),
+		},
+		{
+			name:     "st.D",
+			in:       &st{},
+			p:        Path{}.Pointer().Field("D").Pointer(),
+			wantType: reflect.TypeOf(float32(1)),
+		},
+		{
+			name:     "st.S.S.A",
+			in:       &st{},
+			p:        Path{}.Pointer().Field("S").Field("S").Field("A"),
+			wantType: reflect.TypeOf(int(1)),
+		},
+		{
+			name:     "st.P.A",
+			in:       &st{},
+			p:        Path{}.Pointer().Field("P").Pointer().Field("A"),
+			wantType: reflect.TypeOf(int(1)),
+		},
+		{
+			name:    "no such field",
+			in:      &st{},
+			p:       Path{}.Pointer().Field("X"),
+			wantErr: true,
+		},
+		{
+			name:    "type mismatch: struct",
+			in:      &st{},
+			p:       Path{}.Field("X"),
+			wantErr: true,
+		},
+		{
+			name:    "type mismatch: slice",
+			in:      &st{},
+			p:       Path{}.Pointer().Index(0),
+			wantErr: true,
+		},
+		{
+			name:    "type mismatch: map",
+			in:      &st{},
+			p:       Path{}.Pointer().MapIndex("x"),
+			wantErr: true,
+		},
+		{
+			name:    "type mismatch: pointer",
+			in:      &st{},
+			p:       Path{}.Pointer().Pointer(),
+			wantErr: true,
+		},
+		{
+			name:    "type mismatch: path too long",
+			in:      &st{},
+			p:       Path{}.Pointer().Field("A").Field("X"),
+			wantErr: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ty, err := tc.p.ResolveType(reflect.TypeOf(tc.in))
+			if gotErr := err != nil; gotErr != tc.wantErr {
+				t.Fatalf("ResolveType() = %v; gotErr = %t, want %t", err, gotErr, tc.wantErr)
+			} else if gotErr {
+				return
+			}
+			if ty != tc.wantType {
+				t.Fatalf("ResolveType() = %v, want %v", ty, tc.wantType)
+			}
+		})
 	}
 }

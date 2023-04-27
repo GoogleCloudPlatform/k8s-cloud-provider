@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package api
 
 import (
@@ -29,7 +30,7 @@ type missingFieldOnCopy struct {
 // copierOption are options that customize the behavior of the internal copier.
 type copierOption func(*copier)
 
-// copierLogS considers logging for the copier to use the given func f.
+// copierLogS configures logging for the copier to use the given func f.
 func copierLogS(f func(msg string, kv ...any)) copierOption {
 	return func(c *copier) { c.logSFn = f }
 }

@@ -84,3 +84,108 @@ func checkPostAccess(traits *FieldTraits, v reflect.Value) error {
 	}
 	return visit(v, acc)
 }
+
+// checkNoCycles there are no cycles where a struct type appears 2+ times on the
+// same path. Our algorithms requires special handling for recursive structures.
+func checkNoCycles(p Path, t reflect.Type, seen []string) error {
+	switch t.Kind() {
+	case reflect.Slice:
+		return checkNoCycles(p.Index(0), t.Elem(), seen)
+	case reflect.Pointer:
+		return checkNoCycles(p.Pointer(), t.Elem(), seen)
+	case reflect.Map:
+		// Use "x" as the placeholder for the map key in the Path for debugging
+		// output purposes.
+		return checkNoCycles(p.MapIndex("x"), t.Elem(), seen)
+	case reflect.Struct:
+		typeName := fmt.Sprintf("%s/%s", t.PkgPath(), t.Name())
+		for _, seenTypeName := range seen {
+			if typeName == seenTypeName {
+				return fmt.Errorf("recursive type found at %s: %s", p, typeName)
+			}
+		}
+		// Add this struct type to the list of types seen on this path.
+		seen = append(seen, fmt.Sprintf("%s/%s", t.PkgPath(), t.Name()))
+		for i := 0; i < t.NumField(); i++ {
+			if err := checkNoCycles(p.Field(t.Field(i).Name), t.Field(i).Type, seen); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// checkResourceTypes the type is something we can handle. Assumes
+// checkNoCycles() passed.
+func checkResourceTypes(p Path, t reflect.Type) error {
+	// valid_type => basic | ...
+	if isBasicT(t) {
+		return nil
+	}
+	switch t.Kind() {
+	case reflect.Pointer:
+		if err := checkResourceTypes(p, t.Elem()); err != nil {
+			return err
+		}
+	case reflect.Struct:
+		// struct => {all fields are valid_type}
+		for i := 0; i < t.NumField(); i++ {
+			tf := t.Field(i)
+			if err := checkResourceTypes(p.Field(tf.Name), tf.Type); err != nil {
+				return err
+			}
+		}
+	case reflect.Slice:
+		// slice => {elements => valid_type}
+		if err := checkResourceTypes(p.Index(0), t.Elem()); err != nil {
+			return err
+		}
+	case reflect.Map:
+		// map => key is basic type; value is valid_type
+		if !isBasicT(t.Key()) {
+			return fmt.Errorf("map key must be basic type %s: %v", p.Pointer(), t)
+		}
+		// Supported value types.
+		if !isBasicT(t.Elem()) {
+			switch t.Elem().Kind() {
+			case reflect.Slice, reflect.Struct:
+			default:
+				return fmt.Errorf("unsupported value type %s: %v", p, t)
+			}
+			// Use "x" as the placeholder for the map key in the Path for debugging
+			// output purposes.
+			if err := checkResourceTypes(p.MapIndex("x"), t.Elem()); err != nil {
+				return err
+			}
+		}
+	default:
+		return fmt.Errorf("unsupported type %s: %v", p, t)
+	}
+	return nil
+}
+
+func checkSchema(t reflect.Type) error {
+	// Run cycleCheck first, other checks will blow up if there are cycles.
+	if err := checkNoCycles(Path{}, t, []string{}); err != nil {
+		return err
+	}
+	if err := checkResourceTypes(Path{}, t); err != nil {
+		return err
+	}
+
+	// Check for common fields for interop with ResourceID.
+	if t.Kind() != reflect.Pointer {
+		return fmt.Errorf("object is not a pointer (%s)", t)
+	}
+	st := t.Elem()
+	nameField, ok := st.FieldByName("Name")
+	if !ok || nameField.Type.Kind() != reflect.String {
+		return fmt.Errorf("object has missing or invalid Name field (ok=%t %v)", ok, nameField)
+	}
+	selfLinkField, ok := st.FieldByName("SelfLink")
+	if !ok || selfLinkField.Type.Kind() != reflect.String {
+		return fmt.Errorf("object has missing or invalid SelfLink field (ok=%t %v)", ok, selfLinkField)
+	}
+
+	return nil
+}

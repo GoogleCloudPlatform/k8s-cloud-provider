@@ -131,3 +131,135 @@ func TestCheckFieldsAreSet(t *testing.T) {
 		})
 	}
 }
+
+// Mutually recursive types need to be declared outside of a func.
+type rec2 struct{ R *rec2i }
+type rec2i struct{ R *rec2 }
+
+func TestCheckNoCycles(t *testing.T) {
+	type innerSt struct{}
+	type okSt struct {
+		ST  innerSt
+		PST *innerSt
+	}
+	type rec1 struct{ R *rec1 }
+	type rec3 struct{ R ****[]rec3 }
+	type rec4 struct{ R map[string]rec4 }
+
+	for _, tc := range []struct {
+		name    string
+		t       reflect.Type
+		wantErr bool
+	}{
+		{name: "ok", t: reflect.TypeOf(okSt{})},
+		{name: "pointer to self", t: reflect.TypeOf(rec1{}), wantErr: true},
+		{name: "mutually recursive", t: reflect.TypeOf(rec2{}), wantErr: true},
+		{name: "multiple indirect", t: reflect.TypeOf(rec3{}), wantErr: true},
+		{name: "map", t: reflect.TypeOf(rec4{}), wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := checkNoCycles(Path{}, tc.t, []string{})
+			gotErr := err != nil
+			if gotErr != tc.wantErr {
+				t.Errorf("cycleCheck() = %v; gotErr = %t, want %T", err, gotErr, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestCheckResourceTypes(t *testing.T) {
+	type innerSt struct{}
+	type okSt struct {
+		I   int
+		S   string
+		PS  *string
+		LS  []string
+		LPS []*string
+		M   map[string]int
+		ST  innerSt
+		PST *innerSt
+	}
+	type invalidSt1 struct {
+		M map[innerSt]int
+	}
+	type invalidSt2 struct {
+		C chan int
+	}
+	type invalidSt3 struct {
+		M map[int]*innerSt
+	}
+
+	for _, tc := range []struct {
+		name    string
+		t       reflect.Type
+		wantErr bool
+	}{
+		{
+			name: "ok",
+			t:    reflect.TypeOf(okSt{}),
+		},
+		{
+			name:    "invalid map type",
+			t:       reflect.TypeOf(invalidSt1{}),
+			wantErr: true,
+		},
+		{
+			name:    "invalid channel",
+			t:       reflect.TypeOf(invalidSt2{}),
+			wantErr: true,
+		},
+		{
+			name:    "invalid map type (pointer)",
+			t:       reflect.TypeOf(invalidSt3{}),
+			wantErr: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := checkResourceTypes(Path{}, tc.t)
+			gotErr := err != nil
+			if gotErr != tc.wantErr {
+				t.Errorf("typeCheck() = %v; gotErr = %t, want %T", err, gotErr, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestCheckSchema(t *testing.T) {
+	type innerSt struct{}
+	type okSt struct {
+		Name     string
+		SelfLink string
+
+		ST  innerSt
+		PST *innerSt
+	}
+	type badSt struct {
+		C chan int
+
+		Name     string
+		SelfLink string
+	}
+	type badStFieldsBad struct {
+		Name     int
+		SelfLink string
+	}
+
+	for _, tc := range []struct {
+		name    string
+		t       reflect.Type
+		wantErr bool
+	}{
+		{name: "ok", t: reflect.TypeOf(&okSt{})},
+		{name: "fails cycle check", t: reflect.TypeOf(&rec2{}), wantErr: true},
+		{name: "fails type check", t: reflect.TypeOf(&badSt{}), wantErr: true},
+		{name: "fails type check bad fields", t: reflect.TypeOf(&badStFieldsBad{}), wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := checkSchema(tc.t)
+			gotErr := err != nil
+			if gotErr != tc.wantErr {
+				t.Errorf("versionedObjectCheck() = %v; gotErr = %t, want %T", err, gotErr, tc.wantErr)
+			}
+		})
+	}
+}

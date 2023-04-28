@@ -22,11 +22,11 @@ limitations under the License.
 //
 // # Working with versioned API types.
 //
-// VersionedObject is used to write version-agnostic code such as
-// Kubernetes-style API translators.
+// Resource is used to write version-agnostic code such as Kubernetes-style API
+// translators.
 //
 //	 // Instantiate the adapter.
-//	 type Address = VersionedObject[compute.Address, alpha.Address, beta.Address]
+//	 type Address = NewResource[compute.Address, alpha.Address, beta.Address](...)
 //	 addr := Address{}
 //
 //	// Manipulate the fields in Address.
@@ -55,29 +55,12 @@ limitations under the License.
 //	    if errors.As(err, &objErrors) { /* handle MissingFields, etc. */ }
 //	}
 //
-// # Assumptions
-//
-// The code currently handles a narrow range of Go types:
-//
-//   - Root of the resource is a struct.
-//   - Struct fields are: basic type (e.g. int or string), pointer to a basic type,
-//     struct or pointer to struct, slice or map.
-//   - Map keys are basic type. map values are the same as struct fields.
-//   - Slice values are the same types as struct fields.
-//   - There are no recursive (cyclic) definitions (e.g. struct S that points (directly
-//     or indirectly) to S again.
-//   - Fields of the same name between version MUST be of the same basic, slice and
-//     map type. Struct can differ and are handled recusively.
-//
-// Exceptions to these rules can be handled by adding custom type conversions
-// (see below).
-//
 // # Checking type assumptions with unit tests
 //
-// VersionedObject.CheckSchema() can be used to check if the types referenced
-// meet the above criteria.
+// Resource.CheckSchema() can be used to check if the types referenced meet the
+// above criteria.
 //
-//	type Address = VersionedObject[compute.Address, alpha.Address, beta.Address]
+//	type Address = NewResource[compute.Address, alpha.Address, beta.Address](...)
 //	addr := Address{}
 //	if err := addr.CheckSchema(); err != nil { /* unsupported type schema */ }
 package api

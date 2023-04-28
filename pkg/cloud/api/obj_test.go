@@ -20,11 +20,54 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/meta"
 	"github.com/google/go-cmp/cmp"
 	"github.com/kr/pretty"
 )
 
-func TestVersionedObject(t *testing.T) {
+func newTestResource[G any, A any, B any](tt TypeTrait[G, A, B]) *resource[G, A, B] {
+	return NewResource(&cloud.ResourceID{
+		ProjectID: "proj-1",
+		Resource:  "st",
+		Key:       meta.GlobalKey("obj-1"),
+	}, tt)
+}
+
+type testTrait[G any, A any, B any] struct {
+	BaseTypeTrait[G, A, B]
+}
+
+func (testTrait[G, A, B]) FieldTraits(meta.Version) *FieldTraits {
+	ret := &FieldTraits{}
+
+	ret.AllowZeroValue(Path{}.Pointer().Field("I"))
+	ret.AllowZeroValue(Path{}.Pointer().Field("S"))
+	ret.AllowZeroValue(Path{}.Pointer().Field("F"))
+	ret.AllowZeroValue(Path{}.Pointer().Field("St"))
+	ret.AllowZeroValue(Path{}.Pointer().Field("St").Field("I"))
+	ret.AllowZeroValue(Path{}.Pointer().Field("StP"))
+	ret.AllowZeroValue(Path{}.Pointer().Field("StP").Pointer().Field("I"))
+	ret.AllowZeroValue(Path{}.Pointer().Field("LStr"))
+	ret.AllowZeroValue(Path{}.Pointer().Field("LPStr"))
+	ret.AllowZeroValue(Path{}.Pointer().Field("M"))
+	ret.AllowZeroValue(Path{}.Pointer().Field("Name"))
+	ret.AllowZeroValue(Path{}.Pointer().Field("SelfLink"))
+
+	ret.AllowZeroValue(Path{}.Pointer().Field("AI"))
+	ret.AllowZeroValue(Path{}.Pointer().Field("St").Field("A"))
+	ret.AllowZeroValue(Path{}.Pointer().Field("StP").Pointer().Field("A"))
+
+	ret.AllowZeroValue(Path{}.Pointer().Field("BI"))
+	ret.AllowZeroValue(Path{}.Pointer().Field("St").Field("B"))
+	ret.AllowZeroValue(Path{}.Pointer().Field("StP").Pointer().Field("B"))
+
+	ret.AllowZeroValue(Path{}.Pointer().Field("ABS"))
+
+	return ret
+}
+
+func TestResourceToX(t *testing.T) {
 	type inner struct{ I int }
 	type innerA struct {
 		I int
@@ -49,6 +92,8 @@ func TestVersionedObject(t *testing.T) {
 
 		M map[string]int
 
+		Name            string
+		SelfLink        string
 		NullFields      []string
 		ForceSendFields []string
 	}
@@ -68,6 +113,8 @@ func TestVersionedObject(t *testing.T) {
 
 		M map[string]int
 
+		Name            string
+		SelfLink        string
 		NullFields      []string
 		ForceSendFields []string
 	}
@@ -87,11 +134,13 @@ func TestVersionedObject(t *testing.T) {
 
 		M map[string]int
 
+		Name            string
+		SelfLink        string
 		NullFields      []string
 		ForceSendFields []string
 	}
 
-	type stObj = VersionedObject[st, stA, stB]
+	type stObj = resource[st, stA, stB]
 
 	type testCase struct {
 		name      string
@@ -346,8 +395,11 @@ func TestVersionedObject(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var o stObj
-
+			o := NewResource[st, stA, stB](&cloud.ResourceID{
+				ProjectID: "proj-1",
+				Resource:  "st",
+				Key:       meta.GlobalKey("obj-1"),
+			}, &testTrait[st, stA, stB]{})
 			if tc.edit != nil {
 				err := o.Access(tc.edit)
 				if gotErr := err != nil; gotErr != tc.wantEditErr {
@@ -375,7 +427,7 @@ func TestVersionedObject(t *testing.T) {
 					return
 				}
 			}
-			check(&o, &tc)
+			check(o, &tc)
 		})
 	}
 
@@ -388,7 +440,11 @@ func TestVersionedObject(t *testing.T) {
 			}
 
 			t.Run(tc.name, func(t *testing.T) {
-				var o stObj
+				o := NewResource[st, stA, stB](&cloud.ResourceID{
+					ProjectID: "proj-1",
+					Resource:  "st",
+					Key:       meta.GlobalKey("obj-1"),
+				}, &testTrait[st, stA, stB]{})
 
 				if tc.edit != nil {
 					err := o.Access(tc.edit)
@@ -420,22 +476,21 @@ func TestVersionedObject(t *testing.T) {
 						t.Errorf("repeated call to EditBeta failed: %v", err)
 					}
 				}
-				check(&o, &tc)
+				check(o, &tc)
 			})
 		}
 	})
 }
 
-func TestVersionedObjectMissingFields(t *testing.T) {
+func TestResourceMissingFields(t *testing.T) {
 	// Test that the missing fields is correct after a sequence of edits at
 	// different API versions.
-
 	type ga struct{ A int }
 	type alph struct{ A, B int }
 	type beta struct{ A int }
-	type vo = VersionedObject[ga, alph, beta]
+	type vo = resource[ga, alph, beta]
 
-	obj := &vo{}
+	obj := newTestResource[ga, alph, beta](nil)
 
 	// Set x.B, only available in the Alpha version of the API.
 	obj.AccessAlpha(func(x *alph) { x.B = 20 })
@@ -467,7 +522,7 @@ func TestVersionedObjectMissingFields(t *testing.T) {
 	}
 }
 
-func TestVersionedObjectMissingMetaFields(t *testing.T) {
+func TestResourceMissingMetaFields(t *testing.T) {
 	// Test that the missing fields is correct after a sequence of edits at
 	// different API versions. Field is specified using a metafield.
 
@@ -483,9 +538,8 @@ func TestVersionedObjectMissingMetaFields(t *testing.T) {
 		A               int
 		ForceSendFields []string
 	}
-	type vo = VersionedObject[ga, alph, beta]
-
-	obj := &vo{}
+	type vo = resource[ga, alph, beta]
+	obj := newTestResource[ga, alph, beta](nil)
 
 	// Set x.B, only available in the Alpha version of the API.
 	obj.AccessAlpha(func(x *alph) { x.ForceSendFields = []string{"B"} })
@@ -521,11 +575,11 @@ func TestVersionedObjectMissingMetaFields(t *testing.T) {
 	}
 }
 
-func TestVersionedObjectSet(t *testing.T) {
+func TestResourceSetX(t *testing.T) {
 	type ga struct{ A int }
 	type al struct{ A, B, C int }
 	type be struct{ A, B, D int }
-	type vo = VersionedObject[ga, al, be]
+	type vo = resource[ga, al, be]
 
 	for _, tc := range []struct {
 		name      string
@@ -564,40 +618,282 @@ func TestVersionedObjectSet(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			o := &vo{}
+			obj := newTestResource[ga, al, be](nil)
+
 			var err error
 			switch src := tc.src.(type) {
 			case *ga:
-				err = o.Set(src)
+				err = obj.Set(src)
 			case *al:
-				err = o.SetAlpha(src)
+				err = obj.SetAlpha(src)
 			case *be:
-				err = o.SetBeta(src)
+				err = obj.SetBeta(src)
 			}
 			if gotErr := err != nil; gotErr != tc.setErr {
 				t.Errorf("Set*() = %v; gotErr = %t, want %t", err, gotErr, tc.setErr)
 			}
 
-			gotGA, err := o.ToGA()
+			gotGA, err := obj.ToGA()
 			if gotErr := err != nil; gotErr != tc.gaErr {
 				t.Errorf("ToGA() = %v; gotErr = %t, want %t", err, gotErr, tc.gaErr)
 			}
 			if diff := cmp.Diff(gotGA, tc.wantGA); diff != "" {
 				t.Errorf("ToGA(); -got,+want: %s", diff)
 			}
-			gotAlpha, err := o.ToAlpha()
+			gotAlpha, err := obj.ToAlpha()
 			if gotErr := err != nil; gotErr != tc.alphaErr {
 				t.Errorf("ToAlpha() = %v; gotErr = %t, want %t", err, gotErr, tc.alphaErr)
 			}
 			if diff := cmp.Diff(gotAlpha, tc.wantAlpha); diff != "" {
 				t.Errorf("ToAlpha(); -got,+want: %s", diff)
 			}
-			gotBeta, err := o.ToBeta()
+			gotBeta, err := obj.ToBeta()
 			if gotErr := err != nil; gotErr != tc.betaErr {
 				t.Errorf("ToBeta() = %v; gotErr = %t, want %t", err, gotErr, tc.betaErr)
 			}
 			if diff := cmp.Diff(gotBeta, tc.wantBeta); diff != "" {
 				t.Errorf("ToBeta(); -got,+want: %s", diff)
+			}
+		})
+	}
+}
+
+func TestResourceCheckSchema(t *testing.T) {
+	type st struct {
+		Name            string
+		SelfLink        string
+		I               int
+		NullFields      []string
+		ForceSendFields []string
+	}
+	type stA struct {
+		Name            string
+		SelfLink        string
+		I               int
+		A               int
+		NullFields      []string
+		ForceSendFields []string
+	}
+	type stB struct {
+		Name            string
+		SelfLink        string
+		I               int
+		B               int
+		NullFields      []string
+		ForceSendFields []string
+	}
+	type invalid struct {
+		I               chan int
+		NullFields      []string
+		ForceSendFields []string
+	}
+
+	type checkSchema interface{ CheckSchema() error }
+	for _, tc := range []struct {
+		name    string
+		res     checkSchema
+		wantErr bool
+	}{
+		{
+			name: "valid schema",
+			res:  newTestResource[st, stA, stB](nil),
+		},
+		{
+			name:    "invalid schema",
+			res:     newTestResource[invalid, stA, stB](nil),
+			wantErr: true,
+		},
+		{
+			name:    "invalid schema alpha",
+			res:     newTestResource[st, invalid, stB](nil),
+			wantErr: true,
+		},
+		{
+			name:    "invalid schema beta",
+			res:     newTestResource[st, stA, invalid](nil),
+			wantErr: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.res.CheckSchema()
+			if gotErr := err != nil; gotErr != tc.wantErr {
+				t.Fatalf("CheckSchema() = %v; gotErr = %t, want %t", err, gotErr, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestResourceImpliedVersion(t *testing.T) {
+	type st struct {
+		I               int
+		NullFields      []string
+		ForceSendFields []string
+	}
+	type stA struct {
+		I               int
+		A               int
+		NullFields      []string
+		ForceSendFields []string
+	}
+	type stB struct {
+		I               int
+		B               int
+		NullFields      []string
+		ForceSendFields []string
+	}
+
+	for _, tc := range []struct {
+		name    string
+		ga      *st
+		alpha   *stA
+		beta    *stB
+		wantVer meta.Version
+		wantErr bool
+	}{
+		{
+			name:    "ver ga",
+			ga:      &st{I: 1},
+			wantVer: meta.VersionGA,
+		},
+		{
+			name:    "ver alpha",
+			alpha:   &stA{I: 1, A: 5},
+			wantVer: meta.VersionAlpha,
+		},
+		{
+			name:    "ver beta",
+			beta:    &stB{I: 1, B: 7},
+			wantVer: meta.VersionBeta,
+		},
+		{
+			name:    "ver alpha",
+			ga:      &st{I: 1},
+			alpha:   &stA{I: 1, A: 5},
+			wantVer: meta.VersionAlpha,
+		},
+		{
+			name:    "ver alpha",
+			ga:      &st{I: 1},
+			beta:    &stB{I: 1, B: 5},
+			wantVer: meta.VersionBeta,
+		},
+		{
+			name:    "ver unknown",
+			ga:      &st{I: 1},
+			alpha:   &stA{I: 1, A: 5},
+			beta:    &stB{I: 1, B: 10},
+			wantErr: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			res := newTestResource[st, stA, stB](nil)
+			if tc.ga != nil {
+				res.Set(tc.ga)
+			}
+			if tc.alpha != nil {
+				res.SetAlpha(tc.alpha)
+			}
+			if tc.beta != nil {
+				res.SetBeta(tc.beta)
+			}
+			ver, err := res.ImpliedVersion()
+			if gotErr := err != nil; gotErr != tc.wantErr {
+				t.Fatalf("ImpliedVersion() = %v; gotErr = %t, want %t", err, gotErr, tc.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			if ver != tc.wantVer {
+				t.Errorf("ImpliedVersion() = %v, want %v", ver, tc.wantVer)
+			}
+		})
+	}
+}
+
+func TestResourceTypeTrait(t *testing.T) {
+	type st struct {
+		I int
+	}
+	type stA struct {
+		A int
+	}
+	type stB struct {
+		B int
+	}
+
+	tt := TypeTrait[st, stA, stB](&TypeTraitFuncs[st, stA, stB]{
+		CopyHelperGAtoAlphaF: func(dest *stA, src *st) error {
+			dest.A = src.I + 1
+			return nil
+		},
+		CopyHelperGAtoBetaF: func(dest *stB, src *st) error {
+			dest.B = src.I + 2
+			return nil
+		},
+		CopyHelperAlphaToGAF: func(dest *st, src *stA) error {
+			dest.I = src.A - 1
+			return nil
+		},
+		CopyHelperAlphaToBetaF: func(dest *stB, src *stA) error {
+			dest.B = src.A + 1
+			return nil
+		},
+		CopyHelperBetaToGAF: func(dest *st, src *stB) error {
+			dest.I = src.B - 2
+			return nil
+		},
+		CopyHelperBetaToAlphaF: func(dest *stA, src *stB) error {
+			dest.A = src.B - 1
+			return nil
+		},
+		FieldTraitsF: func(v meta.Version) *FieldTraits {
+			return &FieldTraits{}
+		},
+	})
+
+	for _, tc := range []struct {
+		name  string
+		f     func(r Resource[st, stA, stB])
+		want  st
+		wantA stA
+		wantB stB
+	}{
+		{
+			name:  "set field",
+			f:     func(r Resource[st, stA, stB]) { r.Access(func(x *st) { x.I = 13 }) },
+			want:  st{I: 13},
+			wantA: stA{A: 14},
+			wantB: stB{B: 15},
+		},
+		{
+			name:  "set field alpha",
+			f:     func(r Resource[st, stA, stB]) { r.AccessAlpha(func(x *stA) { x.A = 11 }) },
+			want:  st{I: 10},
+			wantA: stA{A: 11},
+			wantB: stB{B: 12},
+		},
+		{
+			name:  "set field beta",
+			f:     func(r Resource[st, stA, stB]) { r.AccessBeta(func(x *stB) { x.B = 12 }) },
+			want:  st{I: 10},
+			wantA: stA{A: 11},
+			wantB: stB{B: 12},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := newTestResource(tt)
+			tc.f(r)
+			g, _ := r.ToGA()
+			if diff := cmp.Diff(g, &tc.want); diff != "" {
+				t.Errorf("ToGA() -got,+want: %s", diff)
+			}
+			a, _ := r.ToAlpha()
+			if diff := cmp.Diff(a, &tc.wantA); diff != "" {
+				t.Errorf("ToAlpha() -got,+want: %s", diff)
+			}
+			b, _ := r.ToBeta()
+			if diff := cmp.Diff(b, &tc.wantB); diff != "" {
+				t.Errorf("ToBeta() -got,+want: %s", diff)
 			}
 		})
 	}

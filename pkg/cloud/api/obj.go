@@ -19,6 +19,9 @@ package api
 import (
 	"fmt"
 	"reflect"
+
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/meta"
 )
 
 // ConversionContext gives which version => version the error occurred on.
@@ -66,50 +69,100 @@ type conversionErrors struct {
 	missingFields []missingFieldOnCopy
 }
 
-// VersionedObject wraps the standard GA, Alpha, Beta versions of a GCP
-// resource. By accessing the object using Access(), AccessAlpha().
-// AccessBeta(), VersionedObject will ensure that common fields between the
-// versions of the object are in sync.
-type VersionedObject[GA any, Alpha any, Beta any] struct {
+// NewResource constructs a new Resource.
+//
+// If typeTrait is nil, then it will be set to BaseTypeTrait.
+func NewResource[GA any, Alpha any, Beta any](resourceID *cloud.ResourceID, typeTrait TypeTrait[GA, Alpha, Beta]) *resource[GA, Alpha, Beta] {
+	if typeTrait == nil {
+		typeTrait = &BaseTypeTrait[GA, Alpha, Beta]{}
+	}
+
+	obj := &resource[GA, Alpha, Beta]{
+		typeTrait:  typeTrait,
+		resourceID: resourceID,
+	}
+	return obj
+}
+
+// Resource wraps the multi-versioned concrete resources.
+type Resource[GA any, Alpha any, Beta any] interface {
+	CheckSchema() error
+
+	ResourceID() *cloud.ResourceID
+	ImpliedVersion() (meta.Version, error)
+
+	Access(f func(x *GA)) error
+	AccessAlpha(f func(x *Alpha)) error
+	AccessBeta(f func(x *Beta)) error
+
+	Set(src *GA) error
+	SetAlpha(src *Alpha) error
+	SetBeta(src *Beta) error
+
+	ToGA() (*GA, error)
+	ToAlpha() (*Alpha, error)
+	ToBeta() (*Beta, error)
+}
+
+// resource wraps the standard GA, Alpha, Beta versions of a GCP
+// resource. By accessing the resource using Access(), AccessAlpha().
+// AccessBeta(), resource will ensure that common fields between the
+// versions of the resource are in sync.
+type resource[GA any, Alpha any, Beta any] struct {
 	copierOptions []copierOption
+	typeTrait     TypeTrait[GA, Alpha, Beta]
 
 	ga    GA
 	alpha Alpha
 	beta  Beta
 
-	errors [conversionContextCount]conversionErrors
+	resourceID *cloud.ResourceID
+	errors     [conversionContextCount]conversionErrors
 }
 
 // CheckSchema should be called in init() to ensure that the resource being
 // wrapped by VersionedObject meets the assumptions we are making for this the
 // transformations to work.
-func (u *VersionedObject[GA, Alpha, Beta]) CheckSchema() error {
-	err := checkSchema(reflect.TypeOf(u.ga))
+
+func (u *resource[GA, Alpha, Beta]) CheckSchema() error {
+	err := checkSchema(reflect.TypeOf(&u.ga))
 	if err != nil {
 		return err
 	}
-	err = checkSchema(reflect.TypeOf(u.alpha))
+	err = checkSchema(reflect.TypeOf(&u.alpha))
 	if err != nil {
 		return err
 	}
-	err = checkSchema(reflect.TypeOf(u.beta))
+	err = checkSchema(reflect.TypeOf(&u.beta))
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
+// ResourceID is the resource ID of this resource.
+func (u *resource[GA, Alpha, Beta]) ResourceID() *cloud.ResourceID { return u.resourceID }
+
+// TODO: check for full specification, exception of optional parameters.
+
 // Access the mutable object.
-func (u *VersionedObject[GA, Alpha, Beta]) Access(f func(x *GA)) error {
+func (u *resource[GA, Alpha, Beta]) Access(f func(x *GA)) error {
 	f(&u.ga)
 
 	src := reflect.ValueOf(&u.ga)
-
-	c := newCopier(u.copierOptions...)
-	err := c.do(reflect.ValueOf(&u.alpha), src)
+	err := checkPostAccess(u.typeTrait.FieldTraits(meta.VersionGA), src)
 	if err != nil {
 		return err
 	}
+
+	c := newCopier(u.copierOptions...)
+	if err = c.do(reflect.ValueOf(&u.alpha), src); err != nil {
+		return err
+	}
+	if err := u.typeTrait.CopyHelperGAtoAlpha(&u.alpha, &u.ga); err != nil {
+		return err
+	}
+
 	u.errors[GAToAlphaConversion].missingFields = c.missing
 
 	c = newCopier(u.copierOptions...)
@@ -117,58 +170,104 @@ func (u *VersionedObject[GA, Alpha, Beta]) Access(f func(x *GA)) error {
 	if err != nil {
 		return err
 	}
+	if err := u.typeTrait.CopyHelperGAtoBeta(&u.beta, &u.ga); err != nil {
+		return err
+	}
+
 	u.errors[GAToBetaConversion].missingFields = c.missing
 
 	return nil
 }
 
 // AccessAlpha object.
-func (u *VersionedObject[GA, Alpha, Beta]) AccessAlpha(f func(x *Alpha)) error {
+func (u *resource[GA, Alpha, Beta]) AccessAlpha(f func(x *Alpha)) error {
 	f(&u.alpha)
-	src := reflect.ValueOf(&u.alpha)
 
-	c := newCopier(u.copierOptions...)
-	err := c.do(reflect.ValueOf(&u.ga), src)
+	src := reflect.ValueOf(&u.alpha)
+	err := checkPostAccess(u.typeTrait.FieldTraits(meta.VersionAlpha), src)
 	if err != nil {
 		return err
 	}
+
+	c := newCopier(u.copierOptions...)
+	if err := c.do(reflect.ValueOf(&u.ga), src); err != nil {
+		return err
+	}
+	if err := u.typeTrait.CopyHelperAlphaToGA(&u.ga, &u.alpha); err != nil {
+		return err
+	}
+
 	u.errors[AlphaToGAConversion].missingFields = c.missing
 
 	c = newCopier(u.copierOptions...)
-	err = c.do(reflect.ValueOf(&u.beta), src)
-	if err != nil {
+	if err := c.do(reflect.ValueOf(&u.beta), src); err != nil {
 		return err
 	}
+	if err := u.typeTrait.CopyHelperAlphaToBeta(&u.beta, &u.alpha); err != nil {
+		return err
+	}
+
 	u.errors[AlphaToBetaConversion].missingFields = c.missing
 
 	return nil
 }
 
 // AccessBeta object.
-func (u *VersionedObject[GA, Alpha, Beta]) AccessBeta(f func(x *Beta)) error {
+func (u *resource[GA, Alpha, Beta]) AccessBeta(f func(x *Beta)) error {
 	f(&u.beta)
-	src := reflect.ValueOf(&u.beta)
 
-	c := newCopier(u.copierOptions...)
-	err := c.do(reflect.ValueOf(&u.ga), src)
+	src := reflect.ValueOf(&u.beta)
+	err := checkPostAccess(u.typeTrait.FieldTraits(meta.VersionBeta), src)
 	if err != nil {
 		return err
 	}
+
+	c := newCopier(u.copierOptions...)
+	if err := c.do(reflect.ValueOf(&u.ga), src); err != nil {
+		return err
+	}
+	if err := u.typeTrait.CopyHelperBetaToGA(&u.ga, &u.beta); err != nil {
+		return err
+	}
+
 	u.errors[BetaToGAConversion].missingFields = c.missing
 
 	c = newCopier(u.copierOptions...)
-	err = c.do(reflect.ValueOf(&u.alpha), src)
-	if err != nil {
+	if err := c.do(reflect.ValueOf(&u.alpha), src); err != nil {
 		return err
 	}
+	if err := u.typeTrait.CopyHelperBetaToAlpha(&u.alpha, &u.beta); err != nil {
+		return err
+	}
+
 	u.errors[BetaToAlphaConversion].missingFields = c.missing
 
 	return nil
 }
 
+// ImpliedVersion returns the best API version for the set of fields in the
+// object. It will return an error if it is not clear which version should be
+// used without missing configuration.
+func (u *resource[GA, Alpha, Beta]) ImpliedVersion() (meta.Version, error) {
+	_, gaErr := u.ToGA()
+	_, alphaErr := u.ToAlpha()
+	_, betaErr := u.ToBeta()
+
+	switch {
+	case gaErr == nil && alphaErr == nil && betaErr == nil:
+		return meta.VersionGA, nil
+	case gaErr != nil && alphaErr == nil && betaErr != nil:
+		return meta.VersionAlpha, nil
+	case gaErr != nil && alphaErr != nil && betaErr == nil:
+		return meta.VersionBeta, nil
+	default:
+		return meta.VersionGA, fmt.Errorf("indeterminant version (ga=%v, alpha=%v, beta=%v)", gaErr, alphaErr, betaErr)
+	}
+}
+
 // ToGA returns the GA version of this object. Use error.As ConversionError to
 // get the specific details.
-func (u *VersionedObject[GA, Alpha, Beta]) ToGA() (*GA, error) {
+func (u *resource[GA, Alpha, Beta]) ToGA() (*GA, error) {
 	var errs ConversionError
 	for _, cc := range []ConversionContext{AlphaToGAConversion, BetaToGAConversion} {
 		for _, mf := range u.errors[cc].missingFields {
@@ -187,7 +286,7 @@ func (u *VersionedObject[GA, Alpha, Beta]) ToGA() (*GA, error) {
 
 // ToAlpha returns the Alpha version of this object. Use error.As
 // ConversionError to get the specific details.
-func (u *VersionedObject[GA, Alpha, Beta]) ToAlpha() (*Alpha, error) {
+func (u *resource[GA, Alpha, Beta]) ToAlpha() (*Alpha, error) {
 	var errs ConversionError
 	for _, cc := range []ConversionContext{GAToAlphaConversion, BetaToAlphaConversion} {
 		for _, mf := range u.errors[cc].missingFields {
@@ -206,7 +305,7 @@ func (u *VersionedObject[GA, Alpha, Beta]) ToAlpha() (*Alpha, error) {
 
 // ToBeta returns the Beta version of this object. Use error.As ConversionError
 // to get the specific details.
-func (u *VersionedObject[GA, Alpha, Beta]) ToBeta() (*Beta, error) {
+func (u *resource[GA, Alpha, Beta]) ToBeta() (*Beta, error) {
 	var errs ConversionError
 	for _, cc := range []ConversionContext{GAToBetaConversion, AlphaToBetaConversion} {
 		for _, mf := range u.errors[cc].missingFields {
@@ -224,7 +323,8 @@ func (u *VersionedObject[GA, Alpha, Beta]) ToBeta() (*Beta, error) {
 }
 
 // Set the value to src.
-func (u *VersionedObject[GA, Alpha, Beta]) Set(src *GA) error {
+func (u *resource[GA, Alpha, Beta]) Set(src *GA) error {
+	// TODO: this skips the field validation.
 	var err error
 	u.Access(func(dest *GA) {
 		c := newCopier(u.copierOptions...)
@@ -234,7 +334,8 @@ func (u *VersionedObject[GA, Alpha, Beta]) Set(src *GA) error {
 }
 
 // SetAlpha the value to src.
-func (u *VersionedObject[GA, Alpha, Beta]) SetAlpha(src *Alpha) error {
+func (u *resource[GA, Alpha, Beta]) SetAlpha(src *Alpha) error {
+	// TODO: this skips the field validation.
 	var err error
 	u.AccessAlpha(func(dest *Alpha) {
 		c := newCopier(u.copierOptions...)
@@ -244,7 +345,8 @@ func (u *VersionedObject[GA, Alpha, Beta]) SetAlpha(src *Alpha) error {
 }
 
 // SetBeta the value to src.
-func (u *VersionedObject[GA, Alpha, Beta]) SetBeta(src *Beta) error {
+func (u *resource[GA, Alpha, Beta]) SetBeta(src *Beta) error {
+	// TODO: this skips the field validation.
 	var err error
 	u.AccessBeta(func(dest *Beta) {
 		c := newCopier(u.copierOptions...)

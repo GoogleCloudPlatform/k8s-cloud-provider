@@ -23,6 +23,8 @@ import (
 )
 
 func TestFill(t *testing.T) {
+	t.Parallel()
+
 	type inner struct {
 		I int
 	}

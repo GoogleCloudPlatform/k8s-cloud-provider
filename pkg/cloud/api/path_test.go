@@ -22,6 +22,8 @@ import (
 )
 
 func TestPath(t *testing.T) {
+	t.Parallel()
+
 	var p Path
 
 	// Order of test cases matters as these build on each other.
@@ -44,6 +46,8 @@ func TestPath(t *testing.T) {
 }
 
 func TestPathEqual(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		a, b Path
 		want bool
@@ -64,6 +68,8 @@ func TestPathEqual(t *testing.T) {
 }
 
 func TestPathHasPrefix(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		a, b Path
 		want bool
@@ -91,6 +97,8 @@ func TestPathHasPrefix(t *testing.T) {
 }
 
 func TestResolveType(t *testing.T) {
+	t.Parallel()
+
 	type st struct {
 		A int
 		B []string

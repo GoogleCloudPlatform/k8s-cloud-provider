@@ -23,6 +23,8 @@ import (
 )
 
 func TestDiff(t *testing.T) {
+	t.Parallel()
+
 	type sti struct {
 		I  int
 		LS []string

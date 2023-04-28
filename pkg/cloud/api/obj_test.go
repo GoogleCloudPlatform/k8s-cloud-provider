@@ -68,6 +68,8 @@ func (testTrait[G, A, B]) FieldTraits(meta.Version) *FieldTraits {
 }
 
 func TestResourceToX(t *testing.T) {
+	t.Parallel()
+
 	type inner struct{ I int }
 	type innerA struct {
 		I int
@@ -483,6 +485,8 @@ func TestResourceToX(t *testing.T) {
 }
 
 func TestResourceMissingFields(t *testing.T) {
+	t.Parallel()
+
 	// Test that the missing fields is correct after a sequence of edits at
 	// different API versions.
 	type ga struct{ A int }
@@ -523,6 +527,8 @@ func TestResourceMissingFields(t *testing.T) {
 }
 
 func TestResourceMissingMetaFields(t *testing.T) {
+	t.Parallel()
+
 	// Test that the missing fields is correct after a sequence of edits at
 	// different API versions. Field is specified using a metafield.
 
@@ -576,6 +582,8 @@ func TestResourceMissingMetaFields(t *testing.T) {
 }
 
 func TestResourceSetX(t *testing.T) {
+	t.Parallel()
+
 	type ga struct{ A int }
 	type al struct{ A, B, C int }
 	type be struct{ A, B, D int }
@@ -659,6 +667,8 @@ func TestResourceSetX(t *testing.T) {
 }
 
 func TestResourceCheckSchema(t *testing.T) {
+	t.Parallel()
+
 	type st struct {
 		Name            string
 		SelfLink        string
@@ -724,6 +734,8 @@ func TestResourceCheckSchema(t *testing.T) {
 }
 
 func TestResourceImpliedVersion(t *testing.T) {
+	t.Parallel()
+
 	type st struct {
 		I               int
 		NullFields      []string
@@ -811,6 +823,8 @@ func TestResourceImpliedVersion(t *testing.T) {
 }
 
 func TestResourceTypeTrait(t *testing.T) {
+	t.Parallel()
+
 	type st struct {
 		I int
 	}

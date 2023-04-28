@@ -22,6 +22,8 @@ import (
 )
 
 func TestTypeIs(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		val  any
 		pl   []kindPredicate
@@ -56,6 +58,8 @@ func TestTypeIs(t *testing.T) {
 }
 
 func TestTypeIsShortcuts(t *testing.T) {
+	t.Parallel()
+
 	intVal := 42
 
 	for _, tc := range []struct {

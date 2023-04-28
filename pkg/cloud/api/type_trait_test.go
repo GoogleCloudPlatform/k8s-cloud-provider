@@ -24,6 +24,8 @@ import (
 )
 
 func TestFieldTraits(t *testing.T) {
+	t.Parallel()
+
 	type sti struct {
 		I  int
 		LS []string
@@ -118,6 +120,8 @@ func TestFieldTraits(t *testing.T) {
 }
 
 func TestFieldTraitsClone(t *testing.T) {
+	t.Parallel()
+
 	dt := &FieldTraits{}
 	dt.OutputOnly(Path{}.Pointer().Field("A"))
 
@@ -128,6 +132,8 @@ func TestFieldTraitsClone(t *testing.T) {
 }
 
 func TestFieldTraitsCheckSchema(t *testing.T) {
+	t.Parallel()
+
 	type st struct {
 		A int
 		S struct {

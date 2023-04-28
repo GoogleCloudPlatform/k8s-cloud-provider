@@ -22,6 +22,8 @@ import (
 )
 
 func TestCheckFieldsAreSet(t *testing.T) {
+	t.Parallel()
+
 	type sti struct {
 		A               int
 		NullFields      []string
@@ -137,6 +139,8 @@ type rec2 struct{ R *rec2i }
 type rec2i struct{ R *rec2 }
 
 func TestCheckNoCycles(t *testing.T) {
+	t.Parallel()
+
 	type innerSt struct{}
 	type okSt struct {
 		ST  innerSt
@@ -168,6 +172,8 @@ func TestCheckNoCycles(t *testing.T) {
 }
 
 func TestCheckResourceTypes(t *testing.T) {
+	t.Parallel()
+
 	type innerSt struct{}
 	type okSt struct {
 		I   int
@@ -225,6 +231,8 @@ func TestCheckResourceTypes(t *testing.T) {
 }
 
 func TestCheckSchema(t *testing.T) {
+	t.Parallel()
+
 	type innerSt struct{}
 	type okSt struct {
 		Name     string

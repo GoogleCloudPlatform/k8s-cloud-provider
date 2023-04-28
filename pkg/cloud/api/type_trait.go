@@ -44,7 +44,7 @@ type TypeTrait[GA any, Alpha any, Beta any] interface {
 // reduce verbosity when creating a custom TypeTrait.
 type BaseTypeTrait[GA any, Alpha any, Beta any] struct{}
 
-// noTypeTrait implements TypeTrait.
+// Implements TypeTrait.
 func (*BaseTypeTrait[GA, Alpha, Beta]) CopyHelperGAtoAlpha(dest *Alpha, src *GA) error { return nil }
 func (*BaseTypeTrait[GA, Alpha, Beta]) CopyHelperGAtoBeta(dest *Beta, src *GA) error   { return nil }
 func (*BaseTypeTrait[GA, Alpha, Beta]) CopyHelperAlphaToGA(dest *GA, src *Alpha) error { return nil }
@@ -67,6 +67,61 @@ func NewFieldTraits() *FieldTraits {
 			},
 		},
 	}
+}
+
+// TypeTraitFuncs is a TypeTrait that takes func instead of defining an interface.
+type TypeTraitFuncs[GA any, Alpha any, Beta any] struct {
+	CopyHelperGAtoAlphaF   func(dest *Alpha, src *GA) error
+	CopyHelperGAtoBetaF    func(dest *Beta, src *GA) error
+	CopyHelperAlphaToGAF   func(dest *GA, src *Alpha) error
+	CopyHelperAlphaToBetaF func(dest *Beta, src *Alpha) error
+	CopyHelperBetaToGAF    func(dest *GA, src *Beta) error
+	CopyHelperBetaToAlphaF func(dest *Alpha, src *Beta) error
+	FieldTraitsF           func(meta.Version) *FieldTraits
+}
+
+// Implements TypeTrait.
+func (f *TypeTraitFuncs[GA, Alpha, Beta]) CopyHelperGAtoAlpha(dest *Alpha, src *GA) error {
+	if f.CopyHelperGAtoAlphaF == nil {
+		return nil
+	}
+	return f.CopyHelperGAtoAlphaF(dest, src)
+}
+func (f *TypeTraitFuncs[GA, Alpha, Beta]) CopyHelperGAtoBeta(dest *Beta, src *GA) error {
+	if f.CopyHelperGAtoBetaF == nil {
+		return nil
+	}
+	return f.CopyHelperGAtoBetaF(dest, src)
+}
+func (f *TypeTraitFuncs[GA, Alpha, Beta]) CopyHelperAlphaToGA(dest *GA, src *Alpha) error {
+	if f.CopyHelperAlphaToGAF == nil {
+		return nil
+	}
+	return f.CopyHelperAlphaToGAF(dest, src)
+}
+func (f *TypeTraitFuncs[GA, Alpha, Beta]) CopyHelperAlphaToBeta(dest *Beta, src *Alpha) error {
+	if f.CopyHelperAlphaToBetaF == nil {
+		return nil
+	}
+	return f.CopyHelperAlphaToBetaF(dest, src)
+}
+func (f *TypeTraitFuncs[GA, Alpha, Beta]) CopyHelperBetaToGA(dest *GA, src *Beta) error {
+	if f.CopyHelperBetaToGAF == nil {
+		return nil
+	}
+	return f.CopyHelperBetaToGAF(dest, src)
+}
+func (f *TypeTraitFuncs[GA, Alpha, Beta]) CopyHelperBetaToAlpha(dest *Alpha, src *Beta) error {
+	if f.CopyHelperBetaToAlphaF == nil {
+		return nil
+	}
+	return f.CopyHelperBetaToAlphaF(dest, src)
+}
+func (f *TypeTraitFuncs[GA, Alpha, Beta]) FieldTraits(v meta.Version) *FieldTraits {
+	if f.FieldTraitsF == nil {
+		return &FieldTraits{}
+	}
+	return f.FieldTraitsF(v)
 }
 
 // FieldTraits are the features and behavior for fields in the resource.

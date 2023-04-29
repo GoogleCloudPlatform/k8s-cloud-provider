@@ -34,6 +34,8 @@ func testCopier(t *testing.T) *copier {
 }
 
 func TestCopyBasic(t *testing.T) {
+	t.Parallel()
+
 	v := reflect.ValueOf
 
 	var (
@@ -86,6 +88,8 @@ func TestCopyBasic(t *testing.T) {
 }
 
 func TestCopyPointer(t *testing.T) {
+	t.Parallel()
+
 	v := reflect.ValueOf
 
 	type stt struct {
@@ -167,6 +171,8 @@ func TestCopyPointer(t *testing.T) {
 }
 
 func TestCopySlice(t *testing.T) {
+	t.Parallel()
+
 	newI := func(x int) *int { return &x }
 	v := reflect.ValueOf
 
@@ -246,6 +252,8 @@ func TestCopySlice(t *testing.T) {
 }
 
 func TestCopyStruct(t *testing.T) {
+	t.Parallel()
+
 	newI := func(x int) *int { return &x }
 	v := reflect.ValueOf
 
@@ -363,6 +371,8 @@ func TestCopyStruct(t *testing.T) {
 }
 
 func TestCopyMap(t *testing.T) {
+	t.Parallel()
+
 	type st struct{ I int }
 
 	v := reflect.ValueOf
@@ -453,6 +463,8 @@ func TestCopyMap(t *testing.T) {
 }
 
 func TestCopyMetaFields(t *testing.T) {
+	t.Parallel()
+
 	type st1 struct {
 		SomeField    string
 		St1OnlyField string

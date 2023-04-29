@@ -86,28 +86,50 @@ func NewResource[GA any, Alpha any, Beta any](resourceID *cloud.ResourceID, type
 
 // Resource wraps the multi-versioned concrete resources.
 type Resource[GA any, Alpha any, Beta any] interface {
+	// CheckSchema should be called in init() to ensure that the resource being
+	// wrapped meets the assumptions we are making for this the transformations
+	// to work.
 	CheckSchema() error
 
+	// ResourceID is the resource ID of this resource.
 	ResourceID() *cloud.ResourceID
+
+	// ImpliedVersion returns the best API version for the set of
+	// fields in the resource. It will return an error if it is not
+	// clear which version should be used without missing
+	// configuration.
 	ImpliedVersion() (meta.Version, error)
 
+	// Access the mutable resource.
 	Access(f func(x *GA)) error
+	// AccessAlpha resource.
 	AccessAlpha(f func(x *Alpha)) error
+	// AccessBeta resource.
 	AccessBeta(f func(x *Beta)) error
 
+	// ToGA returns the GA version of this resource. Use error.As
+	// ConversionError to get the specific details.
+	ToGA() (*GA, error)
+	// ToAlpha returns the Alpha version of this resource. Use
+	// error.As ConversionError to get the specific details.
+	ToAlpha() (*Alpha, error)
+	// ToBeta returns the Beta version of this resource. Use
+	// error.As ConversionError to get the specific details.
+	ToBeta() (*Beta, error)
+
+	// Set the value to src.
 	Set(src *GA) error
+	// SetAlpha the value to src.
 	SetAlpha(src *Alpha) error
+	// SetBeta the value to src.
 	SetBeta(src *Beta) error
 
-	ToGA() (*GA, error)
-	ToAlpha() (*Alpha, error)
-	ToBeta() (*Beta, error)
+	// Freeze the resource to a read-only copy. It is an error if it is ambiguous
+	// which version is the correct one i.e. not all fields can be represented in a
+	// single version of the resource.
+	Freeze() (FrozenResource[GA, Alpha, Beta], error)
 }
 
-// resource wraps the standard GA, Alpha, Beta versions of a GCP
-// resource. By accessing the resource using Access(), AccessAlpha().
-// AccessBeta(), resource will ensure that common fields between the
-// versions of the resource are in sync.
 type resource[GA any, Alpha any, Beta any] struct {
 	copierOptions []copierOption
 	typeTrait     TypeTrait[GA, Alpha, Beta]
@@ -119,10 +141,6 @@ type resource[GA any, Alpha any, Beta any] struct {
 	resourceID *cloud.ResourceID
 	errors     [conversionContextCount]conversionErrors
 }
-
-// CheckSchema should be called in init() to ensure that the resource being
-// wrapped by VersionedObject meets the assumptions we are making for this the
-// transformations to work.
 
 func (u *resource[GA, Alpha, Beta]) CheckSchema() error {
 	err := checkSchema(reflect.TypeOf(&u.ga))
@@ -140,12 +158,8 @@ func (u *resource[GA, Alpha, Beta]) CheckSchema() error {
 	return nil
 }
 
-// ResourceID is the resource ID of this resource.
 func (u *resource[GA, Alpha, Beta]) ResourceID() *cloud.ResourceID { return u.resourceID }
 
-// TODO: check for full specification, exception of optional parameters.
-
-// Access the mutable object.
 func (u *resource[GA, Alpha, Beta]) Access(f func(x *GA)) error {
 	f(&u.ga)
 
@@ -179,7 +193,6 @@ func (u *resource[GA, Alpha, Beta]) Access(f func(x *GA)) error {
 	return nil
 }
 
-// AccessAlpha object.
 func (u *resource[GA, Alpha, Beta]) AccessAlpha(f func(x *Alpha)) error {
 	f(&u.alpha)
 
@@ -212,7 +225,6 @@ func (u *resource[GA, Alpha, Beta]) AccessAlpha(f func(x *Alpha)) error {
 	return nil
 }
 
-// AccessBeta object.
 func (u *resource[GA, Alpha, Beta]) AccessBeta(f func(x *Beta)) error {
 	f(&u.beta)
 
@@ -245,9 +257,6 @@ func (u *resource[GA, Alpha, Beta]) AccessBeta(f func(x *Beta)) error {
 	return nil
 }
 
-// ImpliedVersion returns the best API version for the set of fields in the
-// object. It will return an error if it is not clear which version should be
-// used without missing configuration.
 func (u *resource[GA, Alpha, Beta]) ImpliedVersion() (meta.Version, error) {
 	_, gaErr := u.ToGA()
 	_, alphaErr := u.ToAlpha()
@@ -265,8 +274,6 @@ func (u *resource[GA, Alpha, Beta]) ImpliedVersion() (meta.Version, error) {
 	}
 }
 
-// ToGA returns the GA version of this object. Use error.As ConversionError to
-// get the specific details.
 func (u *resource[GA, Alpha, Beta]) ToGA() (*GA, error) {
 	var errs ConversionError
 	for _, cc := range []ConversionContext{AlphaToGAConversion, BetaToGAConversion} {
@@ -284,8 +291,6 @@ func (u *resource[GA, Alpha, Beta]) ToGA() (*GA, error) {
 	return &u.ga, nil
 }
 
-// ToAlpha returns the Alpha version of this object. Use error.As
-// ConversionError to get the specific details.
 func (u *resource[GA, Alpha, Beta]) ToAlpha() (*Alpha, error) {
 	var errs ConversionError
 	for _, cc := range []ConversionContext{GAToAlphaConversion, BetaToAlphaConversion} {
@@ -303,8 +308,6 @@ func (u *resource[GA, Alpha, Beta]) ToAlpha() (*Alpha, error) {
 	return &u.alpha, nil
 }
 
-// ToBeta returns the Beta version of this object. Use error.As ConversionError
-// to get the specific details.
 func (u *resource[GA, Alpha, Beta]) ToBeta() (*Beta, error) {
 	var errs ConversionError
 	for _, cc := range []ConversionContext{GAToBetaConversion, AlphaToBetaConversion} {
@@ -322,7 +325,6 @@ func (u *resource[GA, Alpha, Beta]) ToBeta() (*Beta, error) {
 	return &u.beta, nil
 }
 
-// Set the value to src.
 func (u *resource[GA, Alpha, Beta]) Set(src *GA) error {
 	// TODO: this skips the field validation.
 	var err error
@@ -333,7 +335,6 @@ func (u *resource[GA, Alpha, Beta]) Set(src *GA) error {
 	return err
 }
 
-// SetAlpha the value to src.
 func (u *resource[GA, Alpha, Beta]) SetAlpha(src *Alpha) error {
 	// TODO: this skips the field validation.
 	var err error
@@ -344,7 +345,6 @@ func (u *resource[GA, Alpha, Beta]) SetAlpha(src *Alpha) error {
 	return err
 }
 
-// SetBeta the value to src.
 func (u *resource[GA, Alpha, Beta]) SetBeta(src *Beta) error {
 	// TODO: this skips the field validation.
 	var err error
@@ -353,4 +353,42 @@ func (u *resource[GA, Alpha, Beta]) SetBeta(src *Beta) error {
 		err = c.do(reflect.ValueOf(dest), reflect.ValueOf(src))
 	})
 	return err
+}
+
+func (u *resource[GA, Alpha, Beta]) Freeze() (FrozenResource[GA, Alpha, Beta], error) {
+	ver, err := u.ImpliedVersion()
+	if err != nil {
+		return nil, err
+	}
+	// For the structures in the other versions, fill in
+	// zero-valued fields in the metafields. This ensures that if
+	// the resource can be diff'd and sync'd correctly in all
+	// versions.
+	//
+	// Example:
+	//
+	// - Beta has an extra field "*Feature1" that is not in GA.
+	// - We determine that the version stored on the server is the
+	//   Beta version, so we do a diff with beta structs -- which
+	//   results in a diff and update.
+	// - At this point, we need to set NullFields = ["Feature1"],
+	//   otherwise the update will ignore the field.
+
+	if ver != meta.VersionGA {
+		if err := fillNullAndForceSend(u.typeTrait.FieldTraits(meta.VersionGA), reflect.ValueOf(&u.ga)); err != nil {
+			return nil, err
+		}
+	}
+	if ver != meta.VersionAlpha {
+		if err := fillNullAndForceSend(u.typeTrait.FieldTraits(meta.VersionAlpha), reflect.ValueOf(&u.alpha)); err != nil {
+			return nil, err
+		}
+	}
+	if ver != meta.VersionBeta {
+		if err := fillNullAndForceSend(u.typeTrait.FieldTraits(meta.VersionBeta), reflect.ValueOf(&u.beta)); err != nil {
+			return nil, err
+		}
+	}
+
+	return &frozenResource[GA, Alpha, Beta]{x: u, ver: ver}, nil
 }

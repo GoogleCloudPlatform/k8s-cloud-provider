@@ -40,7 +40,7 @@ type testTrait[G any, A any, B any] struct {
 
 func (testTrait[G, A, B]) FieldTraits(meta.Version) *FieldTraits {
 	ret := &FieldTraits{}
-
+	// This avoids very verbose test cases.
 	ret.AllowZeroValue(Path{}.Pointer().Field("I"))
 	ret.AllowZeroValue(Path{}.Pointer().Field("S"))
 	ret.AllowZeroValue(Path{}.Pointer().Field("F"))
@@ -68,15 +68,25 @@ func (testTrait[G, A, B]) FieldTraits(meta.Version) *FieldTraits {
 }
 
 func TestResourceToX(t *testing.T) {
-	type inner struct{ I int }
+	t.Parallel()
+
+	type inner struct {
+		I               int
+		NullFields      []string
+		ForceSendFields []string
+	}
 	type innerA struct {
-		I int
-		A string
+		I               int
+		A               string
+		NullFields      []string
+		ForceSendFields []string
 	}
 
 	type innerB struct {
-		I int
-		B string
+		I               int
+		B               string
+		NullFields      []string
+		ForceSendFields []string
 	}
 
 	type st struct {
@@ -483,37 +493,51 @@ func TestResourceToX(t *testing.T) {
 }
 
 func TestResourceMissingFields(t *testing.T) {
+	t.Parallel()
+
 	// Test that the missing fields is correct after a sequence of edits at
 	// different API versions.
-	type ga struct{ A int }
-	type alph struct{ A, B int }
-	type beta struct{ A int }
-	type vo = resource[ga, alph, beta]
+	type ga struct {
+		A               int
+		NullFields      []string
+		ForceSendFields []string
+	}
+	type alph struct {
+		A, B            int
+		NullFields      []string
+		ForceSendFields []string
+	}
+	type beta struct {
+		A               int
+		NullFields      []string
+		ForceSendFields []string
+	}
+	type resType = resource[ga, alph, beta]
 
-	obj := newTestResource[ga, alph, beta](nil)
+	res := newTestResource[ga, alph, beta](nil)
 
 	// Set x.B, only available in the Alpha version of the API.
-	obj.AccessAlpha(func(x *alph) { x.B = 20 })
+	res.AccessAlpha(func(x *alph) { x.B = 20 })
 	// The following should not overwrite the missing field information of B.
-	obj.Access(func(x *ga) { x.A = 10 })
-	obj.AccessBeta(func(x *beta) { x.A = 12 })
-	obj.AccessAlpha(func(x *alph) { x.A = 15 })
+	res.Access(func(x *ga) { x.A = 10 })
+	res.AccessBeta(func(x *beta) { x.A = 12 })
+	res.AccessAlpha(func(x *alph) { x.A = 15 })
 
-	gaResult, err := obj.ToGA()
+	gaResult, err := res.ToGA()
 	if diff := cmp.Diff(gaResult, &ga{A: 15}); diff != "" {
 		t.Errorf("ToGA(); -got,+want: %s", diff)
 	}
 	if err == nil {
 		t.Error("ToGA() = nil, want error")
 	}
-	aResult, err := obj.ToAlpha()
+	aResult, err := res.ToAlpha()
 	if diff := cmp.Diff(aResult, &alph{A: 15, B: 20}); diff != "" {
 		t.Errorf("ToAlpha(); -got,+want: %s", diff)
 	}
 	if err != nil {
 		t.Errorf("ToAlpha() = %v, want nil", err)
 	}
-	bResult, err := obj.ToBeta()
+	bResult, err := res.ToBeta()
 	if diff := cmp.Diff(bResult, &beta{A: 15}); diff != "" {
 		t.Errorf("ToBeta(); -got,+want: %s", diff)
 	}
@@ -523,39 +547,44 @@ func TestResourceMissingFields(t *testing.T) {
 }
 
 func TestResourceMissingMetaFields(t *testing.T) {
+	t.Parallel()
+
 	// Test that the missing fields is correct after a sequence of edits at
 	// different API versions. Field is specified using a metafield.
 
 	type ga struct {
 		A               int
+		NullFields      []string
 		ForceSendFields []string
 	}
 	type alph struct {
 		A, B            int
+		NullFields      []string
 		ForceSendFields []string
 	}
 	type beta struct {
 		A               int
+		NullFields      []string
 		ForceSendFields []string
 	}
-	type vo = resource[ga, alph, beta]
-	obj := newTestResource[ga, alph, beta](nil)
+	type resType = resource[ga, alph, beta]
+	res := newTestResource[ga, alph, beta](nil)
 
 	// Set x.B, only available in the Alpha version of the API.
-	obj.AccessAlpha(func(x *alph) { x.ForceSendFields = []string{"B"} })
+	res.AccessAlpha(func(x *alph) { x.ForceSendFields = []string{"B"} })
 	// The following should not overwrite the missing field information of B.
-	obj.Access(func(x *ga) { x.A = 10 })
-	obj.AccessBeta(func(x *beta) { x.A = 12 })
-	obj.AccessAlpha(func(x *alph) { x.A = 15 })
+	res.Access(func(x *ga) { x.A = 10 })
+	res.AccessBeta(func(x *beta) { x.A = 12 })
+	res.AccessAlpha(func(x *alph) { x.A = 15 })
 
-	gaResult, err := obj.ToGA()
+	gaResult, err := res.ToGA()
 	if diff := cmp.Diff(gaResult, &ga{A: 15}); diff != "" {
 		t.Errorf("ToGA(); -got,+want: %s", diff)
 	}
 	if err == nil {
 		t.Error("ToGA() = nil, want error")
 	}
-	aResult, err := obj.ToAlpha()
+	aResult, err := res.ToAlpha()
 	if diff := cmp.Diff(aResult, &alph{
 		A:               15,
 		B:               0,
@@ -566,7 +595,7 @@ func TestResourceMissingMetaFields(t *testing.T) {
 	if err != nil {
 		t.Errorf("ToAlpha() = %v, want nil", err)
 	}
-	bResult, err := obj.ToBeta()
+	bResult, err := res.ToBeta()
 	if diff := cmp.Diff(bResult, &beta{A: 15}); diff != "" {
 		t.Errorf("ToBeta(); -got,+want: %s", diff)
 	}
@@ -576,10 +605,24 @@ func TestResourceMissingMetaFields(t *testing.T) {
 }
 
 func TestResourceSetX(t *testing.T) {
-	type ga struct{ A int }
-	type al struct{ A, B, C int }
-	type be struct{ A, B, D int }
-	type vo = resource[ga, al, be]
+	t.Parallel()
+
+	type ga struct {
+		A               int
+		NullFields      []string
+		ForceSendFields []string
+	}
+	type al struct {
+		A, B, C         int
+		NullFields      []string
+		ForceSendFields []string
+	}
+	type be struct {
+		A, B, D         int
+		NullFields      []string
+		ForceSendFields []string
+	}
+	type res = resource[ga, al, be]
 
 	for _, tc := range []struct {
 		name      string
@@ -618,36 +661,36 @@ func TestResourceSetX(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			obj := newTestResource[ga, al, be](nil)
+			res := newTestResource[ga, al, be](nil)
 
 			var err error
 			switch src := tc.src.(type) {
 			case *ga:
-				err = obj.Set(src)
+				err = res.Set(src)
 			case *al:
-				err = obj.SetAlpha(src)
+				err = res.SetAlpha(src)
 			case *be:
-				err = obj.SetBeta(src)
+				err = res.SetBeta(src)
 			}
 			if gotErr := err != nil; gotErr != tc.setErr {
 				t.Errorf("Set*() = %v; gotErr = %t, want %t", err, gotErr, tc.setErr)
 			}
 
-			gotGA, err := obj.ToGA()
+			gotGA, err := res.ToGA()
 			if gotErr := err != nil; gotErr != tc.gaErr {
 				t.Errorf("ToGA() = %v; gotErr = %t, want %t", err, gotErr, tc.gaErr)
 			}
 			if diff := cmp.Diff(gotGA, tc.wantGA); diff != "" {
 				t.Errorf("ToGA(); -got,+want: %s", diff)
 			}
-			gotAlpha, err := obj.ToAlpha()
+			gotAlpha, err := res.ToAlpha()
 			if gotErr := err != nil; gotErr != tc.alphaErr {
 				t.Errorf("ToAlpha() = %v; gotErr = %t, want %t", err, gotErr, tc.alphaErr)
 			}
 			if diff := cmp.Diff(gotAlpha, tc.wantAlpha); diff != "" {
 				t.Errorf("ToAlpha(); -got,+want: %s", diff)
 			}
-			gotBeta, err := obj.ToBeta()
+			gotBeta, err := res.ToBeta()
 			if gotErr := err != nil; gotErr != tc.betaErr {
 				t.Errorf("ToBeta() = %v; gotErr = %t, want %t", err, gotErr, tc.betaErr)
 			}
@@ -659,6 +702,8 @@ func TestResourceSetX(t *testing.T) {
 }
 
 func TestResourceCheckSchema(t *testing.T) {
+	t.Parallel()
+
 	type st struct {
 		Name            string
 		SelfLink        string
@@ -724,6 +769,8 @@ func TestResourceCheckSchema(t *testing.T) {
 }
 
 func TestResourceImpliedVersion(t *testing.T) {
+	t.Parallel()
+
 	type st struct {
 		I               int
 		NullFields      []string
@@ -811,14 +858,22 @@ func TestResourceImpliedVersion(t *testing.T) {
 }
 
 func TestResourceTypeTrait(t *testing.T) {
+	t.Parallel()
+
 	type st struct {
-		I int
+		I               int
+		NullFields      []string
+		ForceSendFields []string
 	}
 	type stA struct {
-		A int
+		A               int
+		NullFields      []string
+		ForceSendFields []string
 	}
 	type stB struct {
-		B int
+		B               int
+		NullFields      []string
+		ForceSendFields []string
 	}
 
 	tt := TypeTrait[st, stA, stB](&TypeTraitFuncs[st, stA, stB]{

@@ -25,6 +25,8 @@ import (
 )
 
 func TestVisit(t *testing.T) {
+	t.Parallel()
+
 	trace := map[string]string{}
 	recordFn := func(p Path, v reflect.Value) (bool, error) {
 		trace[p.String()] = fmt.Sprint(v)

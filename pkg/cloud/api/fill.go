@@ -19,6 +19,7 @@ package api
 import (
 	"fmt"
 	"reflect"
+	"sort"
 )
 
 func staticFiller(t reflect.Type, p Path) any {
@@ -154,4 +155,51 @@ func (f *filler) doMap(p Path, v reflect.Value) (bool, error) {
 	// Returning true will cause the visitor to descend into the
 	// map and fill it with values.
 	return true, nil
+}
+
+func fillNullAndForceSend(traits *FieldTraits, v reflect.Value) error {
+	acc := newAcceptorFuncs()
+	acc.onStructF = func(p Path, v reflect.Value) (bool, error) {
+		acc, err := newMetafieldAccessor(v)
+		if err != nil {
+			return false, fmt.Errorf("fillNullAndForceSend: %w", err)
+		}
+
+		nullFields := acc.null()
+		forceSendFields := acc.forceSend()
+
+		for i := 0; i < v.NumField(); i++ {
+			ft := v.Type().Field(i)
+			if ft.Name == "NullFields" || ft.Name == "ForceSendFields" {
+				continue
+			}
+			fType := traits.fieldType(p.Field(ft.Name))
+			fv := v.Field(i)
+
+			if fType == FieldTypeOrdinary {
+				switch {
+				case fv.IsZero() && fv.Type().Kind() == reflect.Pointer:
+					nullFields[ft.Name] = true
+				case fv.IsZero():
+					forceSendFields[ft.Name] = true
+				}
+			}
+		}
+
+		set := func(m map[string]bool, d reflect.Value) {
+			var sl []string
+			for k := range m {
+				sl = append(sl, k)
+			}
+			sort.Strings(sl)
+			d.Set(reflect.ValueOf(sl))
+		}
+
+		set(nullFields, v.FieldByName(nullFieldsName))
+		set(forceSendFields, v.FieldByName(forceSendFieldsName))
+
+		return true, nil
+	}
+
+	return visit(v, acc)
 }

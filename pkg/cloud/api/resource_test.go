@@ -659,6 +659,13 @@ func TestResourceSetX(t *testing.T) {
 			gaErr:     true,
 			alphaErr:  true,
 		},
+		{
+			name:      "Set will ignore errors: zero fields not ForceSendFields",
+			src:       &ga{},
+			wantGA:    &ga{},
+			wantAlpha: &al{},
+			wantBeta:  &be{},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			res := newTestResource[ga, al, be](nil)

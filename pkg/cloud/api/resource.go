@@ -72,7 +72,10 @@ type conversionErrors struct {
 // NewResource constructs a new Resource.
 //
 // If typeTrait is nil, then it will be set to BaseTypeTrait.
-func NewResource[GA any, Alpha any, Beta any](resourceID *cloud.ResourceID, typeTrait TypeTrait[GA, Alpha, Beta]) *resource[GA, Alpha, Beta] {
+func NewResource[GA any, Alpha any, Beta any](
+	resourceID *cloud.ResourceID,
+	typeTrait TypeTrait[GA, Alpha, Beta],
+) *resource[GA, Alpha, Beta] {
 	if typeTrait == nil {
 		typeTrait = &BaseTypeTrait[GA, Alpha, Beta]{}
 	}
@@ -117,11 +120,17 @@ type Resource[GA any, Alpha any, Beta any] interface {
 	// error.As ConversionError to get the specific details.
 	ToBeta() (*Beta, error)
 
-	// Set the value to src.
+	// Set the value to src. This skips some of the field
+	// validation in Access* so should only be used with a valid
+	// object returned from GCE.
 	Set(src *GA) error
-	// SetAlpha the value to src.
+	// SetAlpha the value to src. This skips some of the field
+	// validation in Access* so should only be used with a valid
+	// object returned from GCE.
 	SetAlpha(src *Alpha) error
-	// SetBeta the value to src.
+	// SetBeta the value to src. This skips some of the field
+	// validation in Access* so should only be used with a valid
+	// object returned from GCE.
 	SetBeta(src *Beta) error
 
 	// Freeze the resource to a read-only copy. It is an error if it is ambiguous
@@ -160,101 +169,91 @@ func (u *resource[GA, Alpha, Beta]) CheckSchema() error {
 
 func (u *resource[GA, Alpha, Beta]) ResourceID() *cloud.ResourceID { return u.resourceID }
 
-func (u *resource[GA, Alpha, Beta]) Access(f func(x *GA)) error {
-	f(&u.ga)
+const (
+	postAccessSkipValidation = 1 << iota
+)
 
-	src := reflect.ValueOf(&u.ga)
-	err := checkPostAccess(u.typeTrait.FieldTraits(meta.VersionGA), src)
-	if err != nil {
-		return err
+func (u *resource[GA, Alpha, Beta]) postAccess(srcVer meta.Version, flags int) error {
+	type convert struct {
+		dest       reflect.Value
+		copyHelper func() error
+		errors     *conversionErrors
 	}
 
-	c := newCopier(u.copierOptions...)
-	if err = c.do(reflect.ValueOf(&u.alpha), src); err != nil {
-		return err
-	}
-	if err := u.typeTrait.CopyHelperGAtoAlpha(&u.alpha, &u.ga); err != nil {
-		return err
+	var src reflect.Value
+	var conversions []convert
+
+	switch srcVer {
+	case meta.VersionGA:
+		src = reflect.ValueOf(&u.ga)
+		conversions = append(conversions, convert{
+			dest:       reflect.ValueOf(&u.alpha),
+			copyHelper: func() error { return u.typeTrait.CopyHelperGAtoAlpha(&u.alpha, &u.ga) },
+			errors:     &u.errors[GAToAlphaConversion],
+		})
+		conversions = append(conversions, convert{
+			dest:       reflect.ValueOf(&u.beta),
+			copyHelper: func() error { return u.typeTrait.CopyHelperGAtoBeta(&u.beta, &u.ga) },
+			errors:     &u.errors[GAToBetaConversion],
+		})
+	case meta.VersionAlpha:
+		src = reflect.ValueOf(&u.alpha)
+		conversions = append(conversions, convert{
+			dest:       reflect.ValueOf(&u.ga),
+			copyHelper: func() error { return u.typeTrait.CopyHelperAlphaToGA(&u.ga, &u.alpha) },
+			errors:     &u.errors[AlphaToGAConversion],
+		})
+		conversions = append(conversions, convert{
+			dest:       reflect.ValueOf(&u.beta),
+			copyHelper: func() error { return u.typeTrait.CopyHelperAlphaToBeta(&u.beta, &u.alpha) },
+			errors:     &u.errors[AlphaToBetaConversion],
+		})
+	case meta.VersionBeta:
+		src = reflect.ValueOf(&u.beta)
+		conversions = append(conversions, convert{
+			dest:       reflect.ValueOf(&u.ga),
+			copyHelper: func() error { return u.typeTrait.CopyHelperBetaToGA(&u.ga, &u.beta) },
+			errors:     &u.errors[BetaToGAConversion],
+		})
+		conversions = append(conversions, convert{
+			dest:       reflect.ValueOf(&u.alpha),
+			copyHelper: func() error { return u.typeTrait.CopyHelperBetaToAlpha(&u.alpha, &u.beta) },
+			errors:     &u.errors[BetaToAlphaConversion],
+		})
 	}
 
-	u.errors[GAToAlphaConversion].missingFields = c.missing
-
-	c = newCopier(u.copierOptions...)
-	err = c.do(reflect.ValueOf(&u.beta), src)
-	if err != nil {
-		return err
+	if flags&postAccessSkipValidation == 0 {
+		if err := checkPostAccess(u.typeTrait.FieldTraits(srcVer), src); err != nil {
+			return err
+		}
 	}
-	if err := u.typeTrait.CopyHelperGAtoBeta(&u.beta, &u.ga); err != nil {
-		return err
+	for _, conv := range conversions {
+		c := newCopier(u.copierOptions...)
+		if err := c.do(conv.dest, src); err != nil {
+			return err
+		}
+		if err := conv.copyHelper(); err != nil {
+			return err
+		}
+		conv.errors.missingFields = c.missing
 	}
-
-	u.errors[GAToBetaConversion].missingFields = c.missing
 
 	return nil
+}
+
+func (u *resource[GA, Alpha, Beta]) Access(f func(x *GA)) error {
+	f(&u.ga)
+	return u.postAccess(meta.VersionGA, 0)
 }
 
 func (u *resource[GA, Alpha, Beta]) AccessAlpha(f func(x *Alpha)) error {
 	f(&u.alpha)
-
-	src := reflect.ValueOf(&u.alpha)
-	err := checkPostAccess(u.typeTrait.FieldTraits(meta.VersionAlpha), src)
-	if err != nil {
-		return err
-	}
-
-	c := newCopier(u.copierOptions...)
-	if err := c.do(reflect.ValueOf(&u.ga), src); err != nil {
-		return err
-	}
-	if err := u.typeTrait.CopyHelperAlphaToGA(&u.ga, &u.alpha); err != nil {
-		return err
-	}
-
-	u.errors[AlphaToGAConversion].missingFields = c.missing
-
-	c = newCopier(u.copierOptions...)
-	if err := c.do(reflect.ValueOf(&u.beta), src); err != nil {
-		return err
-	}
-	if err := u.typeTrait.CopyHelperAlphaToBeta(&u.beta, &u.alpha); err != nil {
-		return err
-	}
-
-	u.errors[AlphaToBetaConversion].missingFields = c.missing
-
-	return nil
+	return u.postAccess(meta.VersionAlpha, 0)
 }
 
 func (u *resource[GA, Alpha, Beta]) AccessBeta(f func(x *Beta)) error {
 	f(&u.beta)
-
-	src := reflect.ValueOf(&u.beta)
-	err := checkPostAccess(u.typeTrait.FieldTraits(meta.VersionBeta), src)
-	if err != nil {
-		return err
-	}
-
-	c := newCopier(u.copierOptions...)
-	if err := c.do(reflect.ValueOf(&u.ga), src); err != nil {
-		return err
-	}
-	if err := u.typeTrait.CopyHelperBetaToGA(&u.ga, &u.beta); err != nil {
-		return err
-	}
-
-	u.errors[BetaToGAConversion].missingFields = c.missing
-
-	c = newCopier(u.copierOptions...)
-	if err := c.do(reflect.ValueOf(&u.alpha), src); err != nil {
-		return err
-	}
-	if err := u.typeTrait.CopyHelperBetaToAlpha(&u.alpha, &u.beta); err != nil {
-		return err
-	}
-
-	u.errors[BetaToAlphaConversion].missingFields = c.missing
-
-	return nil
+	return u.postAccess(meta.VersionBeta, 0)
 }
 
 func (u *resource[GA, Alpha, Beta]) ImpliedVersion() (meta.Version, error) {
@@ -326,33 +325,27 @@ func (u *resource[GA, Alpha, Beta]) ToBeta() (*Beta, error) {
 }
 
 func (u *resource[GA, Alpha, Beta]) Set(src *GA) error {
-	// TODO: this skips the field validation.
-	var err error
-	u.Access(func(dest *GA) {
-		c := newCopier(u.copierOptions...)
-		err = c.do(reflect.ValueOf(dest), reflect.ValueOf(src))
-	})
-	return err
+	c := newCopier(u.copierOptions...)
+	if err := c.do(reflect.ValueOf(&u.ga), reflect.ValueOf(src)); err != nil {
+		return err
+	}
+	return u.postAccess(meta.VersionGA, postAccessSkipValidation)
 }
 
 func (u *resource[GA, Alpha, Beta]) SetAlpha(src *Alpha) error {
-	// TODO: this skips the field validation.
-	var err error
-	u.AccessAlpha(func(dest *Alpha) {
-		c := newCopier(u.copierOptions...)
-		err = c.do(reflect.ValueOf(dest), reflect.ValueOf(src))
-	})
-	return err
+	c := newCopier(u.copierOptions...)
+	if err := c.do(reflect.ValueOf(&u.alpha), reflect.ValueOf(src)); err != nil {
+		return err
+	}
+	return u.postAccess(meta.VersionAlpha, postAccessSkipValidation)
 }
 
 func (u *resource[GA, Alpha, Beta]) SetBeta(src *Beta) error {
-	// TODO: this skips the field validation.
-	var err error
-	u.AccessBeta(func(dest *Beta) {
-		c := newCopier(u.copierOptions...)
-		err = c.do(reflect.ValueOf(dest), reflect.ValueOf(src))
-	})
-	return err
+	c := newCopier(u.copierOptions...)
+	if err := c.do(reflect.ValueOf(&u.beta), reflect.ValueOf(src)); err != nil {
+		return err
+	}
+	return u.postAccess(meta.VersionBeta, postAccessSkipValidation)
 }
 
 func (u *resource[GA, Alpha, Beta]) Freeze() (FrozenResource[GA, Alpha, Beta], error) {
@@ -373,7 +366,6 @@ func (u *resource[GA, Alpha, Beta]) Freeze() (FrozenResource[GA, Alpha, Beta], e
 	//   results in a diff and update.
 	// - At this point, we need to set NullFields = ["Feature1"],
 	//   otherwise the update will ignore the field.
-
 	if ver != meta.VersionGA {
 		if err := fillNullAndForceSend(u.typeTrait.FieldTraits(meta.VersionGA), reflect.ValueOf(&u.ga)); err != nil {
 			return nil, err

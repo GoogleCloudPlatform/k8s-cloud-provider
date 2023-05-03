@@ -63,4 +63,17 @@ limitations under the License.
 //	type Address = NewResource[compute.Address, alpha.Address, beta.Address](...)
 //	addr := Address{}
 //	if err := addr.CheckSchema(); err != nil { /* unsupported type schema */ }
+//
+// # Customizing resource behavior
+//
+// Resource conversion behavior can be customized using
+// TypeTraits. TypeTraits give hooks to the Resource implementation on
+// version conversion and diff'ing.
+//
+//	type myTypeTrait struct { BaseTypeTrait[myTypeGA, myTypeAlpha, myTypeBeta] }
+//
+//	// CopyHelpers are called after the generic value-wise copy is
+//	// finished. This allows for any additional fixup of the fields after
+//	// conversion.
+//	func (*myTypeTrait) CopyHelperGAtoAlpha(...) { ... }
 package api

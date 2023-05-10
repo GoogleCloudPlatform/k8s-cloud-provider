@@ -26,6 +26,10 @@ import (
 func checkPostAccess(traits *FieldTraits, v reflect.Value) error {
 	acc := newAcceptorFuncs()
 	acc.onStructF = func(p Path, v reflect.Value) (bool, error) {
+		if p.Equal(Path{}.Pointer().Field("ServerResponse")) {
+			return false, nil
+		}
+
 		acc, err := newMetafieldAccessor(v)
 		if err != nil {
 			return false, fmt.Errorf("checkPostAccess %v: %w", p, err)
@@ -153,19 +157,16 @@ func checkSchema(t reflect.Type) error {
 	if err := checkResourceTypes(Path{}, t); err != nil {
 		return err
 	}
-
-	// Check for common fields for interop with ResourceID.
+	// Check that common fields are present.
 	if t.Kind() != reflect.Pointer {
 		return fmt.Errorf("object is not a pointer (%s)", t)
 	}
 	st := t.Elem()
-	nameField, ok := st.FieldByName("Name")
-	if !ok || nameField.Type.Kind() != reflect.String {
-		return fmt.Errorf("object has missing or invalid Name field (ok=%t %v)", ok, nameField)
-	}
-	selfLinkField, ok := st.FieldByName("SelfLink")
-	if !ok || selfLinkField.Type.Kind() != reflect.String {
-		return fmt.Errorf("object has missing or invalid SelfLink field (ok=%t %v)", ok, selfLinkField)
+	for _, fn := range []string{"Name", "SelfLink"} {
+		f, ok := st.FieldByName(fn)
+		if !ok || f.Type.Kind() != reflect.String {
+			return fmt.Errorf("object has missing or invalid type for the %s field", fn)
+		}
 	}
 
 	return nil

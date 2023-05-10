@@ -160,6 +160,9 @@ func (f *filler) doMap(p Path, v reflect.Value) (bool, error) {
 func fillNullAndForceSend(traits *FieldTraits, v reflect.Value) error {
 	acc := newAcceptorFuncs()
 	acc.onStructF = func(p Path, v reflect.Value) (bool, error) {
+		if p.Equal(Path{}.Pointer().Field("ServerResponse")) {
+			return false, nil
+		}
 		acc, err := newMetafieldAccessor(v)
 		if err != nil {
 			return false, fmt.Errorf("fillNullAndForceSend: %w", err)

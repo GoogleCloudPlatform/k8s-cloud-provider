@@ -17,16 +17,14 @@ limitations under the License.
 package api
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/meta"
 	"github.com/google/go-cmp/cmp"
-	"github.com/kr/pretty"
 )
 
-func newTestResource[G any, A any, B any](tt TypeTrait[G, A, B]) *resource[G, A, B] {
+func newTestResource[G any, A any, B any](tt TypeTrait[G, A, B]) *mutableResource[G, A, B] {
 	return NewResource(&cloud.ResourceID{
 		ProjectID: "proj-1",
 		Resource:  "st",
@@ -150,7 +148,7 @@ func TestResourceToX(t *testing.T) {
 		ForceSendFields []string
 	}
 
-	type stObj = resource[st, stA, stB]
+	type stObj = mutableResource[st, stA, stB]
 
 	type testCase struct {
 		name      string
@@ -178,9 +176,9 @@ func TestResourceToX(t *testing.T) {
 				x.S = "abc"
 				x.F = 4.2
 			},
-			want:      &st{I: 13, S: "abc", F: 4.2},
-			wantAlpha: &stA{I: 13, S: "abc", F: 4.2},
-			wantBeta:  &stB{I: 13, S: "abc", F: 4.2},
+			want:      &st{Name: "obj-1", I: 13, S: "abc", F: 4.2},
+			wantAlpha: &stA{Name: "obj-1", I: 13, S: "abc", F: 4.2},
+			wantBeta:  &stB{Name: "obj-1", I: 13, S: "abc", F: 4.2},
 		},
 		{
 			name: "alpha only fields",
@@ -188,10 +186,10 @@ func TestResourceToX(t *testing.T) {
 				x.I = 12
 				x.AI = 13
 			},
-			want:        &st{I: 12},
+			want:        &st{Name: "obj-1", I: 12},
 			wantErr:     true,
-			wantAlpha:   &stA{I: 12, AI: 13},
-			wantBeta:    &stB{I: 12},
+			wantAlpha:   &stA{Name: "obj-1", I: 12, AI: 13},
+			wantBeta:    &stB{Name: "obj-1", I: 12},
 			wantBetaErr: true,
 		},
 		{
@@ -200,11 +198,11 @@ func TestResourceToX(t *testing.T) {
 				x.I = 12
 				x.BI = 13
 			},
-			want:         &st{I: 12},
+			want:         &st{Name: "obj-1", I: 12},
 			wantErr:      true,
-			wantAlpha:    &stA{I: 12},
+			wantAlpha:    &stA{Name: "obj-1", I: 12},
 			wantAlphaErr: true,
-			wantBeta:     &stB{I: 12, BI: 13},
+			wantBeta:     &stB{Name: "obj-1", I: 12, BI: 13},
 		},
 		{
 			name: "alpha beta fields",
@@ -212,19 +210,19 @@ func TestResourceToX(t *testing.T) {
 				x.I = 12
 				x.ABS = "abc"
 			},
-			want:      &st{I: 12},
+			want:      &st{Name: "obj-1", I: 12},
 			wantErr:   true,
-			wantAlpha: &stA{I: 12, ABS: "abc"},
-			wantBeta:  &stB{I: 12, ABS: "abc"},
+			wantAlpha: &stA{Name: "obj-1", I: 12, ABS: "abc"},
+			wantBeta:  &stB{Name: "obj-1", I: 12, ABS: "abc"},
 		},
 		{
 			name: "inner struct",
 			edit: func(x *st) {
 				x.St.I = 13
 			},
-			want:      &st{St: inner{I: 13}},
-			wantAlpha: &stA{St: innerA{I: 13}},
-			wantBeta:  &stB{St: innerB{I: 13}},
+			want:      &st{Name: "obj-1", St: inner{I: 13}},
+			wantAlpha: &stA{Name: "obj-1", St: innerA{I: 13}},
+			wantBeta:  &stB{Name: "obj-1", St: innerB{I: 13}},
 		},
 		{
 			name: "inner struct alpha only",
@@ -232,10 +230,10 @@ func TestResourceToX(t *testing.T) {
 				x.St.I = 13
 				x.St.A = "abc"
 			},
-			want:        &st{St: inner{I: 13}},
+			want:        &st{Name: "obj-1", St: inner{I: 13}},
 			wantErr:     true,
-			wantAlpha:   &stA{St: innerA{I: 13, A: "abc"}},
-			wantBeta:    &stB{St: innerB{I: 13}},
+			wantAlpha:   &stA{Name: "obj-1", St: innerA{I: 13, A: "abc"}},
+			wantBeta:    &stB{Name: "obj-1", St: innerB{I: 13}},
 			wantBetaErr: true,
 		},
 		{
@@ -244,68 +242,68 @@ func TestResourceToX(t *testing.T) {
 				x.St.I = 13
 				x.St.B = "abc"
 			},
-			want:         &st{St: inner{I: 13}},
+			want:         &st{Name: "obj-1", St: inner{I: 13}},
 			wantErr:      true,
-			wantAlpha:    &stA{St: innerA{I: 13}},
+			wantAlpha:    &stA{Name: "obj-1", St: innerA{I: 13}},
 			wantAlphaErr: true,
-			wantBeta:     &stB{St: innerB{I: 13, B: "abc"}},
+			wantBeta:     &stB{Name: "obj-1", St: innerB{I: 13, B: "abc"}},
 		},
 		{
 			name: "inner pointer struct",
 			edit: func(x *st) {
 				x.StP = &inner{I: 13}
 			},
-			want:      &st{StP: &inner{I: 13}},
-			wantAlpha: &stA{StP: &innerA{I: 13}},
-			wantBeta:  &stB{StP: &innerB{I: 13}},
+			want:      &st{Name: "obj-1", StP: &inner{I: 13}},
+			wantAlpha: &stA{Name: "obj-1", StP: &innerA{I: 13}},
+			wantBeta:  &stB{Name: "obj-1", StP: &innerB{I: 13}},
 		},
 		{
 			name: "inner pointer struct alpha",
 			editAlpha: func(x *stA) {
 				x.StP = &innerA{I: 13}
 			},
-			want:      &st{StP: &inner{I: 13}},
-			wantAlpha: &stA{StP: &innerA{I: 13}},
-			wantBeta:  &stB{StP: &innerB{I: 13}},
+			want:      &st{Name: "obj-1", StP: &inner{I: 13}},
+			wantAlpha: &stA{Name: "obj-1", StP: &innerA{I: 13}},
+			wantBeta:  &stB{Name: "obj-1", StP: &innerB{I: 13}},
 		},
 		{
 			name: "inner pointer struct beta",
 			editBeta: func(x *stB) {
 				x.StP = &innerB{I: 13}
 			},
-			want:      &st{StP: &inner{I: 13}},
-			wantAlpha: &stA{StP: &innerA{I: 13}},
-			wantBeta:  &stB{StP: &innerB{I: 13}},
+			want:      &st{Name: "obj-1", StP: &inner{I: 13}},
+			wantAlpha: &stA{Name: "obj-1", StP: &innerA{I: 13}},
+			wantBeta:  &stB{Name: "obj-1", StP: &innerB{I: 13}},
 		},
 		{
 			name:      "string list",
 			edit:      func(x *st) { x.LStr = []string{"a", "b"} },
-			want:      &st{LStr: []string{"a", "b"}},
-			wantAlpha: &stA{LStr: []string{"a", "b"}},
-			wantBeta:  &stB{LStr: []string{"a", "b"}},
+			want:      &st{Name: "obj-1", LStr: []string{"a", "b"}},
+			wantAlpha: &stA{Name: "obj-1", LStr: []string{"a", "b"}},
+			wantBeta:  &stB{Name: "obj-1", LStr: []string{"a", "b"}},
 		},
 		{
 			name:      "map",
 			edit:      func(x *st) { x.M = map[string]int{"a": 1} },
-			want:      &st{M: map[string]int{"a": 1}},
-			wantAlpha: &stA{M: map[string]int{"a": 1}},
-			wantBeta:  &stB{M: map[string]int{"a": 1}},
+			want:      &st{Name: "obj-1", M: map[string]int{"a": 1}},
+			wantAlpha: &stA{Name: "obj-1", M: map[string]int{"a": 1}},
+			wantBeta:  &stB{Name: "obj-1", M: map[string]int{"a": 1}},
 		},
 		{
 			name:      "edit ga then alpha",
 			edit:      func(x *st) { x.I = 11 },
 			editAlpha: func(x *stA) { x.I = 42 },
-			want:      &st{I: 42},
-			wantAlpha: &stA{I: 42},
-			wantBeta:  &stB{I: 42},
+			want:      &st{Name: "obj-1", I: 42},
+			wantAlpha: &stA{Name: "obj-1", I: 42},
+			wantBeta:  &stB{Name: "obj-1", I: 42},
 		},
 		{
 			name:      "edit ga then beta",
 			edit:      func(x *st) { x.I = 11 },
 			editBeta:  func(x *stB) { x.I = 42 },
-			want:      &st{I: 42},
-			wantAlpha: &stA{I: 42},
-			wantBeta:  &stB{I: 42},
+			want:      &st{Name: "obj-1", I: 42},
+			wantAlpha: &stA{Name: "obj-1", I: 42},
+			wantBeta:  &stB{Name: "obj-1", I: 42},
 		},
 		{
 			name: "edit ga then alpha with inner struct",
@@ -313,33 +311,33 @@ func TestResourceToX(t *testing.T) {
 			editAlpha: func(x *stA) {
 				x.St.I = 42
 			},
-			want:      &st{I: 11, St: inner{I: 42}},
-			wantAlpha: &stA{I: 11, St: innerA{I: 42}},
-			wantBeta:  &stB{I: 11, St: innerB{I: 42}},
+			want:      &st{Name: "obj-1", I: 11, St: inner{I: 42}},
+			wantAlpha: &stA{Name: "obj-1", I: 11, St: innerA{I: 42}},
+			wantBeta:  &stB{Name: "obj-1", I: 11, St: innerB{I: 42}},
 		},
 		{
 			name:      "ForceSendFields",
 			edit:      func(x *st) { x.ForceSendFields = []string{"I"} },
-			want:      &st{ForceSendFields: []string{"I"}},
-			wantAlpha: &stA{ForceSendFields: []string{"I"}},
-			wantBeta:  &stB{ForceSendFields: []string{"I"}},
+			want:      &st{Name: "obj-1", ForceSendFields: []string{"I"}},
+			wantAlpha: &stA{Name: "obj-1", ForceSendFields: []string{"I"}},
+			wantBeta:  &stB{Name: "obj-1", ForceSendFields: []string{"I"}},
 		},
 		{
 			name:        "ForceSendFields alpha only",
 			editAlpha:   func(x *stA) { x.ForceSendFields = []string{"AI"} },
-			want:        &st{},
+			want:        &st{Name: "obj-1"},
 			wantErr:     true,
-			wantAlpha:   &stA{ForceSendFields: []string{"AI"}},
-			wantBeta:    &stB{},
+			wantAlpha:   &stA{Name: "obj-1", ForceSendFields: []string{"AI"}},
+			wantBeta:    &stB{Name: "obj-1"},
 			wantBetaErr: true,
 		},
 		{
 			name:      "ForceSendFields alpha beta only",
 			editAlpha: func(x *stA) { x.ForceSendFields = []string{"ABS"} },
-			want:      &st{},
+			want:      &st{Name: "obj-1"},
 			wantErr:   true,
-			wantAlpha: &stA{ForceSendFields: []string{"ABS"}},
-			wantBeta:  &stB{ForceSendFields: []string{"ABS"}},
+			wantAlpha: &stA{Name: "obj-1", ForceSendFields: []string{"ABS"}},
+			wantBeta:  &stB{Name: "obj-1", ForceSendFields: []string{"ABS"}},
 		},
 		{
 			name:        "ForceSendFields invalid field",
@@ -349,26 +347,26 @@ func TestResourceToX(t *testing.T) {
 		{
 			name:      "NullFields",
 			edit:      func(x *st) { x.NullFields = []string{"I"} },
-			want:      &st{NullFields: []string{"I"}},
-			wantAlpha: &stA{NullFields: []string{"I"}},
-			wantBeta:  &stB{NullFields: []string{"I"}},
+			want:      &st{Name: "obj-1", NullFields: []string{"I"}},
+			wantAlpha: &stA{Name: "obj-1", NullFields: []string{"I"}},
+			wantBeta:  &stB{Name: "obj-1", NullFields: []string{"I"}},
 		},
 		{
 			name:        "NullFields alpha only",
 			editAlpha:   func(x *stA) { x.NullFields = []string{"AI"} },
-			want:        &st{},
+			want:        &st{Name: "obj-1"},
 			wantErr:     true,
-			wantAlpha:   &stA{NullFields: []string{"AI"}},
-			wantBeta:    &stB{},
+			wantAlpha:   &stA{Name: "obj-1", NullFields: []string{"AI"}},
+			wantBeta:    &stB{Name: "obj-1"},
 			wantBetaErr: true,
 		},
 		{
 			name:      "NullFields alpha beta only",
 			editAlpha: func(x *stA) { x.NullFields = []string{"ABS"} },
-			want:      &st{},
+			want:      &st{Name: "obj-1"},
 			wantErr:   true,
-			wantAlpha: &stA{NullFields: []string{"ABS"}},
-			wantBeta:  &stB{NullFields: []string{"ABS"}},
+			wantAlpha: &stA{Name: "obj-1", NullFields: []string{"ABS"}},
+			wantBeta:  &stB{Name: "obj-1", NullFields: []string{"ABS"}},
 		},
 		{
 			name:        "NullFields invalid field",
@@ -382,24 +380,24 @@ func TestResourceToX(t *testing.T) {
 		if gotErr := err != nil; gotErr != tc.wantErr {
 			t.Fatalf("o.ToGA() = %v; gotErr = %t, wantErr = %t", err, gotErr, tc.wantErr)
 		}
-		if !reflect.DeepEqual(got, tc.want) {
-			t.Errorf("o.ToGA() = %s, want %s", pretty.Sprint(got), pretty.Sprint(tc.want))
+		if diff := cmp.Diff(got, tc.want); diff != "" {
+			t.Fatalf("o.ToGA(), -got,+want: %s", diff)
 		}
 
 		gotAlpha, err := o.ToAlpha()
 		if gotErr := err != nil; gotErr != tc.wantAlphaErr {
 			t.Fatalf("o.ToAlpha() = %v; gotErr = %t, wantErr = %t", err, gotErr, tc.wantAlphaErr)
 		}
-		if !reflect.DeepEqual(gotAlpha, tc.wantAlpha) {
-			t.Errorf("o.ToAlpha() = %s, want %s", pretty.Sprint(gotAlpha), pretty.Sprint(tc.wantAlpha))
+		if diff := cmp.Diff(gotAlpha, tc.wantAlpha); diff != "" {
+			t.Fatalf("o.ToAlpha(), -got,+want: %s", diff)
 		}
 
 		gotBeta, err := o.ToBeta()
 		if gotErr := err != nil; gotErr != tc.wantBetaErr {
 			t.Fatalf("o.ToBeta() = %v; gotErr = %t, wantErr = %t", err, gotErr, tc.wantBetaErr)
 		}
-		if !reflect.DeepEqual(gotBeta, tc.wantBeta) {
-			t.Errorf("o.ToBeta() = %s, want %s", pretty.Sprint(gotBeta), pretty.Sprint(tc.wantBeta))
+		if diff := cmp.Diff(gotBeta, tc.wantBeta); diff != "" {
+			t.Fatalf("o.ToBeta(), -got,+want: %s", diff)
 		}
 	}
 
@@ -512,7 +510,7 @@ func TestResourceMissingFields(t *testing.T) {
 		NullFields      []string
 		ForceSendFields []string
 	}
-	type resType = resource[ga, alph, beta]
+	type resType = mutableResource[ga, alph, beta]
 
 	res := newTestResource[ga, alph, beta](nil)
 
@@ -567,7 +565,7 @@ func TestResourceMissingMetaFields(t *testing.T) {
 		NullFields      []string
 		ForceSendFields []string
 	}
-	type resType = resource[ga, alph, beta]
+	type resType = mutableResource[ga, alph, beta]
 	res := newTestResource[ga, alph, beta](nil)
 
 	// Set x.B, only available in the Alpha version of the API.
@@ -622,7 +620,7 @@ func TestResourceSetX(t *testing.T) {
 		NullFields      []string
 		ForceSendFields []string
 	}
-	type res = resource[ga, al, be]
+	type res = mutableResource[ga, al, be]
 
 	for _, tc := range []struct {
 		name      string
@@ -915,28 +913,28 @@ func TestResourceTypeTrait(t *testing.T) {
 
 	for _, tc := range []struct {
 		name  string
-		f     func(r Resource[st, stA, stB])
+		f     func(r MutableResource[st, stA, stB])
 		want  st
 		wantA stA
 		wantB stB
 	}{
 		{
 			name:  "set field",
-			f:     func(r Resource[st, stA, stB]) { r.Access(func(x *st) { x.I = 13 }) },
+			f:     func(r MutableResource[st, stA, stB]) { r.Access(func(x *st) { x.I = 13 }) },
 			want:  st{I: 13},
 			wantA: stA{A: 14},
 			wantB: stB{B: 15},
 		},
 		{
 			name:  "set field alpha",
-			f:     func(r Resource[st, stA, stB]) { r.AccessAlpha(func(x *stA) { x.A = 11 }) },
+			f:     func(r MutableResource[st, stA, stB]) { r.AccessAlpha(func(x *stA) { x.A = 11 }) },
 			want:  st{I: 10},
 			wantA: stA{A: 11},
 			wantB: stB{B: 12},
 		},
 		{
 			name:  "set field beta",
-			f:     func(r Resource[st, stA, stB]) { r.AccessBeta(func(x *stB) { x.B = 12 }) },
+			f:     func(r MutableResource[st, stA, stB]) { r.AccessBeta(func(x *stB) { x.B = 12 }) },
 			want:  st{I: 10},
 			wantA: stA{A: 11},
 			wantB: stB{B: 12},

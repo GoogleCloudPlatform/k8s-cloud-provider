@@ -29,6 +29,8 @@ func (f *FakeAcceptor) Accept() {
 }
 
 func TestAcceptRateLimiter(t *testing.T) {
+	t.Parallel()
+
 	fa := &FakeAcceptor{accept: func() {}}
 	arl := &AcceptRateLimiter{fa}
 	err := arl.Accept(context.Background(), nil)
@@ -50,6 +52,8 @@ func TestAcceptRateLimiter(t *testing.T) {
 }
 
 func TestMinimumRateLimiter(t *testing.T) {
+	t.Parallel()
+
 	fa := &FakeAcceptor{accept: func() {}}
 	arl := &AcceptRateLimiter{fa}
 	var called bool

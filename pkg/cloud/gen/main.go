@@ -985,6 +985,8 @@ func (g *{{.GCEWrapType}}) AggregatedList(ctx context.Context, fl *filter.F) (ma
 		klog.V(4).Infof("{{.GCEWrapType}}.AggregatedList(%v, %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
 	if kLogEnabled(4) {
 		klog.V(4).Infof("{{.GCEWrapType}}.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(all), nil)
 	} else if kLogEnabled(5) {
@@ -1032,6 +1034,7 @@ func (g *{{.GCEWrapType}}) ListUsable(ctx context.Context, fl *filter.F) ([]*{{.
 		klog.V(4).Infof("{{.GCEWrapType}}.ListUsable(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
 		return nil, err
 	}
+	g.s.RateLimiter.Observe(ctx, nil, ck)
 
 	if kLogEnabled(4) {
 		klog.V(4).Infof("{{.GCEWrapType}}.ListUsable(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)

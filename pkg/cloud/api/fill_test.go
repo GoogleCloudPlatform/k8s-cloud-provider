@@ -117,6 +117,11 @@ func TestFillNullAndForceSend(t *testing.T) {
 		NullFields      []string
 		ForceSendFields []string
 	}
+	type stServerResponse struct {
+		ServerResponse  struct{ A int }
+		NullFields      []string
+		ForceSendFields []string
+	}
 
 	for _, tc := range []struct {
 		name    string
@@ -152,6 +157,12 @@ func TestFillNullAndForceSend(t *testing.T) {
 					ForceSendFields: []string{"A"},
 				},
 			},
+		},
+		{
+			name: "ignore .ServerResponse",
+			ft:   NewFieldTraits(),
+			in:   &stServerResponse{},
+			want: &stServerResponse{},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

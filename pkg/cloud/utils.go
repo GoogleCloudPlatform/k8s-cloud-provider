@@ -106,6 +106,16 @@ func (r *ResourceID) SelfLink(ver meta.Version) string {
 	return SelfLink(ver, r.ProjectID, r.Resource, r.Key)
 }
 
+func (r *ResourceID) String() string {
+	switch r.Key.Type() {
+	case meta.Zonal:
+		return fmt.Sprintf("%s:%s/%s/%s", r.Resource, r.ProjectID, r.Key.Zone, r.Key.Name)
+	case meta.Regional:
+		return fmt.Sprintf("%s:%s/%s/%s", r.Resource, r.ProjectID, r.Key.Region, r.Key.Name)
+	}
+	return fmt.Sprintf("%s:%s/%s", r.Resource, r.ProjectID, r.Key.Name)
+}
+
 // ParseResourceURL parses resource URLs of the following formats:
 //
 //	global/<res>/<name>

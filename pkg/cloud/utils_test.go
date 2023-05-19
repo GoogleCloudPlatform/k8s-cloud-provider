@@ -79,6 +79,33 @@ func TestEqualResourceID(t *testing.T) {
 	}
 }
 
+func TestResourceIDString(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		id   *ResourceID
+		want string
+	}{
+		{
+			id:   &ResourceID{"proj1", "res1", meta.GlobalKey("key1")},
+			want: "res1:proj1/key1",
+		},
+		{
+			id:   &ResourceID{"proj1", "res1", meta.RegionalKey("key1", "us-central1")},
+			want: "res1:proj1/us-central1/key1",
+		},
+		{
+			id:   &ResourceID{"proj1", "res1", meta.ZonalKey("key1", "us-central1-c")},
+			want: "res1:proj1/us-central1-c/key1",
+		},
+	} {
+		got := tc.id.String()
+		if got != tc.want {
+			t.Errorf("String() = %q, want %q (id = %+v)", got, tc.want, tc.id)
+		}
+	}
+}
+
 func TestParseResourceURL(t *testing.T) {
 	t.Parallel()
 

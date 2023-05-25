@@ -99,6 +99,12 @@ func NewExistsAction(id *cloud.ResourceID) Action {
 	}
 }
 
+func NewDoesNotExistAction(id *cloud.ResourceID) Action {
+	return &eventAction{
+		events: EventList{NewNotExistsEvent(id)},
+	}
+}
+
 // eventAction exist only to signal events. These Actions do not have side
 // effects; they are used to model the starting conditions of an execution.
 type eventAction struct {

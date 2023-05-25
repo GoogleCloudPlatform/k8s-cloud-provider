@@ -18,11 +18,12 @@ package exec
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
 )
 
-type ExecutorResult struct {
+type Result struct {
 	// Completed Actions with no errors.
 	Completed []Action
 	// Errors are Actions that failed with an error.
@@ -41,18 +42,18 @@ type ActionWithErr struct {
 type Executor interface {
 	// Run the actions. Returns non-nil if there was an error in execution of
 	// one or more Actions.
-	Run(context.Context, cloud.Cloud) (*ExecutorResult, error)
+	Run(context.Context, cloud.Cloud) (*Result, error)
 }
 
-type ExecutorOption func(*ExecutorConfig)
+type Option func(*ExecutorConfig)
 
 // TracerOption sets a tracer to accumulate the execution of the Actions.
-func TracerOption(t Tracer) ExecutorOption {
+func TracerOption(t Tracer) Option {
 	return func(c *ExecutorConfig) { c.Tracer = t }
 }
 
 // DryRunOption will run in dry run mode if true.
-func DryRunOption(dryRun bool) ExecutorOption {
+func DryRunOption(dryRun bool) Option {
 	return func(c *ExecutorConfig) { c.DryRun = dryRun }
 }
 
@@ -71,7 +72,7 @@ var (
 )
 
 // ErrorStrategyOption sets the error handling strategy.
-func ErrorStrategyOption(s ErrorStrategy) ExecutorOption {
+func ErrorStrategyOption(s ErrorStrategy) Option {
 	return func(c *ExecutorConfig) { c.ErrorStrategy = s }
 }
 
@@ -87,4 +88,13 @@ type ExecutorConfig struct {
 	Tracer        Tracer
 	DryRun        bool
 	ErrorStrategy ErrorStrategy
+}
+
+func (c *ExecutorConfig) validate() error {
+	switch c.ErrorStrategy {
+	case ContinueOnError, StopOnError:
+	default:
+		return fmt.Errorf("invalid ErrorStrategy: %q", c.ErrorStrategy)
+	}
+	return nil
 }

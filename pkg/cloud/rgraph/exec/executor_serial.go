@@ -25,13 +25,17 @@ import (
 )
 
 // NewSerialExecutor returns a new Executor that runs tasks single-threaded.
-func NewSerialExecutor(pending []Action, opts ...ExecutorOption) *serialExecutor {
+func NewSerialExecutor(pending []Action, opts ...Option) (*serialExecutor, error) {
 	ret := &serialExecutor{
 		config: defaultExecutorConfig(),
-		result: &ExecutorResult{Pending: pending},
+		result: &Result{Pending: pending},
 	}
 	for _, opt := range opts {
 		opt(ret.config)
+	}
+
+	if err := ret.config.validate(); err != nil {
+		return nil, err
 	}
 
 	if ret.config.DryRun {
@@ -44,19 +48,19 @@ func NewSerialExecutor(pending []Action, opts ...ExecutorOption) *serialExecutor
 		}
 	}
 
-	return ret
+	return ret, nil
 }
 
 type serialExecutor struct {
 	config *ExecutorConfig
 
 	runFunc func(context.Context, cloud.Cloud, Action) ([]Event, error)
-	result  *ExecutorResult
+	result  *Result
 }
 
 var _ Executor = (*serialExecutor)(nil)
 
-func (ex *serialExecutor) Run(ctx context.Context, c cloud.Cloud) (*ExecutorResult, error) {
+func (ex *serialExecutor) Run(ctx context.Context, c cloud.Cloud) (*Result, error) {
 	for a := ex.next(); a != nil; a = ex.next() {
 		err := ex.runAction(ctx, c, a)
 		if err != nil {

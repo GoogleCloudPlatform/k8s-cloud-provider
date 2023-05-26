@@ -88,7 +88,10 @@ func (b *BuilderBase) inRefs() []ResourceRef    { return b.curInRefs }
 
 // Defaults sets the default values for a empty Builder node.
 func (b *BuilderBase) Defaults(id *cloud.ResourceID) {
-	b.Init(id, NodeUnknown, OwnershipUnknown, meta.VersionGA)
+	b.id = id
+	b.state = NodeUnknown
+	b.ownership = OwnershipUnknown
+	b.version = meta.VersionGA
 }
 
 // Init the values of the BuilderBase.
@@ -96,10 +99,14 @@ func (b *BuilderBase) Init(
 	id *cloud.ResourceID,
 	state NodeState,
 	ownership OwnershipStatus,
-	version meta.Version,
+	resource UntypedResource,
 ) {
 	b.id = id
 	b.state = state
 	b.ownership = ownership
-	b.version = version
+	if resource == nil {
+		b.version = meta.VersionGA
+	} else {
+		b.version = resource.Version()
+	}
 }

@@ -30,7 +30,7 @@ import (
 type testAction struct {
 	ActionBase
 	name   string
-	events []Event
+	events EventList
 	err    error
 }
 
@@ -38,11 +38,11 @@ func (a *testAction) String() string {
 	return fmt.Sprintf("%s(%v)", a.name, a.events)
 }
 
-func (a *testAction) DryRun() []Event {
+func (a *testAction) DryRun() EventList {
 	return a.events
 }
 
-func (a *testAction) Run(context.Context, cloud.Cloud) ([]Event, error) {
+func (a *testAction) Run(context.Context, cloud.Cloud) (EventList, error) {
 	return a.events, a.err
 }
 
@@ -57,48 +57,48 @@ func (a *testAction) Metadata() *ActionMetadata {
 func TestActionBase(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
-		events  []Event
-		signals []Event
+		events  EventList
+		signals EventList
 
 		wantSignalRet []bool
-		wantPending   []Event
-		wantDone      []Event
+		wantPending   EventList
+		wantDone      EventList
 		wantCanRun    bool
 	}{
 		{
 			name:          "signal one event",
-			events:        []Event{StringEvent("a")},
-			signals:       []Event{StringEvent("a")},
+			events:        EventList{StringEvent("a")},
+			signals:       EventList{StringEvent("a")},
 			wantSignalRet: []bool{true},
-			wantPending:   []Event{},
-			wantDone:      []Event{StringEvent("a")},
+			wantPending:   EventList{},
+			wantDone:      EventList{StringEvent("a")},
 			wantCanRun:    true,
 		},
 		{
 			name:          "signal one event ignored",
-			events:        []Event{StringEvent("a")},
-			signals:       []Event{StringEvent("b")},
+			events:        EventList{StringEvent("a")},
+			signals:       EventList{StringEvent("b")},
 			wantSignalRet: []bool{false},
-			wantPending:   []Event{StringEvent("a")},
-			wantDone:      []Event{},
+			wantPending:   EventList{StringEvent("a")},
+			wantDone:      EventList{},
 			wantCanRun:    false,
 		},
 		{
 			name:          "multiple events out of order",
-			events:        []Event{StringEvent("a"), StringEvent("b")},
-			signals:       []Event{StringEvent("b"), StringEvent("a")},
+			events:        EventList{StringEvent("a"), StringEvent("b")},
+			signals:       EventList{StringEvent("b"), StringEvent("a")},
 			wantSignalRet: []bool{true, true},
-			wantPending:   []Event{},
-			wantDone:      []Event{StringEvent("a"), StringEvent("b")},
+			wantPending:   EventList{},
+			wantDone:      EventList{StringEvent("a"), StringEvent("b")},
 			wantCanRun:    true,
 		},
 		{
 			name:          "multiple events pending",
-			events:        []Event{StringEvent("a"), StringEvent("b")},
-			signals:       []Event{StringEvent("b"), StringEvent("c")},
+			events:        EventList{StringEvent("a"), StringEvent("b")},
+			signals:       EventList{StringEvent("b"), StringEvent("c")},
 			wantSignalRet: []bool{true, false},
-			wantPending:   []Event{StringEvent("a")},
-			wantDone:      []Event{StringEvent("b")},
+			wantPending:   EventList{StringEvent("a")},
+			wantDone:      EventList{StringEvent("b")},
 			wantCanRun:    false,
 		},
 	} {
@@ -135,8 +135,8 @@ func TestEventAction(t *testing.T) {
 		CanRan    bool
 		Signal    bool
 		S         string
-		Pending   []Event
-		RunEvents []Event
+		Pending   EventList
+		RunEvents EventList
 	}
 
 	got := values{
@@ -156,7 +156,7 @@ func TestEventAction(t *testing.T) {
 		Signal:    false,
 		S:         "EventAction([Exists(res1:proj1/x)])",
 		Pending:   nil,
-		RunEvents: []Event{&existsEvent{id: resID}},
+		RunEvents: EventList{&existsEvent{id: resID}},
 	})
 	if diff != "" {
 		t.Errorf("diff: -got/+want: %s", diff)

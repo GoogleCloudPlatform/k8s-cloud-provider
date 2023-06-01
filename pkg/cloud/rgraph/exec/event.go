@@ -27,8 +27,30 @@ import (
 type Event interface {
 	// Equal returns true if this event is == to other.
 	Equal(other Event) bool
-	// String implements Stringer.
+	// String implements Stringer. The values returned by String() must satisfy
+	// the same behavior as Equal(), i.e. a.String() == b.String() if and only
+	// if a.Equal(b).
 	String() string
+}
+
+// EventList is a list of events.
+type EventList []Event
+
+// Equal is true if other contains the same set (order independent) of events.
+func (el EventList) Equal(other EventList) bool {
+	if len(el) != len(other) {
+		return false
+	}
+	m := map[string]struct{}{}
+	for _, x := range el {
+		m[x.String()] = struct{}{}
+	}
+	for _, x := range other {
+		if _, ok := m[x.String()]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 // NewExistsEvent returns and event that signals that the resource ID exists.

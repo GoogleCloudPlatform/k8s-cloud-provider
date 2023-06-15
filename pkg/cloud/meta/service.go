@@ -68,6 +68,15 @@ func (i *ServiceInfo) VersionTitle() string {
 	panic(fmt.Errorf("invalid version %q", i.Version()))
 }
 
+// GroupVersionTitle returns the capitalized golang CamelCase name for the API Group version.
+func (i *ServiceInfo) GroupVersionTitle() string {
+	prefix := ""
+	if i.APIGroup == APIGroupNetworkServices {
+		prefix = "NetworkServices"
+	}
+	return prefix + i.VersionTitle()
+}
+
 // WrapType is the name of the wrapper service type.
 func (i *ServiceInfo) WrapType() string {
 	switch i.Version() {
@@ -88,27 +97,38 @@ func (i *ServiceInfo) WrapTypeOps() string {
 
 // FQObjectType is fully qualified name of the object (e.g. compute.Instance).
 func (i *ServiceInfo) FQObjectType() string {
-	return fmt.Sprintf("%v.%v", i.Version(), i.Object)
+	return fmt.Sprintf("%v%v.%v", i.APIGroup, i.Version(), i.Object)
 }
 
 // ObjectListType is the compute List type for the object (contains Items field).
 func (i *ServiceInfo) ObjectListType() string {
-	return fmt.Sprintf("%v.%vList", i.Version(), i.Object)
+	if i.IsNetworkServices() {
+		return fmt.Sprintf("%v%v.List%vResponse", i.APIGroup, i.Version(), i.Service)
+	}
+	return fmt.Sprintf("%v%v.%vList", i.APIGroup, i.Version(), i.Object)
+}
+
+// ObjectListType is the compute List type for the object (contains Items field).
+func (i *ServiceInfo) ListItemName() string {
+	if i.IsNetworkServices() {
+		return i.Service
+	}
+	return "Items"
 }
 
 // ObjectAggregatedListType is the compute List type for the object (contains Items field).
 func (i *ServiceInfo) ObjectAggregatedListType() string {
-	return fmt.Sprintf("%v.%vAggregatedList", i.Version(), i.Object)
+	return fmt.Sprintf("%v%v.%vAggregatedList", i.APIGroup, i.Version(), i.Object)
 }
 
 // ObjectListUsableType is the compute List type for the object (contains Items field).
 func (i *ServiceInfo) ObjectListUsableType() string {
-	return fmt.Sprintf("%v.Usable%vAggregatedList", i.version, i.Service)
+	return fmt.Sprintf("%v%v.Usable%vAggregatedList", i.APIGroup, i.version, i.Service)
 }
 
 // FQListUsableObjectType is fully qualified name of the object (e.g. compute.Instance).
 func (i *ServiceInfo) FQListUsableObjectType() string {
-	return fmt.Sprintf("%v.Usable%v", i.Version(), i.Object)
+	return fmt.Sprintf("%v%v.Usable%v", i.APIGroup, i.Version(), i.Object)
 }
 
 // MockWrapType is the name of the concrete mock for this type.
@@ -121,13 +141,19 @@ func (i *ServiceInfo) MockField() string {
 	return "Mock" + i.WrapType()
 }
 
-// GCEWrapType is the name of the GCE wrapper type.
-func (i *ServiceInfo) GCEWrapType() string {
+// GCPWrapType is the name of the GCP wrapper type.
+func (i *ServiceInfo) GCPWrapType() string {
+	if i.APIGroup == APIGroupNetworkServices {
+		return "TD" + i.WrapType()
+	}
 	return "GCE" + i.WrapType()
 }
 
-// Field is the name of the GCE struct.
+// Field is the name of the GCP struct.
 func (i *ServiceInfo) Field() string {
+	if i.APIGroup == APIGroupNetworkServices {
+		return "td" + i.WrapType()
+	}
 	return "gce" + i.WrapType()
 }
 
@@ -170,6 +196,11 @@ func (i *ServiceInfo) KeyIsRegional() bool {
 // KeyIsZonal is true if the key is zonal.
 func (i *ServiceInfo) KeyIsZonal() bool {
 	return i.keyType == Zonal
+}
+
+// NetworkServices is true if the APIGroup is networkservices.
+func (i *ServiceInfo) IsNetworkServices() bool {
+	return i.APIGroup == APIGroupNetworkServices
 }
 
 // KeyIsProject is true if the key represents the project resource.

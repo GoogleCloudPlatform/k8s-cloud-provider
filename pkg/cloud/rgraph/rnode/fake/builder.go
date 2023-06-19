@@ -67,7 +67,7 @@ func (b *Builder) OutRefs() ([]rnode.ResourceRef, error) {
 }
 
 func (b *Builder) Build() (rnode.Node, error) {
-	ret := &fakeNode{}
+	ret := &fakeNode{resource: b.resource}
 	if err := ret.InitFromBuilder(b); err != nil {
 		return nil, err
 	}

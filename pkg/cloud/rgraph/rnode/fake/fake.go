@@ -30,6 +30,7 @@ type fakeResource struct {
 	ForceSendFields []string
 }
 
+// ID for the resource.
 func ID(project string, key *meta.Key) *cloud.ResourceID {
 	return &cloud.ResourceID{
 		Resource:  "fakes",
@@ -49,6 +50,7 @@ func newMutableFake(project string, key *meta.Key) mutableFake {
 	return api.NewResource[fakeResource, fakeResource, fakeResource](res, &fakeTypeTrait{})
 }
 
+// Fake resource for testing.
 type Fake = api.Resource[fakeResource, fakeResource, fakeResource]
 
 type fakeTypeTrait struct {

@@ -17,7 +17,8 @@ limitations under the License.
 package fake
 
 import (
-	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/meta"
+	"fmt"
+
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/exec"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode"
 )
@@ -32,15 +33,50 @@ var _ rnode.Node = (*fakeNode)(nil)
 func (n *fakeNode) Resource() rnode.UntypedResource { return n.resource }
 
 func (n *fakeNode) Diff(gotNode rnode.Node) (*rnode.PlanDetails, error) {
-	return nil, nil // TODO
+	gotRes, ok := gotNode.Resource().(Fake)
+	if !ok {
+		return nil, fmt.Errorf("fakeNode: invalid type to Diff: %T", gotNode.Resource())
+	}
+
+	diff, err := gotRes.Diff(n.resource)
+	if err != nil {
+		return nil, fmt.Errorf("fakeNode: Diff %w", err)
+	}
+	if diff.HasDiff() {
+		return &rnode.PlanDetails{
+			Operation: rnode.OpUpdate,
+			Why:       "Fake has diff",
+			Diff:      diff,
+		}, nil
+	}
+
+	return &rnode.PlanDetails{
+		Operation: rnode.OpNothing,
+		Why:       "No diff between got and want",
+	}, nil
 }
 
 func (n *fakeNode) Actions(got rnode.Node) ([]exec.Action, error) {
-	return nil, nil // TODO
+	op := n.Plan().Op()
+
+	switch op {
+	case rnode.OpCreate:
+		return []exec.Action{exec.NewExistsAction(n.ID())}, nil
+	case rnode.OpDelete:
+		return []exec.Action{exec.NewDoesNotExistAction(n.ID())}, nil
+	case rnode.OpNothing:
+		return []exec.Action{exec.NewExistsAction(n.ID())}, nil
+	case rnode.OpRecreate:
+		return []exec.Action{exec.NewExistsAction(n.ID())}, nil
+	case rnode.OpUpdate:
+		return []exec.Action{exec.NewExistsAction(n.ID())}, nil
+	}
+
+	return nil, fmt.Errorf("fakeNode: invalid plan op %s", op)
 }
 
 func (n *fakeNode) Builder() rnode.Builder {
 	b := &Builder{}
-	b.Init(n.ID(), n.State(), n.Ownership(), meta.VersionGA)
+	b.Init(n.ID(), n.State(), n.Ownership(), nil)
 	return b
 }

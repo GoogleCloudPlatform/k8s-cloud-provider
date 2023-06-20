@@ -32,7 +32,7 @@ func actionsFromGraphStr(graphStr string) []Action {
 	get := func(ev string) *testAction {
 		a, ok := actionMap[ev]
 		if !ok {
-			a = &testAction{name: ev, events: []Event{StringEvent(ev)}}
+			a = &testAction{name: ev, events: EventList{StringEvent(ev)}}
 			actionMap[ev] = a
 		}
 		return a

@@ -34,14 +34,14 @@ type Action interface {
 	Signal(Event) bool
 	// Run the Action, performing the operations. Returns a list of Events to
 	// signal and/or any errors that have occurred.
-	Run(context.Context, cloud.Cloud) ([]Event, error)
+	Run(context.Context, cloud.Cloud) (EventList, error)
 	// DryRun simulates running the Action. Returns a list of Events to signal.
-	DryRun() []Event
+	DryRun() EventList
 	// String returns a human-readable representation of the Action for logging.
 	String() string
 
 	// PendingEvents is the list of events that this Action is still waiting on.
-	PendingEvents() []Event
+	PendingEvents() EventList
 
 	// Metadata returns metadata used for visualizations.
 	Metadata() *ActionMetadata
@@ -71,13 +71,13 @@ type ActionMetadata struct {
 // Action implementation.
 type ActionBase struct {
 	// Want are the events this action is still waiting for.
-	Want []Event
+	Want EventList
 	// Done tracks the events that have happened. This is for debugging.
-	Done []Event
+	Done EventList
 }
 
-func (b *ActionBase) CanRun() bool           { return len(b.Want) == 0 }
-func (b *ActionBase) PendingEvents() []Event { return b.Want }
+func (b *ActionBase) CanRun() bool             { return len(b.Want) == 0 }
+func (b *ActionBase) PendingEvents() EventList { return b.Want }
 
 func (b *ActionBase) Signal(ev Event) bool {
 	for i, wantEv := range b.Want {
@@ -95,29 +95,35 @@ func (b *ActionBase) Signal(ev Event) bool {
 // It has no other side effects.
 func NewExistsAction(id *cloud.ResourceID) Action {
 	return &eventAction{
-		events: []Event{&existsEvent{id: id}},
+		events: EventList{&existsEvent{id: id}},
+	}
+}
+
+func NewDoesNotExistAction(id *cloud.ResourceID) Action {
+	return &eventAction{
+		events: EventList{NewNotExistsEvent(id)},
 	}
 }
 
 // eventAction exist only to signal events. These Actions do not have side
 // effects; they are used to model the starting conditions of an execution.
 type eventAction struct {
-	events []Event
+	events EventList
 }
 
 // eventAction is an Action.
 var _ Action = (*eventAction)(nil)
 
-func (*eventAction) CanRun() bool           { return true }
-func (*eventAction) Signal(Event) bool      { return false }
-func (a *eventAction) String() string       { return fmt.Sprintf("EventAction(%v)", a.events) }
-func (*eventAction) PendingEvents() []Event { return nil }
+func (*eventAction) CanRun() bool             { return true }
+func (*eventAction) Signal(Event) bool        { return false }
+func (a *eventAction) String() string         { return fmt.Sprintf("EventAction(%v)", a.events) }
+func (*eventAction) PendingEvents() EventList { return nil }
 
-func (a *eventAction) DryRun() []Event {
+func (a *eventAction) DryRun() EventList {
 	return a.events
 }
 
-func (a *eventAction) Run(context.Context, cloud.Cloud) ([]Event, error) {
+func (a *eventAction) Run(context.Context, cloud.Cloud) (EventList, error) {
 	return a.events, nil
 }
 

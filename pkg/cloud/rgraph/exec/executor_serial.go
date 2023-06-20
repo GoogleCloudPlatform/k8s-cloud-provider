@@ -39,11 +39,11 @@ func NewSerialExecutor(pending []Action, opts ...Option) (*serialExecutor, error
 	}
 
 	if ret.config.DryRun {
-		ret.runFunc = func(ctx context.Context, c cloud.Cloud, a Action) ([]Event, error) {
+		ret.runFunc = func(ctx context.Context, c cloud.Cloud, a Action) (EventList, error) {
 			return a.DryRun(), nil
 		}
 	} else {
-		ret.runFunc = func(ctx context.Context, c cloud.Cloud, a Action) ([]Event, error) {
+		ret.runFunc = func(ctx context.Context, c cloud.Cloud, a Action) (EventList, error) {
 			return a.Run(ctx, c)
 		}
 	}
@@ -54,7 +54,7 @@ func NewSerialExecutor(pending []Action, opts ...Option) (*serialExecutor, error
 type serialExecutor struct {
 	config *ExecutorConfig
 
-	runFunc func(context.Context, cloud.Cloud, Action) ([]Event, error)
+	runFunc func(context.Context, cloud.Cloud, Action) (EventList, error)
 	result  *Result
 }
 

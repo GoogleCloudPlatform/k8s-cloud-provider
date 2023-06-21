@@ -35,12 +35,12 @@ func (n *fakeNode) Resource() rnode.UntypedResource { return n.resource }
 func (n *fakeNode) Diff(gotNode rnode.Node) (*rnode.PlanDetails, error) {
 	gotRes, ok := gotNode.Resource().(Fake)
 	if !ok {
-		return nil, fmt.Errorf("fakeNode: invalid type to Diff: %T", gotNode.Resource())
+		return nil, fmt.Errorf("fakeNode %s: invalid type to Diff: %T", n.ID(), gotNode.Resource())
 	}
 
 	diff, err := gotRes.Diff(n.resource)
 	if err != nil {
-		return nil, fmt.Errorf("fakeNode: Diff %w", err)
+		return nil, fmt.Errorf("fakeNode %s: Diff %w", n.ID(), err)
 	}
 	if diff.HasDiff() {
 		return &rnode.PlanDetails{
@@ -72,7 +72,7 @@ func (n *fakeNode) Actions(got rnode.Node) ([]exec.Action, error) {
 		return []exec.Action{exec.NewExistsAction(n.ID())}, nil
 	}
 
-	return nil, fmt.Errorf("fakeNode: invalid plan op %s", op)
+	return nil, fmt.Errorf("fakeNode %s: invalid plan op %s", n.ID(), op)
 }
 
 func (n *fakeNode) Builder() rnode.Builder {

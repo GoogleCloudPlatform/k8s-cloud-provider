@@ -22,9 +22,12 @@ import (
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/meta"
 )
 
-// fakeResource is a resource used only for testing.
-type fakeResource struct {
-	Name            string
+// FakeResource is a resource used only for testing.
+type FakeResource struct {
+	Name string
+	// Value is compared in Diff.
+	Value string
+	// Dependencies are URLs to other resources i.e. OutRefs.
 	Dependencies    []string
 	NullFields      []string
 	ForceSendFields []string
@@ -39,20 +42,20 @@ func ID(project string, key *meta.Key) *cloud.ResourceID {
 	}
 }
 
-type mutableFake = api.MutableResource[fakeResource, fakeResource, fakeResource]
+type MutableFake = api.MutableResource[FakeResource, FakeResource, FakeResource]
 
-func newMutableFake(project string, key *meta.Key) mutableFake {
+func NewMutableFake(project string, key *meta.Key) MutableFake {
 	res := &cloud.ResourceID{
 		Resource:  "fakes",
 		ProjectID: project,
 		Key:       key,
 	}
-	return api.NewResource[fakeResource, fakeResource, fakeResource](res, &fakeTypeTrait{})
+	return api.NewResource[FakeResource, FakeResource, FakeResource](res, &fakeTypeTrait{})
 }
 
 // Fake resource for testing.
-type Fake = api.Resource[fakeResource, fakeResource, fakeResource]
+type Fake = api.Resource[FakeResource, FakeResource, FakeResource]
 
 type fakeTypeTrait struct {
-	api.BaseTypeTrait[fakeResource, fakeResource, fakeResource]
+	api.BaseTypeTrait[FakeResource, FakeResource, FakeResource]
 }

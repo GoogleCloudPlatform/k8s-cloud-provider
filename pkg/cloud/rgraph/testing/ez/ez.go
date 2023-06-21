@@ -36,14 +36,19 @@ type GraphOption int
 const (
 	// PanicOnAccessErr causes panic() if Accces() returns an error. Otherwise,
 	// the error is ignored.
-	PanicOnAccessErr = 1 << iota
+	PanicOnAccessErr GraphOption = 1 << iota
 )
 
 func panicf(s string, args ...any) { panic(fmt.Sprintf(s, args...)) }
 
+// Graph is an easy way to build resource Graphs. This is intended for static
+// testing case construction. Errors are handled by panic().
 type Graph struct {
-	Nodes   []Node
+	// Nodes in the Graph.
+	Nodes []Node
+	// Project to use by default if not specified in the Node.
 	Project string
+	// Options to use by default in the Graph and Nodes.
 	Options GraphOption
 
 	ids idMap
@@ -88,15 +93,26 @@ func (g *Graph) Remove(name string) {
 	}
 }
 
-// Node in the graph.
+// Node in the graph. This is intended for static testing case construction.
+// Errors are handled by panic().
 type Node struct {
-	Name      string
-	Refs      []Ref
-	Options   NodeOption
+	// Name of the resource/node.
+	Name string
+	// Refs to other resources.
+	Refs []Ref
+	// Options for this node.
+	Options NodeOption
+	// SetupFunc will be called to initialize the contents of the Node. The type
+	// of this func should match the type of MutableResource.Access(). For
+	// example, for compute.Address, the signature of this function is:
+	// func(*compute.Address).
 	SetupFunc any
 
-	Region  string
-	Zone    string
+	// Region if applicable.
+	Region string
+	// Zone if applicable.
+	Zone string
+	// Project will override the Project in Graph.
 	Project string
 }
 

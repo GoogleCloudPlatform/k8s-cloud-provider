@@ -3100,7 +3100,7 @@ func (m *MockAddresses) Insert(ctx context.Context, key *meta.Key, obj *ga.Addre
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "addresses")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "addresses", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "addresses", key)
 
 	m.Objects[*key] = &MockAddressesObj{obj}
 	klog.V(5).Infof("MockAddresses.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -3549,7 +3549,7 @@ func (m *MockAlphaAddresses) Insert(ctx context.Context, key *meta.Key, obj *alp
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "addresses")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "addresses", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "addresses", key)
 
 	m.Objects[*key] = &MockAddressesObj{obj}
 	klog.V(5).Infof("MockAlphaAddresses.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -3998,7 +3998,7 @@ func (m *MockBetaAddresses) Insert(ctx context.Context, key *meta.Key, obj *beta
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "addresses")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "addresses", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "addresses", key)
 
 	m.Objects[*key] = &MockAddressesObj{obj}
 	klog.V(5).Infof("MockBetaAddresses.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -4441,7 +4441,7 @@ func (m *MockAlphaGlobalAddresses) Insert(ctx context.Context, key *meta.Key, ob
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "addresses")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "addresses", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "addresses", key)
 
 	m.Objects[*key] = &MockGlobalAddressesObj{obj}
 	klog.V(5).Infof("MockAlphaGlobalAddresses.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -4798,7 +4798,7 @@ func (m *MockBetaGlobalAddresses) Insert(ctx context.Context, key *meta.Key, obj
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "addresses")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "addresses", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "addresses", key)
 
 	m.Objects[*key] = &MockGlobalAddressesObj{obj}
 	klog.V(5).Infof("MockBetaGlobalAddresses.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -5155,7 +5155,7 @@ func (m *MockGlobalAddresses) Insert(ctx context.Context, key *meta.Key, obj *ga
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "addresses")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "addresses", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "addresses", key)
 
 	m.Objects[*key] = &MockGlobalAddressesObj{obj}
 	klog.V(5).Infof("MockGlobalAddresses.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -5527,7 +5527,7 @@ func (m *MockBackendServices) Insert(ctx context.Context, key *meta.Key, obj *ga
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "backendServices")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "backendServices", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "backendServices", key)
 
 	m.Objects[*key] = &MockBackendServicesObj{obj}
 	klog.V(5).Infof("MockBackendServices.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -6274,7 +6274,7 @@ func (m *MockBetaBackendServices) Insert(ctx context.Context, key *meta.Key, obj
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "backendServices")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "backendServices", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "backendServices", key)
 
 	m.Objects[*key] = &MockBackendServicesObj{obj}
 	klog.V(5).Infof("MockBetaBackendServices.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -6981,7 +6981,7 @@ func (m *MockAlphaBackendServices) Insert(ctx context.Context, key *meta.Key, ob
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "backendServices")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "backendServices", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "backendServices", key)
 
 	m.Objects[*key] = &MockBackendServicesObj{obj}
 	klog.V(5).Infof("MockAlphaBackendServices.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -7684,7 +7684,7 @@ func (m *MockRegionBackendServices) Insert(ctx context.Context, key *meta.Key, o
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "backendServices")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "backendServices", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "backendServices", key)
 
 	m.Objects[*key] = &MockRegionBackendServicesObj{obj}
 	klog.V(5).Infof("MockRegionBackendServices.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -8189,7 +8189,7 @@ func (m *MockAlphaRegionBackendServices) Insert(ctx context.Context, key *meta.K
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "backendServices")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "backendServices", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "backendServices", key)
 
 	m.Objects[*key] = &MockRegionBackendServicesObj{obj}
 	klog.V(5).Infof("MockAlphaRegionBackendServices.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -8694,7 +8694,7 @@ func (m *MockBetaRegionBackendServices) Insert(ctx context.Context, key *meta.Ke
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "backendServices")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "backendServices", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "backendServices", key)
 
 	m.Objects[*key] = &MockRegionBackendServicesObj{obj}
 	klog.V(5).Infof("MockBetaRegionBackendServices.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -9195,7 +9195,7 @@ func (m *MockDisks) Insert(ctx context.Context, key *meta.Key, obj *ga.Disk) err
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "disks")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "disks", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "disks", key)
 
 	m.Objects[*key] = &MockDisksObj{obj}
 	klog.V(5).Infof("MockDisks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -9606,7 +9606,7 @@ func (m *MockRegionDisks) Insert(ctx context.Context, key *meta.Key, obj *ga.Dis
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "disks")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "disks", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "disks", key)
 
 	m.Objects[*key] = &MockRegionDisksObj{obj}
 	klog.V(5).Infof("MockRegionDisks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -10016,7 +10016,7 @@ func (m *MockAlphaFirewalls) Insert(ctx context.Context, key *meta.Key, obj *alp
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "firewalls")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "firewalls", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "firewalls", key)
 
 	m.Objects[*key] = &MockFirewallsObj{obj}
 	klog.V(5).Infof("MockAlphaFirewalls.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -10477,7 +10477,7 @@ func (m *MockBetaFirewalls) Insert(ctx context.Context, key *meta.Key, obj *beta
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "firewalls")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "firewalls", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "firewalls", key)
 
 	m.Objects[*key] = &MockFirewallsObj{obj}
 	klog.V(5).Infof("MockBetaFirewalls.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -10938,7 +10938,7 @@ func (m *MockFirewalls) Insert(ctx context.Context, key *meta.Key, obj *ga.Firew
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "firewalls")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "firewalls", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "firewalls", key)
 
 	m.Objects[*key] = &MockFirewallsObj{obj}
 	klog.V(5).Infof("MockFirewalls.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -11419,7 +11419,7 @@ func (m *MockAlphaNetworkFirewallPolicies) Insert(ctx context.Context, key *meta
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networkFirewallPolicies")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "networkFirewallPolicies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "networkFirewallPolicies", key)
 
 	m.Objects[*key] = &MockNetworkFirewallPoliciesObj{obj}
 	klog.V(5).Infof("MockAlphaNetworkFirewallPolicies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -12353,7 +12353,7 @@ func (m *MockAlphaRegionNetworkFirewallPolicies) Insert(ctx context.Context, key
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "regionNetworkFirewallPolicies")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "regionNetworkFirewallPolicies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "regionNetworkFirewallPolicies", key)
 
 	m.Objects[*key] = &MockRegionNetworkFirewallPoliciesObj{obj}
 	klog.V(5).Infof("MockAlphaRegionNetworkFirewallPolicies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -13266,7 +13266,7 @@ func (m *MockForwardingRules) Insert(ctx context.Context, key *meta.Key, obj *ga
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "forwardingRules")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "forwardingRules", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "forwardingRules", key)
 
 	m.Objects[*key] = &MockForwardingRulesObj{obj}
 	klog.V(5).Infof("MockForwardingRules.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -13729,7 +13729,7 @@ func (m *MockAlphaForwardingRules) Insert(ctx context.Context, key *meta.Key, ob
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "forwardingRules")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "forwardingRules", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "forwardingRules", key)
 
 	m.Objects[*key] = &MockForwardingRulesObj{obj}
 	klog.V(5).Infof("MockAlphaForwardingRules.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -14192,7 +14192,7 @@ func (m *MockBetaForwardingRules) Insert(ctx context.Context, key *meta.Key, obj
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "forwardingRules")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "forwardingRules", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "forwardingRules", key)
 
 	m.Objects[*key] = &MockForwardingRulesObj{obj}
 	klog.V(5).Infof("MockBetaForwardingRules.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -14652,7 +14652,7 @@ func (m *MockAlphaGlobalForwardingRules) Insert(ctx context.Context, key *meta.K
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "forwardingRules")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "forwardingRules", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "forwardingRules", key)
 
 	m.Objects[*key] = &MockGlobalForwardingRulesObj{obj}
 	klog.V(5).Infof("MockAlphaGlobalForwardingRules.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -15113,7 +15113,7 @@ func (m *MockBetaGlobalForwardingRules) Insert(ctx context.Context, key *meta.Ke
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "forwardingRules")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "forwardingRules", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "forwardingRules", key)
 
 	m.Objects[*key] = &MockGlobalForwardingRulesObj{obj}
 	klog.V(5).Infof("MockBetaGlobalForwardingRules.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -15574,7 +15574,7 @@ func (m *MockGlobalForwardingRules) Insert(ctx context.Context, key *meta.Key, o
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "forwardingRules")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "forwardingRules", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "forwardingRules", key)
 
 	m.Objects[*key] = &MockGlobalForwardingRulesObj{obj}
 	klog.V(5).Infof("MockGlobalForwardingRules.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -16033,7 +16033,7 @@ func (m *MockHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *ga.He
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "healthChecks")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "healthChecks", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "healthChecks", key)
 
 	m.Objects[*key] = &MockHealthChecksObj{obj}
 	klog.V(5).Infof("MockHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -16442,7 +16442,7 @@ func (m *MockAlphaHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "healthChecks")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "healthChecks", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "healthChecks", key)
 
 	m.Objects[*key] = &MockHealthChecksObj{obj}
 	klog.V(5).Infof("MockAlphaHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -16851,7 +16851,7 @@ func (m *MockBetaHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *b
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "healthChecks")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "healthChecks", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "healthChecks", key)
 
 	m.Objects[*key] = &MockHealthChecksObj{obj}
 	klog.V(5).Infof("MockBetaHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -17263,7 +17263,7 @@ func (m *MockAlphaRegionHealthChecks) Insert(ctx context.Context, key *meta.Key,
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "healthChecks")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "healthChecks", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "healthChecks", key)
 
 	m.Objects[*key] = &MockRegionHealthChecksObj{obj}
 	klog.V(5).Infof("MockAlphaRegionHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -17674,7 +17674,7 @@ func (m *MockBetaRegionHealthChecks) Insert(ctx context.Context, key *meta.Key, 
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "healthChecks")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "healthChecks", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "healthChecks", key)
 
 	m.Objects[*key] = &MockRegionHealthChecksObj{obj}
 	klog.V(5).Infof("MockBetaRegionHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -18085,7 +18085,7 @@ func (m *MockRegionHealthChecks) Insert(ctx context.Context, key *meta.Key, obj 
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "healthChecks")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "healthChecks", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "healthChecks", key)
 
 	m.Objects[*key] = &MockRegionHealthChecksObj{obj}
 	klog.V(5).Infof("MockRegionHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -18493,7 +18493,7 @@ func (m *MockHttpHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *g
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "httpHealthChecks")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "httpHealthChecks", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "httpHealthChecks", key)
 
 	m.Objects[*key] = &MockHttpHealthChecksObj{obj}
 	klog.V(5).Infof("MockHttpHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -18902,7 +18902,7 @@ func (m *MockHttpsHealthChecks) Insert(ctx context.Context, key *meta.Key, obj *
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "httpsHealthChecks")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "httpsHealthChecks", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "httpsHealthChecks", key)
 
 	m.Objects[*key] = &MockHttpsHealthChecksObj{obj}
 	klog.V(5).Infof("MockHttpsHealthChecks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -19320,7 +19320,7 @@ func (m *MockInstanceGroups) Insert(ctx context.Context, key *meta.Key, obj *ga.
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "instanceGroups")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "instanceGroups", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "instanceGroups", key)
 
 	m.Objects[*key] = &MockInstanceGroupsObj{obj}
 	klog.V(5).Infof("MockInstanceGroups.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -19892,7 +19892,7 @@ func (m *MockInstances) Insert(ctx context.Context, key *meta.Key, obj *ga.Insta
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "instances")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "instances", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "instances", key)
 
 	m.Objects[*key] = &MockInstancesObj{obj}
 	klog.V(5).Infof("MockInstances.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -20357,7 +20357,7 @@ func (m *MockBetaInstances) Insert(ctx context.Context, key *meta.Key, obj *beta
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "instances")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "instances", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "instances", key)
 
 	m.Objects[*key] = &MockInstancesObj{obj}
 	klog.V(5).Infof("MockBetaInstances.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -20872,7 +20872,7 @@ func (m *MockAlphaInstances) Insert(ctx context.Context, key *meta.Key, obj *alp
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "instances")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "instances", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "instances", key)
 
 	m.Objects[*key] = &MockInstancesObj{obj}
 	klog.V(5).Infof("MockAlphaInstances.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -21389,7 +21389,7 @@ func (m *MockInstanceGroupManagers) Insert(ctx context.Context, key *meta.Key, o
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "instanceGroupManagers")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "instanceGroupManagers", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "instanceGroupManagers", key)
 
 	m.Objects[*key] = &MockInstanceGroupManagersObj{obj}
 	klog.V(5).Infof("MockInstanceGroupManagers.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -21945,7 +21945,7 @@ func (m *MockInstanceTemplates) Insert(ctx context.Context, key *meta.Key, obj *
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "instanceTemplates")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "instanceTemplates", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "instanceTemplates", key)
 
 	m.Objects[*key] = &MockInstanceTemplatesObj{obj}
 	klog.V(5).Infof("MockInstanceTemplates.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -22314,7 +22314,7 @@ func (m *MockImages) Insert(ctx context.Context, key *meta.Key, obj *ga.Image) e
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "Images")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "Images", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "Images", key)
 
 	m.Objects[*key] = &MockImagesObj{obj}
 	klog.V(5).Infof("MockImages.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -22943,7 +22943,7 @@ func (m *MockBetaImages) Insert(ctx context.Context, key *meta.Key, obj *beta.Im
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "Images")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "Images", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "Images", key)
 
 	m.Objects[*key] = &MockImagesObj{obj}
 	klog.V(5).Infof("MockBetaImages.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -23572,7 +23572,7 @@ func (m *MockAlphaImages) Insert(ctx context.Context, key *meta.Key, obj *alpha.
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "Images")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "Images", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "Images", key)
 
 	m.Objects[*key] = &MockImagesObj{obj}
 	klog.V(5).Infof("MockAlphaImages.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -24189,7 +24189,7 @@ func (m *MockAlphaNetworks) Insert(ctx context.Context, key *meta.Key, obj *alph
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networks")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "networks", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "networks", key)
 
 	m.Objects[*key] = &MockNetworksObj{obj}
 	klog.V(5).Infof("MockAlphaNetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -24546,7 +24546,7 @@ func (m *MockBetaNetworks) Insert(ctx context.Context, key *meta.Key, obj *beta.
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "networks")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "networks", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "networks", key)
 
 	m.Objects[*key] = &MockNetworksObj{obj}
 	klog.V(5).Infof("MockBetaNetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -24903,7 +24903,7 @@ func (m *MockNetworks) Insert(ctx context.Context, key *meta.Key, obj *ga.Networ
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "networks")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "networks", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "networks", key)
 
 	m.Objects[*key] = &MockNetworksObj{obj}
 	klog.V(5).Infof("MockNetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -25272,7 +25272,7 @@ func (m *MockAlphaNetworkEndpointGroups) Insert(ctx context.Context, key *meta.K
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "networkEndpointGroups")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "networkEndpointGroups", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "networkEndpointGroups", key)
 
 	m.Objects[*key] = &MockNetworkEndpointGroupsObj{obj}
 	klog.V(5).Infof("MockAlphaNetworkEndpointGroups.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -25886,7 +25886,7 @@ func (m *MockBetaNetworkEndpointGroups) Insert(ctx context.Context, key *meta.Ke
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "networkEndpointGroups")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "networkEndpointGroups", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "networkEndpointGroups", key)
 
 	m.Objects[*key] = &MockNetworkEndpointGroupsObj{obj}
 	klog.V(5).Infof("MockBetaNetworkEndpointGroups.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -26500,7 +26500,7 @@ func (m *MockNetworkEndpointGroups) Insert(ctx context.Context, key *meta.Key, o
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "networkEndpointGroups")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "networkEndpointGroups", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "networkEndpointGroups", key)
 
 	m.Objects[*key] = &MockNetworkEndpointGroupsObj{obj}
 	klog.V(5).Infof("MockNetworkEndpointGroups.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -27365,7 +27365,7 @@ func (m *MockAlphaRouters) Insert(ctx context.Context, key *meta.Key, obj *alpha
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "routers")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "routers", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "routers", key)
 
 	m.Objects[*key] = &MockRoutersObj{obj}
 	klog.V(5).Infof("MockAlphaRouters.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -27992,7 +27992,7 @@ func (m *MockBetaRouters) Insert(ctx context.Context, key *meta.Key, obj *beta.R
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "routers")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "routers", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "routers", key)
 
 	m.Objects[*key] = &MockRoutersObj{obj}
 	klog.V(5).Infof("MockBetaRouters.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -28617,7 +28617,7 @@ func (m *MockRouters) Insert(ctx context.Context, key *meta.Key, obj *ga.Router)
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "routers")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "routers", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "routers", key)
 
 	m.Objects[*key] = &MockRoutersObj{obj}
 	klog.V(5).Infof("MockRouters.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -29190,7 +29190,7 @@ func (m *MockRoutes) Insert(ctx context.Context, key *meta.Key, obj *ga.Route) e
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "routes")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "routes", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "routes", key)
 
 	m.Objects[*key] = &MockRoutesObj{obj}
 	klog.V(5).Infof("MockRoutes.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -29557,7 +29557,7 @@ func (m *MockBetaSecurityPolicies) Insert(ctx context.Context, key *meta.Key, ob
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "securityPolicies")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "securityPolicies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "securityPolicies", key)
 
 	m.Objects[*key] = &MockSecurityPoliciesObj{obj}
 	klog.V(5).Infof("MockBetaSecurityPolicies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -30159,7 +30159,7 @@ func (m *MockServiceAttachments) Insert(ctx context.Context, key *meta.Key, obj 
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "serviceAttachments")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "serviceAttachments", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "serviceAttachments", key)
 
 	m.Objects[*key] = &MockServiceAttachmentsObj{obj}
 	klog.V(5).Infof("MockServiceAttachments.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -30570,7 +30570,7 @@ func (m *MockBetaServiceAttachments) Insert(ctx context.Context, key *meta.Key, 
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "serviceAttachments")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "serviceAttachments", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "serviceAttachments", key)
 
 	m.Objects[*key] = &MockServiceAttachmentsObj{obj}
 	klog.V(5).Infof("MockBetaServiceAttachments.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -30981,7 +30981,7 @@ func (m *MockAlphaServiceAttachments) Insert(ctx context.Context, key *meta.Key,
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "serviceAttachments")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "serviceAttachments", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "serviceAttachments", key)
 
 	m.Objects[*key] = &MockServiceAttachmentsObj{obj}
 	klog.V(5).Infof("MockAlphaServiceAttachments.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -31387,7 +31387,7 @@ func (m *MockSslCertificates) Insert(ctx context.Context, key *meta.Key, obj *ga
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslCertificates")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "sslCertificates", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "sslCertificates", key)
 
 	m.Objects[*key] = &MockSslCertificatesObj{obj}
 	klog.V(5).Infof("MockSslCertificates.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -31744,7 +31744,7 @@ func (m *MockBetaSslCertificates) Insert(ctx context.Context, key *meta.Key, obj
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "sslCertificates")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "sslCertificates", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "sslCertificates", key)
 
 	m.Objects[*key] = &MockSslCertificatesObj{obj}
 	klog.V(5).Infof("MockBetaSslCertificates.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -32101,7 +32101,7 @@ func (m *MockAlphaSslCertificates) Insert(ctx context.Context, key *meta.Key, ob
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "sslCertificates")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "sslCertificates", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "sslCertificates", key)
 
 	m.Objects[*key] = &MockSslCertificatesObj{obj}
 	klog.V(5).Infof("MockAlphaSslCertificates.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -32461,7 +32461,7 @@ func (m *MockAlphaRegionSslCertificates) Insert(ctx context.Context, key *meta.K
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "sslCertificates")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "sslCertificates", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "sslCertificates", key)
 
 	m.Objects[*key] = &MockRegionSslCertificatesObj{obj}
 	klog.V(5).Infof("MockAlphaRegionSslCertificates.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -32820,7 +32820,7 @@ func (m *MockBetaRegionSslCertificates) Insert(ctx context.Context, key *meta.Ke
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "sslCertificates")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "sslCertificates", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "sslCertificates", key)
 
 	m.Objects[*key] = &MockRegionSslCertificatesObj{obj}
 	klog.V(5).Infof("MockBetaRegionSslCertificates.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -33179,7 +33179,7 @@ func (m *MockRegionSslCertificates) Insert(ctx context.Context, key *meta.Key, o
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslCertificates")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "sslCertificates", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "sslCertificates", key)
 
 	m.Objects[*key] = &MockRegionSslCertificatesObj{obj}
 	klog.V(5).Infof("MockRegionSslCertificates.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -33501,7 +33501,7 @@ func (m *MockSslPolicies) Insert(ctx context.Context, key *meta.Key, obj *ga.Ssl
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslPolicies")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "sslPolicies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "sslPolicies", key)
 
 	m.Objects[*key] = &MockSslPoliciesObj{obj}
 	klog.V(5).Infof("MockSslPolicies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -33816,7 +33816,7 @@ func (m *MockAlphaSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *a
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "subnetworks")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "subnetworks", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "subnetworks", key)
 
 	m.Objects[*key] = &MockSubnetworksObj{obj}
 	klog.V(5).Infof("MockAlphaSubnetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -34313,7 +34313,7 @@ func (m *MockBetaSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *be
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "subnetworks")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "subnetworks", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "subnetworks", key)
 
 	m.Objects[*key] = &MockSubnetworksObj{obj}
 	klog.V(5).Infof("MockBetaSubnetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -34810,7 +34810,7 @@ func (m *MockSubnetworks) Insert(ctx context.Context, key *meta.Key, obj *ga.Sub
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "subnetworks")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "subnetworks", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "subnetworks", key)
 
 	m.Objects[*key] = &MockSubnetworksObj{obj}
 	klog.V(5).Infof("MockSubnetworks.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -35301,7 +35301,7 @@ func (m *MockAlphaTargetHttpProxies) Insert(ctx context.Context, key *meta.Key, 
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpProxies")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "targetHttpProxies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "targetHttpProxies", key)
 
 	m.Objects[*key] = &MockTargetHttpProxiesObj{obj}
 	klog.V(5).Infof("MockAlphaTargetHttpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -35710,7 +35710,7 @@ func (m *MockBetaTargetHttpProxies) Insert(ctx context.Context, key *meta.Key, o
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpProxies")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "targetHttpProxies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "targetHttpProxies", key)
 
 	m.Objects[*key] = &MockTargetHttpProxiesObj{obj}
 	klog.V(5).Infof("MockBetaTargetHttpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -36119,7 +36119,7 @@ func (m *MockTargetHttpProxies) Insert(ctx context.Context, key *meta.Key, obj *
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpProxies")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "targetHttpProxies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "targetHttpProxies", key)
 
 	m.Objects[*key] = &MockTargetHttpProxiesObj{obj}
 	klog.V(5).Infof("MockTargetHttpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -36531,7 +36531,7 @@ func (m *MockAlphaRegionTargetHttpProxies) Insert(ctx context.Context, key *meta
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpProxies")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "targetHttpProxies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "targetHttpProxies", key)
 
 	m.Objects[*key] = &MockRegionTargetHttpProxiesObj{obj}
 	klog.V(5).Infof("MockAlphaRegionTargetHttpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -36942,7 +36942,7 @@ func (m *MockBetaRegionTargetHttpProxies) Insert(ctx context.Context, key *meta.
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpProxies")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "targetHttpProxies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "targetHttpProxies", key)
 
 	m.Objects[*key] = &MockRegionTargetHttpProxiesObj{obj}
 	klog.V(5).Infof("MockBetaRegionTargetHttpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -37353,7 +37353,7 @@ func (m *MockRegionTargetHttpProxies) Insert(ctx context.Context, key *meta.Key,
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpProxies")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "targetHttpProxies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "targetHttpProxies", key)
 
 	m.Objects[*key] = &MockRegionTargetHttpProxiesObj{obj}
 	klog.V(5).Infof("MockRegionTargetHttpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -37767,7 +37767,7 @@ func (m *MockTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key, obj 
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpsProxies")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "targetHttpsProxies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "targetHttpsProxies", key)
 
 	m.Objects[*key] = &MockTargetHttpsProxiesObj{obj}
 	klog.V(5).Infof("MockTargetHttpsProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -38332,7 +38332,7 @@ func (m *MockAlphaTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key,
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpsProxies")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "targetHttpsProxies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "targetHttpsProxies", key)
 
 	m.Objects[*key] = &MockTargetHttpsProxiesObj{obj}
 	klog.V(5).Infof("MockAlphaTargetHttpsProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -38897,7 +38897,7 @@ func (m *MockBetaTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key, 
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpsProxies")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "targetHttpsProxies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "targetHttpsProxies", key)
 
 	m.Objects[*key] = &MockTargetHttpsProxiesObj{obj}
 	klog.V(5).Infof("MockBetaTargetHttpsProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -39461,7 +39461,7 @@ func (m *MockAlphaRegionTargetHttpsProxies) Insert(ctx context.Context, key *met
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetHttpsProxies")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "targetHttpsProxies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "targetHttpsProxies", key)
 
 	m.Objects[*key] = &MockRegionTargetHttpsProxiesObj{obj}
 	klog.V(5).Infof("MockAlphaRegionTargetHttpsProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -39924,7 +39924,7 @@ func (m *MockBetaRegionTargetHttpsProxies) Insert(ctx context.Context, key *meta
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetHttpsProxies")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "targetHttpsProxies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "targetHttpsProxies", key)
 
 	m.Objects[*key] = &MockRegionTargetHttpsProxiesObj{obj}
 	klog.V(5).Infof("MockBetaRegionTargetHttpsProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -40387,7 +40387,7 @@ func (m *MockRegionTargetHttpsProxies) Insert(ctx context.Context, key *meta.Key
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetHttpsProxies")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "targetHttpsProxies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "targetHttpsProxies", key)
 
 	m.Objects[*key] = &MockRegionTargetHttpsProxiesObj{obj}
 	klog.V(5).Infof("MockRegionTargetHttpsProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -40850,7 +40850,7 @@ func (m *MockTargetPools) Insert(ctx context.Context, key *meta.Key, obj *ga.Tar
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetPools")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "targetPools", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "targetPools", key)
 
 	m.Objects[*key] = &MockTargetPoolsObj{obj}
 	klog.V(5).Infof("MockTargetPools.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -41308,7 +41308,7 @@ func (m *MockAlphaTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, o
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "targetTcpProxies")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "targetTcpProxies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "targetTcpProxies", key)
 
 	m.Objects[*key] = &MockTargetTcpProxiesObj{obj}
 	klog.V(5).Infof("MockAlphaTargetTcpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -41717,7 +41717,7 @@ func (m *MockBetaTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, ob
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "targetTcpProxies")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "targetTcpProxies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "targetTcpProxies", key)
 
 	m.Objects[*key] = &MockTargetTcpProxiesObj{obj}
 	klog.V(5).Infof("MockBetaTargetTcpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -42126,7 +42126,7 @@ func (m *MockTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, obj *g
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "targetTcpProxies")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "targetTcpProxies", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "targetTcpProxies", key)
 
 	m.Objects[*key] = &MockTargetTcpProxiesObj{obj}
 	klog.V(5).Infof("MockTargetTcpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -42535,7 +42535,7 @@ func (m *MockAlphaUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *alpha
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "urlMaps")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "urlMaps", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "urlMaps", key)
 
 	m.Objects[*key] = &MockUrlMapsObj{obj}
 	klog.V(5).Infof("MockAlphaUrlMaps.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -42944,7 +42944,7 @@ func (m *MockBetaUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *beta.U
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "urlMaps")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "urlMaps", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "urlMaps", key)
 
 	m.Objects[*key] = &MockUrlMapsObj{obj}
 	klog.V(5).Infof("MockBetaUrlMaps.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -43353,7 +43353,7 @@ func (m *MockUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *ga.UrlMap)
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "urlMaps")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "urlMaps", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "urlMaps", key)
 
 	m.Objects[*key] = &MockUrlMapsObj{obj}
 	klog.V(5).Infof("MockUrlMaps.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -43765,7 +43765,7 @@ func (m *MockAlphaRegionUrlMaps) Insert(ctx context.Context, key *meta.Key, obj 
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "alpha", "urlMaps")
-	obj.SelfLink = SelfLink(meta.VersionAlpha, projectID, "urlMaps", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "urlMaps", key)
 
 	m.Objects[*key] = &MockRegionUrlMapsObj{obj}
 	klog.V(5).Infof("MockAlphaRegionUrlMaps.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -44176,7 +44176,7 @@ func (m *MockBetaRegionUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "beta", "urlMaps")
-	obj.SelfLink = SelfLink(meta.VersionBeta, projectID, "urlMaps", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "urlMaps", key)
 
 	m.Objects[*key] = &MockRegionUrlMapsObj{obj}
 	klog.V(5).Infof("MockBetaRegionUrlMaps.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -44587,7 +44587,7 @@ func (m *MockRegionUrlMaps) Insert(ctx context.Context, key *meta.Key, obj *ga.U
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "urlMaps")
-	obj.SelfLink = SelfLink(meta.VersionGA, projectID, "urlMaps", key)
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "urlMaps", key)
 
 	m.Objects[*key] = &MockRegionUrlMapsObj{obj}
 	klog.V(5).Infof("MockRegionUrlMaps.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -45051,245 +45051,245 @@ func (g *GCEZones) List(ctx context.Context, fl *filter.F) ([]*ga.Zone, error) {
 // NewAddressesResourceID creates a ResourceID for the Addresses resource.
 func NewAddressesResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
-	return &ResourceID{project, "addresses", key}
+	return &ResourceID{project, "compute", "addresses", key}
 }
 
 // NewBackendServicesResourceID creates a ResourceID for the BackendServices resource.
 func NewBackendServicesResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "backendServices", key}
+	return &ResourceID{project, "compute", "backendServices", key}
 }
 
 // NewDisksResourceID creates a ResourceID for the Disks resource.
 func NewDisksResourceID(project, zone, name string) *ResourceID {
 	key := meta.ZonalKey(name, zone)
-	return &ResourceID{project, "disks", key}
+	return &ResourceID{project, "compute", "disks", key}
 }
 
 // NewFirewallsResourceID creates a ResourceID for the Firewalls resource.
 func NewFirewallsResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "firewalls", key}
+	return &ResourceID{project, "compute", "firewalls", key}
 }
 
 // NewForwardingRulesResourceID creates a ResourceID for the ForwardingRules resource.
 func NewForwardingRulesResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
-	return &ResourceID{project, "forwardingRules", key}
+	return &ResourceID{project, "compute", "forwardingRules", key}
 }
 
 // NewGlobalAddressesResourceID creates a ResourceID for the GlobalAddresses resource.
 func NewGlobalAddressesResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "addresses", key}
+	return &ResourceID{project, "compute", "addresses", key}
 }
 
 // NewGlobalForwardingRulesResourceID creates a ResourceID for the GlobalForwardingRules resource.
 func NewGlobalForwardingRulesResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "forwardingRules", key}
+	return &ResourceID{project, "compute", "forwardingRules", key}
 }
 
 // NewHealthChecksResourceID creates a ResourceID for the HealthChecks resource.
 func NewHealthChecksResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "healthChecks", key}
+	return &ResourceID{project, "compute", "healthChecks", key}
 }
 
 // NewHttpHealthChecksResourceID creates a ResourceID for the HttpHealthChecks resource.
 func NewHttpHealthChecksResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "httpHealthChecks", key}
+	return &ResourceID{project, "compute", "httpHealthChecks", key}
 }
 
 // NewHttpsHealthChecksResourceID creates a ResourceID for the HttpsHealthChecks resource.
 func NewHttpsHealthChecksResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "httpsHealthChecks", key}
+	return &ResourceID{project, "compute", "httpsHealthChecks", key}
 }
 
 // NewImagesResourceID creates a ResourceID for the Images resource.
 func NewImagesResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "Images", key}
+	return &ResourceID{project, "compute", "Images", key}
 }
 
 // NewInstanceGroupManagersResourceID creates a ResourceID for the InstanceGroupManagers resource.
 func NewInstanceGroupManagersResourceID(project, zone, name string) *ResourceID {
 	key := meta.ZonalKey(name, zone)
-	return &ResourceID{project, "instanceGroupManagers", key}
+	return &ResourceID{project, "compute", "instanceGroupManagers", key}
 }
 
 // NewInstanceGroupsResourceID creates a ResourceID for the InstanceGroups resource.
 func NewInstanceGroupsResourceID(project, zone, name string) *ResourceID {
 	key := meta.ZonalKey(name, zone)
-	return &ResourceID{project, "instanceGroups", key}
+	return &ResourceID{project, "compute", "instanceGroups", key}
 }
 
 // NewInstanceTemplatesResourceID creates a ResourceID for the InstanceTemplates resource.
 func NewInstanceTemplatesResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "instanceTemplates", key}
+	return &ResourceID{project, "compute", "instanceTemplates", key}
 }
 
 // NewInstancesResourceID creates a ResourceID for the Instances resource.
 func NewInstancesResourceID(project, zone, name string) *ResourceID {
 	key := meta.ZonalKey(name, zone)
-	return &ResourceID{project, "instances", key}
+	return &ResourceID{project, "compute", "instances", key}
 }
 
 // NewNetworkEndpointGroupsResourceID creates a ResourceID for the NetworkEndpointGroups resource.
 func NewNetworkEndpointGroupsResourceID(project, zone, name string) *ResourceID {
 	key := meta.ZonalKey(name, zone)
-	return &ResourceID{project, "networkEndpointGroups", key}
+	return &ResourceID{project, "compute", "networkEndpointGroups", key}
 }
 
 // NewNetworkFirewallPoliciesResourceID creates a ResourceID for the NetworkFirewallPolicies resource.
 func NewNetworkFirewallPoliciesResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "networkFirewallPolicies", key}
+	return &ResourceID{project, "compute", "networkFirewallPolicies", key}
 }
 
 // NewNetworksResourceID creates a ResourceID for the Networks resource.
 func NewNetworksResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "networks", key}
+	return &ResourceID{project, "compute", "networks", key}
 }
 
 // NewProjectsResourceID creates a ResourceID for the Projects resource.
 func NewProjectsResourceID(project string) *ResourceID {
 	var key *meta.Key
-	return &ResourceID{project, "projects", key}
+	return &ResourceID{project, "compute", "projects", key}
 }
 
 // NewRegionBackendServicesResourceID creates a ResourceID for the RegionBackendServices resource.
 func NewRegionBackendServicesResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
-	return &ResourceID{project, "backendServices", key}
+	return &ResourceID{project, "compute", "backendServices", key}
 }
 
 // NewRegionDisksResourceID creates a ResourceID for the RegionDisks resource.
 func NewRegionDisksResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
-	return &ResourceID{project, "disks", key}
+	return &ResourceID{project, "compute", "disks", key}
 }
 
 // NewRegionHealthChecksResourceID creates a ResourceID for the RegionHealthChecks resource.
 func NewRegionHealthChecksResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
-	return &ResourceID{project, "healthChecks", key}
+	return &ResourceID{project, "compute", "healthChecks", key}
 }
 
 // NewRegionNetworkFirewallPoliciesResourceID creates a ResourceID for the RegionNetworkFirewallPolicies resource.
 func NewRegionNetworkFirewallPoliciesResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
-	return &ResourceID{project, "regionNetworkFirewallPolicies", key}
+	return &ResourceID{project, "compute", "regionNetworkFirewallPolicies", key}
 }
 
 // NewRegionSslCertificatesResourceID creates a ResourceID for the RegionSslCertificates resource.
 func NewRegionSslCertificatesResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
-	return &ResourceID{project, "sslCertificates", key}
+	return &ResourceID{project, "compute", "sslCertificates", key}
 }
 
 // NewRegionTargetHttpProxiesResourceID creates a ResourceID for the RegionTargetHttpProxies resource.
 func NewRegionTargetHttpProxiesResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
-	return &ResourceID{project, "targetHttpProxies", key}
+	return &ResourceID{project, "compute", "targetHttpProxies", key}
 }
 
 // NewRegionTargetHttpsProxiesResourceID creates a ResourceID for the RegionTargetHttpsProxies resource.
 func NewRegionTargetHttpsProxiesResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
-	return &ResourceID{project, "targetHttpsProxies", key}
+	return &ResourceID{project, "compute", "targetHttpsProxies", key}
 }
 
 // NewRegionUrlMapsResourceID creates a ResourceID for the RegionUrlMaps resource.
 func NewRegionUrlMapsResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
-	return &ResourceID{project, "urlMaps", key}
+	return &ResourceID{project, "compute", "urlMaps", key}
 }
 
 // NewRegionsResourceID creates a ResourceID for the Regions resource.
 func NewRegionsResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "regions", key}
+	return &ResourceID{project, "compute", "regions", key}
 }
 
 // NewRoutersResourceID creates a ResourceID for the Routers resource.
 func NewRoutersResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
-	return &ResourceID{project, "routers", key}
+	return &ResourceID{project, "compute", "routers", key}
 }
 
 // NewRoutesResourceID creates a ResourceID for the Routes resource.
 func NewRoutesResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "routes", key}
+	return &ResourceID{project, "compute", "routes", key}
 }
 
 // NewSecurityPoliciesResourceID creates a ResourceID for the SecurityPolicies resource.
 func NewSecurityPoliciesResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "securityPolicies", key}
+	return &ResourceID{project, "compute", "securityPolicies", key}
 }
 
 // NewServiceAttachmentsResourceID creates a ResourceID for the ServiceAttachments resource.
 func NewServiceAttachmentsResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
-	return &ResourceID{project, "serviceAttachments", key}
+	return &ResourceID{project, "compute", "serviceAttachments", key}
 }
 
 // NewSslCertificatesResourceID creates a ResourceID for the SslCertificates resource.
 func NewSslCertificatesResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "sslCertificates", key}
+	return &ResourceID{project, "compute", "sslCertificates", key}
 }
 
 // NewSslPoliciesResourceID creates a ResourceID for the SslPolicies resource.
 func NewSslPoliciesResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "sslPolicies", key}
+	return &ResourceID{project, "compute", "sslPolicies", key}
 }
 
 // NewSubnetworksResourceID creates a ResourceID for the Subnetworks resource.
 func NewSubnetworksResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
-	return &ResourceID{project, "subnetworks", key}
+	return &ResourceID{project, "compute", "subnetworks", key}
 }
 
 // NewTargetHttpProxiesResourceID creates a ResourceID for the TargetHttpProxies resource.
 func NewTargetHttpProxiesResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "targetHttpProxies", key}
+	return &ResourceID{project, "compute", "targetHttpProxies", key}
 }
 
 // NewTargetHttpsProxiesResourceID creates a ResourceID for the TargetHttpsProxies resource.
 func NewTargetHttpsProxiesResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "targetHttpsProxies", key}
+	return &ResourceID{project, "compute", "targetHttpsProxies", key}
 }
 
 // NewTargetPoolsResourceID creates a ResourceID for the TargetPools resource.
 func NewTargetPoolsResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
-	return &ResourceID{project, "targetPools", key}
+	return &ResourceID{project, "compute", "targetPools", key}
 }
 
 // NewTargetTcpProxiesResourceID creates a ResourceID for the TargetTcpProxies resource.
 func NewTargetTcpProxiesResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "targetTcpProxies", key}
+	return &ResourceID{project, "compute", "targetTcpProxies", key}
 }
 
 // NewUrlMapsResourceID creates a ResourceID for the UrlMaps resource.
 func NewUrlMapsResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "urlMaps", key}
+	return &ResourceID{project, "compute", "urlMaps", key}
 }
 
 // NewZonesResourceID creates a ResourceID for the Zones resource.
 func NewZonesResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
-	return &ResourceID{project, "zones", key}
+	return &ResourceID{project, "compute", "zones", key}
 }

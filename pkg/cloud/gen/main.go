@@ -576,7 +576,7 @@ func (m *{{.MockWrapType}}) Insert(ctx context.Context, key *meta.Key, obj *{{.F
 
 	obj.Name = key.Name
 	projectID := m.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Resource}}")
-	obj.SelfLink = SelfLink(meta.Version{{.VersionTitle}}, projectID, "{{.Resource}}", key)
+	obj.SelfLink = SelfLinkWithGroup("{{.APIGroup}}", meta.Version{{.VersionTitle}}, projectID, "{{.Resource}}", key)
 
 	m.Objects[*key] = &Mock{{.Service}}Obj{obj}
 	klog.V(5).Infof("{{.MockWrapType}}.Insert(%v, %v, %+v) = nil", ctx, key, obj)
@@ -1180,7 +1180,7 @@ func New{{.Service}}ResourceID(project, zone, name string) *ResourceID {
 	key := meta.ZonalKey(name, zone)
 {{- end -}}
 {{end}}
-	return &ResourceID{project, "{{.Resource}}", key}
+	return &ResourceID{project, "{{.APIGroup}}", "{{.Resource}}", key}
 }
 `
 	tmpl := template.Must(template.New("resourceIDs").Parse(text))
@@ -1486,17 +1486,18 @@ func TestResourceIDConversion(t *testing.T) {
 				t.Errorf("ParseResourceURL(%s) = _, %v, want nil", fullURL, err)
 			}
 			if !reflect.DeepEqual(id, parsedID) {
-				t.Errorf("SelfLink(%+v) -> ParseResourceURL(%s) = %+v, want original ID", id, fullURL, parsedID)
+				t.Errorf("id.SelfLink(%+v) -> ParseResourceURL(%s) = %+v, want original ID", id, fullURL, parsedID)
 			}
 
-			// Test conversion to and from relative resource name.
+			// Note that when the NetworkServices API Group was added it meant
+			// that the partial paths returned from the functions below that
+			// exclude API Group can't be round tripped.
+
+			// Test conversion to relative resource name.
 			relativeName := id.RelativeResourceName()
-			parsedID, err = ParseResourceURL(relativeName)
+			_, err = ParseResourceURL(relativeName)
 			if err != nil {
 				t.Errorf("ParseResourceURL(%s) = _, %v, want nil", relativeName, err)
-			}
-			if !reflect.DeepEqual(id, parsedID) {
-				t.Errorf("RelativeResourceName(%+v) -> ParseResourceURL(%s) = %+v, want original ID", id, relativeName, parsedID)
 			}
 
 			// Do not test ResourcePath for projects.
@@ -1504,15 +1505,11 @@ func TestResourceIDConversion(t *testing.T) {
 				return
 			}
 
-			// Test conversion to and from resource path.
+			// Test conversion to resource path.
 			resourcePath := id.ResourcePath()
-			parsedID, err = ParseResourceURL(resourcePath)
+			_, err = ParseResourceURL(resourcePath)
 			if err != nil {
 				t.Errorf("ParseResourceURL(%s) = _, %v, want nil", resourcePath, err)
-			}
-			id.ProjectID = ""
-			if !reflect.DeepEqual(id, parsedID) {
-				t.Errorf("ResourcePath(%+v) -> ParseResourceURL(%s) = %+v, want %+v", id, resourcePath, parsedID, id)
 			}
 		})
 	}

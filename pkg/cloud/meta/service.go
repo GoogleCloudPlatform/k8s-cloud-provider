@@ -31,9 +31,11 @@ type ServiceInfo struct {
 	// Service is the Go name of the service struct i.e. where the methods
 	// are defined. Examples: "GlobalForwardingRules".
 	Service string
-	// Resource is the plural noun of the resource in the compute API URL (e.g.
+	// Resource is the plural noun of the resource in the API URL (e.g.
 	// "forwardingRules").
 	Resource string
+	// APIGroup is the API group of the resource.
+	APIGroup APIGroup
 	// version if unspecified will be assumed to be VersionGA.
 	version     Version
 	keyType     KeyType

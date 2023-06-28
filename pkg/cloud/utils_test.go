@@ -31,16 +31,16 @@ func TestEqualResourceID(t *testing.T) {
 		b *ResourceID
 	}{
 		{
-			a: &ResourceID{"some-gce-project", "projects", nil},
-			b: &ResourceID{"some-gce-project", "projects", nil},
+			a: &ResourceID{"some-gce-project", meta.APIGroupCompute, "projects", nil},
+			b: &ResourceID{"some-gce-project", meta.APIGroupCompute, "projects", nil},
 		},
 		{
-			a: &ResourceID{"", "networks", meta.GlobalKey("my-net")},
-			b: &ResourceID{"", "networks", meta.GlobalKey("my-net")},
+			a: &ResourceID{"", meta.APIGroupCompute, "networks", meta.GlobalKey("my-net")},
+			b: &ResourceID{"", meta.APIGroupCompute, "networks", meta.GlobalKey("my-net")},
 		},
 		{
-			a: &ResourceID{"some-gce-project", "projects", meta.GlobalKey("us-central1")},
-			b: &ResourceID{"some-gce-project", "projects", meta.GlobalKey("us-central1")},
+			a: &ResourceID{"some-gce-project", meta.APIGroupCompute, "projects", meta.GlobalKey("us-central1")},
+			b: &ResourceID{"some-gce-project", meta.APIGroupCompute, "projects", meta.GlobalKey("us-central1")},
 		},
 		{
 			a: nil,
@@ -57,19 +57,19 @@ func TestEqualResourceID(t *testing.T) {
 		b *ResourceID
 	}{
 		{
-			a: &ResourceID{"some-gce-project", "projects", nil},
-			b: &ResourceID{"some-other-project", "projects", nil},
+			a: &ResourceID{"some-gce-project", meta.APIGroupCompute, "projects", nil},
+			b: &ResourceID{"some-other-project", meta.APIGroupCompute, "projects", nil},
 		},
 		{
-			a: &ResourceID{"some-gce-project", "projects", nil},
-			b: &ResourceID{"some-gce-project", "projects", meta.GlobalKey("us-central1")},
+			a: &ResourceID{"some-gce-project", meta.APIGroupCompute, "projects", nil},
+			b: &ResourceID{"some-gce-project", meta.APIGroupCompute, "projects", meta.GlobalKey("us-central1")},
 		},
 		{
-			a: &ResourceID{"some-gce-project", "networks", meta.GlobalKey("us-central1")},
-			b: &ResourceID{"some-gce-project", "projects", meta.GlobalKey("us-central1")},
+			a: &ResourceID{"some-gce-project", meta.APIGroupCompute, "networks", meta.GlobalKey("us-central1")},
+			b: &ResourceID{"some-gce-project", meta.APIGroupCompute, "projects", meta.GlobalKey("us-central1")},
 		},
 		{
-			a: &ResourceID{"some-gce-project", "projects", meta.GlobalKey("us-central1")},
+			a: &ResourceID{"some-gce-project", meta.APIGroupCompute, "projects", meta.GlobalKey("us-central1")},
 			b: nil,
 		},
 	} {
@@ -87,16 +87,16 @@ func TestResourceIDString(t *testing.T) {
 		want string
 	}{
 		{
-			id:   &ResourceID{"proj1", "res1", meta.GlobalKey("key1")},
-			want: "res1:proj1/key1",
+			id:   &ResourceID{"proj1", meta.APIGroupNetworkServices, "res1", meta.GlobalKey("key1")},
+			want: "networkservices/res1:proj1/key1",
 		},
 		{
-			id:   &ResourceID{"proj1", "res1", meta.RegionalKey("key1", "us-central1")},
-			want: "res1:proj1/us-central1/key1",
+			id:   &ResourceID{"proj1", meta.APIGroupCompute, "res1", meta.RegionalKey("key1", "us-central1")},
+			want: "compute/res1:proj1/us-central1/key1",
 		},
 		{
-			id:   &ResourceID{"proj1", "res1", meta.ZonalKey("key1", "us-central1-c")},
-			want: "res1:proj1/us-central1-c/key1",
+			id:   &ResourceID{"proj1", meta.APIGroupCompute, "res1", meta.ZonalKey("key1", "us-central1-c")},
+			want: "compute/res1:proj1/us-central1-c/key1",
 		},
 	} {
 		got := tc.id.String()
@@ -115,90 +115,101 @@ func TestParseResourceURL(t *testing.T) {
 	}{
 		{
 			"https://www.googleapis.com/compute/v1/projects/some-gce-project",
-			&ResourceID{"some-gce-project", "projects", nil},
+			&ResourceID{"some-gce-project", meta.APIGroupCompute, "projects", nil},
 		},
 		{
 			"https://www.googleapis.com/compute/v1/projects/some-gce-project/regions/us-central1",
-			&ResourceID{"some-gce-project", "regions", meta.GlobalKey("us-central1")},
+			&ResourceID{"some-gce-project", meta.APIGroupCompute, "regions", meta.GlobalKey("us-central1")},
+		},
+		{
+			"https://www.googleapis.com/networkservices/v1/projects/some-gce-project/regions/us-central1",
+			&ResourceID{"some-gce-project", meta.APIGroupNetworkServices, "regions", meta.GlobalKey("us-central1")},
 		},
 		{
 			"https://www.googleapis.com/compute/v1/projects/some-gce-project/zones/us-central1-b",
-			&ResourceID{"some-gce-project", "zones", meta.GlobalKey("us-central1-b")},
+			&ResourceID{"some-gce-project", meta.APIGroupCompute, "zones", meta.GlobalKey("us-central1-b")},
 		},
 		{
 			"https://www.googleapis.com/compute/v1/projects/some-gce-project/global/operations/operation-1513289952196-56054460af5a0-b1dae0c3-9bbf9dbf",
-			&ResourceID{"some-gce-project", "operations", meta.GlobalKey("operation-1513289952196-56054460af5a0-b1dae0c3-9bbf9dbf")},
+			&ResourceID{"some-gce-project", meta.APIGroupCompute, "operations", meta.GlobalKey("operation-1513289952196-56054460af5a0-b1dae0c3-9bbf9dbf")},
 		},
 		{
 			"https://www.googleapis.com/compute/alpha/projects/some-gce-project/regions/us-central1/addresses/my-address",
-			&ResourceID{"some-gce-project", "addresses", meta.RegionalKey("my-address", "us-central1")},
+			&ResourceID{"some-gce-project", meta.APIGroupCompute, "addresses", meta.RegionalKey("my-address", "us-central1")},
 		},
 		{
 			"https://www.googleapis.com/compute/v1/projects/some-gce-project/zones/us-central1-c/instances/instance-1",
-			&ResourceID{"some-gce-project", "instances", meta.ZonalKey("instance-1", "us-central1-c")},
+			&ResourceID{"some-gce-project", meta.APIGroupCompute, "instances", meta.ZonalKey("instance-1", "us-central1-c")},
 		},
 		{
 			"http://localhost:3990/compute/beta/projects/some-gce-project/global/operations/operation-1513289952196-56054460af5a0-b1dae0c3-9bbf9dbf",
-			&ResourceID{"some-gce-project", "operations", meta.GlobalKey("operation-1513289952196-56054460af5a0-b1dae0c3-9bbf9dbf")},
+			&ResourceID{"some-gce-project", meta.APIGroupCompute, "operations", meta.GlobalKey("operation-1513289952196-56054460af5a0-b1dae0c3-9bbf9dbf")},
 		},
 		{
 			"http://localhost:3990/compute/alpha/projects/some-gce-project/regions/dev-central1/addresses/my-address",
-			&ResourceID{"some-gce-project", "addresses", meta.RegionalKey("my-address", "dev-central1")},
+			&ResourceID{"some-gce-project", meta.APIGroupCompute, "addresses", meta.RegionalKey("my-address", "dev-central1")},
+		},
+		{
+			"http://localhost:3990/networkservices/alpha/projects/some-gce-project/regions/dev-central1/addresses/my-address",
+			&ResourceID{"some-gce-project", meta.APIGroupNetworkServices, "addresses", meta.RegionalKey("my-address", "dev-central1")},
 		},
 		{
 			"http://localhost:3990/compute/v1/projects/some-gce-project/zones/dev-central1-std/instances/instance-1",
-			&ResourceID{"some-gce-project", "instances", meta.ZonalKey("instance-1", "dev-central1-std")},
+			&ResourceID{"some-gce-project", meta.APIGroupCompute, "instances", meta.ZonalKey("instance-1", "dev-central1-std")},
 		},
 		{
 			"projects/some-gce-project",
-			&ResourceID{"some-gce-project", "projects", nil},
+			&ResourceID{"some-gce-project", "", "projects", nil},
 		},
 		{
 			"projects/some-gce-project/regions/us-central1",
-			&ResourceID{"some-gce-project", "regions", meta.GlobalKey("us-central1")},
+			&ResourceID{"some-gce-project", "", "regions", meta.GlobalKey("us-central1")},
 		},
 		{
 			"projects/some-gce-project/zones/us-central1-b",
-			&ResourceID{"some-gce-project", "zones", meta.GlobalKey("us-central1-b")},
+			&ResourceID{"some-gce-project", "", "zones", meta.GlobalKey("us-central1-b")},
 		},
 		{
 			"projects/some-gce-project/global/operations/operation-1513289952196-56054460af5a0-b1dae0c3-9bbf9dbf",
-			&ResourceID{"some-gce-project", "operations", meta.GlobalKey("operation-1513289952196-56054460af5a0-b1dae0c3-9bbf9dbf")},
+			&ResourceID{"some-gce-project", "", "operations", meta.GlobalKey("operation-1513289952196-56054460af5a0-b1dae0c3-9bbf9dbf")},
 		},
 		{
 			"projects/some-gce-project/regions/us-central1/addresses/my-address",
-			&ResourceID{"some-gce-project", "addresses", meta.RegionalKey("my-address", "us-central1")},
+			&ResourceID{"some-gce-project", "", "addresses", meta.RegionalKey("my-address", "us-central1")},
 		},
 		{
 			"projects/some-gce-project/zones/us-central1-c/instances/instance-1",
-			&ResourceID{"some-gce-project", "instances", meta.ZonalKey("instance-1", "us-central1-c")},
+			&ResourceID{"some-gce-project", "", "instances", meta.ZonalKey("instance-1", "us-central1-c")},
 		},
 		{
 			"global/networks/my-network",
-			&ResourceID{"", "networks", meta.GlobalKey("my-network")},
+			&ResourceID{"", "", "networks", meta.GlobalKey("my-network")},
 		},
 		{
 			"regions/us-central1/subnetworks/my-subnet",
-			&ResourceID{"", "subnetworks", meta.RegionalKey("my-subnet", "us-central1")},
+			&ResourceID{"", "", "subnetworks", meta.RegionalKey("my-subnet", "us-central1")},
 		},
 		{
 			"zones/us-central1-c/instances/instance-1",
-			&ResourceID{"", "instances", meta.ZonalKey("instance-1", "us-central1-c")},
+			&ResourceID{"", "", "instances", meta.ZonalKey("instance-1", "us-central1-c")},
 		},
 		{
 			"https://compute.googleapis.com/compute/v1/projects/some-gce-project/regions/us-central1/backendServices/bs1",
-			&ResourceID{"some-gce-project", "backendServices", meta.RegionalKey("bs1", "us-central1")},
+			&ResourceID{"some-gce-project", meta.APIGroupCompute, "backendServices", meta.RegionalKey("bs1", "us-central1")},
 		},
 	} {
-		r, err := ParseResourceURL(tc.in)
-		if err != nil {
-			t.Errorf("ParseResourceURL(%q) = %+v, %v; want _, nil", tc.in, r, err)
-			continue
-		}
-		if !r.Equal(tc.r) {
-			t.Errorf("ParseResourceURL(%q) = %+v, nil; want %+v, nil", tc.in, r, tc.r)
-		}
+		t.Run(tc.in, func(t *testing.T) {
+			r, err := ParseResourceURL(tc.in)
+			if err != nil {
+				t.Errorf("Error from ParseResourceURL(%q) = %+v, %v; want _, nil", tc.in, r, err)
+				return
+			}
+			if !r.Equal(tc.r) {
+				t.Errorf("Unexpected output from ParseResourceURL(%q) = %+v, nil; want %+v, nil", tc.in, r, tc.r)
+			}
+		})
 	}
+
 	// Malformed URLs.
 	for _, tc := range []string{
 		"",
@@ -270,6 +281,36 @@ func TestCopyVisJSON(t *testing.T) {
 	}
 }
 
+func TestResourceIdSelfLink(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		resourceID *ResourceID
+		ver        meta.Version
+		want       string
+	}{
+		{
+			&ResourceID{"proj1", meta.APIGroupNetworkServices, "res1", meta.GlobalKey("key1")},
+			meta.VersionGA,
+			"https://www.googleapis.com/networkservices/v1/projects/proj1/global/res1/key1",
+		},
+		{
+			&ResourceID{"proj1", meta.APIGroupCompute, "res1", meta.GlobalKey("key1")},
+			meta.VersionAlpha,
+			"https://www.googleapis.com/compute/alpha/projects/proj1/global/res1/key1",
+		},
+		{
+			&ResourceID{"proj1", "", "res1", meta.GlobalKey("key1")},
+			meta.VersionAlpha,
+			"https://www.googleapis.com/compute/alpha/projects/proj1/global/res1/key1",
+		},
+	} {
+		if link := tc.resourceID.SelfLink(tc.ver); link != tc.want {
+			t.Errorf("ResourceID{%+v}.SelfLink(%v) = %v, want %q", tc.resourceID, tc.ver, link, tc.want)
+		}
+	}
+}
+
 func TestSelfLink(t *testing.T) {
 	t.Parallel()
 
@@ -325,6 +366,88 @@ func TestSelfLink(t *testing.T) {
 	} {
 		if link := SelfLink(tc.ver, tc.project, tc.resource, tc.key); link != tc.want {
 			t.Errorf("SelfLink(%v, %q, %q, %v) = %v, want %q", tc.ver, tc.project, tc.resource, tc.key, link, tc.want)
+		}
+	}
+}
+
+func TestSelfLinkWithGroup(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		apiGroup meta.APIGroup
+		ver      meta.Version
+		project  string
+		resource string
+		key      *meta.Key
+		want     string
+	}{
+		{
+			meta.APIGroupCompute,
+			meta.VersionAlpha,
+			"proj1",
+			"addresses",
+			meta.RegionalKey("key1", "us-central1"),
+			"https://www.googleapis.com/compute/alpha/projects/proj1/regions/us-central1/addresses/key1",
+		},
+		{
+			meta.APIGroupCompute,
+			meta.VersionBeta,
+			"proj3",
+			"disks",
+			meta.ZonalKey("key2", "us-central1-b"),
+			"https://www.googleapis.com/compute/beta/projects/proj3/zones/us-central1-b/disks/key2",
+		},
+		{
+			meta.APIGroupCompute,
+			meta.VersionGA,
+			"proj4",
+			"urlMaps",
+			meta.GlobalKey("key3"),
+			"https://www.googleapis.com/compute/v1/projects/proj4/global/urlMaps/key3",
+		},
+		{
+			meta.APIGroupCompute,
+			meta.VersionGA,
+			"proj4",
+			"projects",
+			nil,
+			"https://www.googleapis.com/compute/v1/projects/proj4",
+		},
+		{
+			meta.APIGroupCompute,
+			meta.VersionGA,
+			"proj4",
+			"regions",
+			meta.GlobalKey("us-central1"),
+			"https://www.googleapis.com/compute/v1/projects/proj4/regions/us-central1",
+		},
+		{
+			meta.APIGroupCompute,
+			meta.VersionGA,
+			"proj4",
+			"zones",
+			meta.GlobalKey("us-central1-a"),
+			"https://www.googleapis.com/compute/v1/projects/proj4/zones/us-central1-a",
+		},
+		{
+			meta.APIGroupNetworkServices,
+			meta.VersionGA,
+			"proj4",
+			"tcproutes",
+			meta.ZonalKey("key2", "us-central1-a"),
+			"https://www.googleapis.com/networkservices/v1/projects/proj4/zones/us-central1-a/tcproutes/key2",
+		},
+		{
+			meta.APIGroup("foo"),
+			meta.VersionGA,
+			"proj4",
+			"tcproutes",
+			meta.ZonalKey("key1", "us-central1-a"),
+			"https://www.googleapis.com/invalid-apigroup/v1/projects/proj4/zones/us-central1-a/tcproutes/key1",
+		},
+	} {
+		if link := SelfLinkWithGroup(tc.apiGroup, tc.ver, tc.project, tc.resource, tc.key); link != tc.want {
+			t.Errorf("SelfLinkWithGroup(%v, %v, %q, %q, %v) = %v, want %q", tc.apiGroup, tc.ver, tc.project, tc.resource, tc.key, link, tc.want)
 		}
 	}
 }

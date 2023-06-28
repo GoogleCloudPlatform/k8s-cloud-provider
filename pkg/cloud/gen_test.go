@@ -4395,17 +4395,18 @@ func TestResourceIDConversion(t *testing.T) {
 				t.Errorf("ParseResourceURL(%s) = _, %v, want nil", fullURL, err)
 			}
 			if !reflect.DeepEqual(id, parsedID) {
-				t.Errorf("SelfLink(%+v) -> ParseResourceURL(%s) = %+v, want original ID", id, fullURL, parsedID)
+				t.Errorf("id.SelfLink(%+v) -> ParseResourceURL(%s) = %+v, want original ID", id, fullURL, parsedID)
 			}
 
-			// Test conversion to and from relative resource name.
+			// Note that when the NetworkServices API Group was added it meant
+			// that the partial paths returned from the functions below that
+			// exclude API Group can't be round tripped.
+
+			// Test conversion to relative resource name.
 			relativeName := id.RelativeResourceName()
-			parsedID, err = ParseResourceURL(relativeName)
+			_, err = ParseResourceURL(relativeName)
 			if err != nil {
 				t.Errorf("ParseResourceURL(%s) = _, %v, want nil", relativeName, err)
-			}
-			if !reflect.DeepEqual(id, parsedID) {
-				t.Errorf("RelativeResourceName(%+v) -> ParseResourceURL(%s) = %+v, want original ID", id, relativeName, parsedID)
 			}
 
 			// Do not test ResourcePath for projects.
@@ -4413,15 +4414,11 @@ func TestResourceIDConversion(t *testing.T) {
 				return
 			}
 
-			// Test conversion to and from resource path.
+			// Test conversion to resource path.
 			resourcePath := id.ResourcePath()
-			parsedID, err = ParseResourceURL(resourcePath)
+			_, err = ParseResourceURL(resourcePath)
 			if err != nil {
 				t.Errorf("ParseResourceURL(%s) = _, %v, want nil", resourcePath, err)
-			}
-			id.ProjectID = ""
-			if !reflect.DeepEqual(id, parsedID) {
-				t.Errorf("ResourcePath(%+v) -> ParseResourceURL(%s) = %+v, want %+v", id, resourcePath, parsedID, id)
 			}
 		})
 	}

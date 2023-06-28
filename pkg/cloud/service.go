@@ -87,22 +87,22 @@ func (s *Service) pollOperation(ctx context.Context, op operation) error {
 		// returning ctx.Err().
 		select {
 		case <-ctx.Done():
-			klog.V(5).Infof("op.pollOperation(%v, %v) not completed, poll count = %d, ctx.Err = %v (%v elapsed)", ctx, op, pollCount, ctx.Err(), time.Now().Sub(start))
+			klog.V(5).Infof("op.pollOperation(%v, %v) not completed, poll count = %d, ctx.Err = %v (%v elapsed)", ctx, op, pollCount, ctx.Err(), time.Since(start))
 			return ctx.Err()
 		default:
 			// ctx is not canceled, continue immediately
 		}
 
 		pollCount++
-		klog.V(5).Infof("op.isDone(%v) waiting; op = %v, poll count = %d (%v elapsed)", ctx, op, pollCount, time.Now().Sub(start))
+		klog.V(5).Infof("op.isDone(%v) waiting; op = %v, poll count = %d (%v elapsed)", ctx, op, pollCount, time.Since(start))
 		s.RateLimiter.Accept(ctx, op.rateLimitKey())
 		switch done, err := op.isDone(ctx); {
 		case err != nil:
-			klog.V(5).Infof("op.isDone(%v) error; op = %v, poll count = %d, err = %v, retrying (%v elapsed)", ctx, op, pollCount, err, time.Now().Sub(start))
+			klog.V(5).Infof("op.isDone(%v) error; op = %v, poll count = %d, err = %v, retrying (%v elapsed)", ctx, op, pollCount, err, time.Since(start))
 			s.RateLimiter.Observe(ctx, err, op.rateLimitKey())
 			return err
 		case done:
-			klog.V(5).Infof("op.isDone(%v) complete; op = %v, poll count = %d, op.err = %v (%v elapsed)", ctx, op, pollCount, op.error(), time.Now().Sub(start))
+			klog.V(5).Infof("op.isDone(%v) complete; op = %v, poll count = %d, op.err = %v (%v elapsed)", ctx, op, pollCount, op.error(), time.Since(start))
 			s.RateLimiter.Observe(ctx, op.error(), op.rateLimitKey())
 			return op.error()
 		}

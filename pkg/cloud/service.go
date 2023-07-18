@@ -24,17 +24,21 @@ import (
 	alpha "google.golang.org/api/compute/v0.alpha"
 	beta "google.golang.org/api/compute/v0.beta"
 	ga "google.golang.org/api/compute/v1"
+	networkservicesga "google.golang.org/api/networkservices/v1"
+	networkservicesbeta "google.golang.org/api/networkservices/v1beta1"
 	"k8s.io/klog/v2"
 )
 
 // Service is the top-level adapter for all of the different compute API
 // versions.
 type Service struct {
-	GA            *ga.Service
-	Alpha         *alpha.Service
-	Beta          *beta.Service
-	ProjectRouter ProjectRouter
-	RateLimiter   RateLimiter
+	GA                  *ga.Service
+	Alpha               *alpha.Service
+	Beta                *beta.Service
+	NetworkServicesGA   *networkservicesga.ProjectsLocationsService
+	NetworkServicesBeta *networkservicesbeta.ProjectsLocationsService
+	ProjectRouter       ProjectRouter
+	RateLimiter         RateLimiter
 }
 
 // wrapOperation wraps a GCE anyOP in a version generic operation type.

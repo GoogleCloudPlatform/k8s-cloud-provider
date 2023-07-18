@@ -43,11 +43,11 @@ const (
 type Version string
 
 const (
-	// VersionGA is the API version in compute.v1.
+	// VersionGA is the GA API version.
 	VersionGA Version = "ga"
-	// VersionAlpha is the API version in computer.v0.alpha.
+	// VersionAlpha is the alpha API version.
 	VersionAlpha Version = "alpha"
-	// VersionBeta is the API version in computer.v0.beta.
+	// VersionBeta is the beta API version.
 	VersionBeta Version = "beta"
 )
 
@@ -62,12 +62,13 @@ const (
 	APIGroupNetworkServices APIGroup = "networkservices"
 )
 
-// AllVersions is a list of all versions of the GCE API.
+// AllVersions is a list of all versions of the GCP APIs.
 var AllVersions = []Version{
 	VersionGA,
 	VersionAlpha,
 	VersionBeta,
 }
 
-// AllServices lists ServiceInfo for each API Group.
+// AllServices are a list of all the services to generate code for. Keep
+// this list in lexicographical order by object type.
 var AllServices = []*ServiceInfo{}

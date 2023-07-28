@@ -39525,6 +39525,7 @@ type AlphaRegionTargetHttpsProxies interface {
 	List(ctx context.Context, region string, fl *filter.F) ([]*computealpha.TargetHttpsProxy, error)
 	Insert(ctx context.Context, key *meta.Key, obj *computealpha.TargetHttpsProxy) error
 	Delete(ctx context.Context, key *meta.Key) error
+	Patch(context.Context, *meta.Key, *computealpha.TargetHttpsProxy) error
 	SetSslCertificates(context.Context, *meta.Key, *computealpha.RegionTargetHttpsProxiesSetSslCertificatesRequest) error
 	SetUrlMap(context.Context, *meta.Key, *computealpha.UrlMapReference) error
 }
@@ -39566,6 +39567,7 @@ type MockAlphaRegionTargetHttpsProxies struct {
 	ListHook               func(ctx context.Context, region string, fl *filter.F, m *MockAlphaRegionTargetHttpsProxies) (bool, []*computealpha.TargetHttpsProxy, error)
 	InsertHook             func(ctx context.Context, key *meta.Key, obj *computealpha.TargetHttpsProxy, m *MockAlphaRegionTargetHttpsProxies) (bool, error)
 	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockAlphaRegionTargetHttpsProxies) (bool, error)
+	PatchHook              func(context.Context, *meta.Key, *computealpha.TargetHttpsProxy, *MockAlphaRegionTargetHttpsProxies) error
 	SetSslCertificatesHook func(context.Context, *meta.Key, *computealpha.RegionTargetHttpsProxiesSetSslCertificatesRequest, *MockAlphaRegionTargetHttpsProxies) error
 	SetUrlMapHook          func(context.Context, *meta.Key, *computealpha.UrlMapReference, *MockAlphaRegionTargetHttpsProxies) error
 
@@ -39714,6 +39716,14 @@ func (m *MockAlphaRegionTargetHttpsProxies) Delete(ctx context.Context, key *met
 // Obj wraps the object for use in the mock.
 func (m *MockAlphaRegionTargetHttpsProxies) Obj(o *computealpha.TargetHttpsProxy) *MockRegionTargetHttpsProxiesObj {
 	return &MockRegionTargetHttpsProxiesObj{o}
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockAlphaRegionTargetHttpsProxies) Patch(ctx context.Context, key *meta.Key, arg0 *computealpha.TargetHttpsProxy) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetSslCertificates is a mock for the corresponding method.
@@ -39899,6 +39909,48 @@ func (g *GCEAlphaRegionTargetHttpsProxies) Delete(ctx context.Context, key *meta
 	return err
 }
 
+// Patch is a method on GCEAlphaRegionTargetHttpsProxies.
+func (g *GCEAlphaRegionTargetHttpsProxies) Patch(ctx context.Context, key *meta.Key, arg0 *computealpha.TargetHttpsProxy) error {
+	klog.V(5).Infof("GCEAlphaRegionTargetHttpsProxies.Patch(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionTargetHttpsProxies.Patch(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "alpha", "RegionTargetHttpsProxies")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionTargetHttpsProxies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionTargetHttpsProxies.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.RegionTargetHttpsProxies.Patch(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+
+	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.Patch(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
+	klog.V(4).Infof("GCEAlphaRegionTargetHttpsProxies.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // SetSslCertificates is a method on GCEAlphaRegionTargetHttpsProxies.
 func (g *GCEAlphaRegionTargetHttpsProxies) SetSslCertificates(ctx context.Context, key *meta.Key, arg0 *computealpha.RegionTargetHttpsProxiesSetSslCertificatesRequest) error {
 	klog.V(5).Infof("GCEAlphaRegionTargetHttpsProxies.SetSslCertificates(%v, %v, ...): called", ctx, key)
@@ -39989,6 +40041,7 @@ type BetaRegionTargetHttpsProxies interface {
 	List(ctx context.Context, region string, fl *filter.F) ([]*computebeta.TargetHttpsProxy, error)
 	Insert(ctx context.Context, key *meta.Key, obj *computebeta.TargetHttpsProxy) error
 	Delete(ctx context.Context, key *meta.Key) error
+	Patch(context.Context, *meta.Key, *computebeta.TargetHttpsProxy) error
 	SetSslCertificates(context.Context, *meta.Key, *computebeta.RegionTargetHttpsProxiesSetSslCertificatesRequest) error
 	SetUrlMap(context.Context, *meta.Key, *computebeta.UrlMapReference) error
 }
@@ -40030,6 +40083,7 @@ type MockBetaRegionTargetHttpsProxies struct {
 	ListHook               func(ctx context.Context, region string, fl *filter.F, m *MockBetaRegionTargetHttpsProxies) (bool, []*computebeta.TargetHttpsProxy, error)
 	InsertHook             func(ctx context.Context, key *meta.Key, obj *computebeta.TargetHttpsProxy, m *MockBetaRegionTargetHttpsProxies) (bool, error)
 	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockBetaRegionTargetHttpsProxies) (bool, error)
+	PatchHook              func(context.Context, *meta.Key, *computebeta.TargetHttpsProxy, *MockBetaRegionTargetHttpsProxies) error
 	SetSslCertificatesHook func(context.Context, *meta.Key, *computebeta.RegionTargetHttpsProxiesSetSslCertificatesRequest, *MockBetaRegionTargetHttpsProxies) error
 	SetUrlMapHook          func(context.Context, *meta.Key, *computebeta.UrlMapReference, *MockBetaRegionTargetHttpsProxies) error
 
@@ -40178,6 +40232,14 @@ func (m *MockBetaRegionTargetHttpsProxies) Delete(ctx context.Context, key *meta
 // Obj wraps the object for use in the mock.
 func (m *MockBetaRegionTargetHttpsProxies) Obj(o *computebeta.TargetHttpsProxy) *MockRegionTargetHttpsProxiesObj {
 	return &MockRegionTargetHttpsProxiesObj{o}
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockBetaRegionTargetHttpsProxies) Patch(ctx context.Context, key *meta.Key, arg0 *computebeta.TargetHttpsProxy) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetSslCertificates is a mock for the corresponding method.
@@ -40363,6 +40425,48 @@ func (g *GCEBetaRegionTargetHttpsProxies) Delete(ctx context.Context, key *meta.
 	return err
 }
 
+// Patch is a method on GCEBetaRegionTargetHttpsProxies.
+func (g *GCEBetaRegionTargetHttpsProxies) Patch(ctx context.Context, key *meta.Key, arg0 *computebeta.TargetHttpsProxy) error {
+	klog.V(5).Infof("GCEBetaRegionTargetHttpsProxies.Patch(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaRegionTargetHttpsProxies.Patch(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "beta", "RegionTargetHttpsProxies")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("beta"),
+		Service:   "RegionTargetHttpsProxies",
+	}
+	klog.V(5).Infof("GCEBetaRegionTargetHttpsProxies.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.RegionTargetHttpsProxies.Patch(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+
+	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.Patch(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
+	klog.V(4).Infof("GCEBetaRegionTargetHttpsProxies.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // SetSslCertificates is a method on GCEBetaRegionTargetHttpsProxies.
 func (g *GCEBetaRegionTargetHttpsProxies) SetSslCertificates(ctx context.Context, key *meta.Key, arg0 *computebeta.RegionTargetHttpsProxiesSetSslCertificatesRequest) error {
 	klog.V(5).Infof("GCEBetaRegionTargetHttpsProxies.SetSslCertificates(%v, %v, ...): called", ctx, key)
@@ -40453,6 +40557,7 @@ type RegionTargetHttpsProxies interface {
 	List(ctx context.Context, region string, fl *filter.F) ([]*computega.TargetHttpsProxy, error)
 	Insert(ctx context.Context, key *meta.Key, obj *computega.TargetHttpsProxy) error
 	Delete(ctx context.Context, key *meta.Key) error
+	Patch(context.Context, *meta.Key, *computega.TargetHttpsProxy) error
 	SetSslCertificates(context.Context, *meta.Key, *computega.RegionTargetHttpsProxiesSetSslCertificatesRequest) error
 	SetUrlMap(context.Context, *meta.Key, *computega.UrlMapReference) error
 }
@@ -40494,6 +40599,7 @@ type MockRegionTargetHttpsProxies struct {
 	ListHook               func(ctx context.Context, region string, fl *filter.F, m *MockRegionTargetHttpsProxies) (bool, []*computega.TargetHttpsProxy, error)
 	InsertHook             func(ctx context.Context, key *meta.Key, obj *computega.TargetHttpsProxy, m *MockRegionTargetHttpsProxies) (bool, error)
 	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockRegionTargetHttpsProxies) (bool, error)
+	PatchHook              func(context.Context, *meta.Key, *computega.TargetHttpsProxy, *MockRegionTargetHttpsProxies) error
 	SetSslCertificatesHook func(context.Context, *meta.Key, *computega.RegionTargetHttpsProxiesSetSslCertificatesRequest, *MockRegionTargetHttpsProxies) error
 	SetUrlMapHook          func(context.Context, *meta.Key, *computega.UrlMapReference, *MockRegionTargetHttpsProxies) error
 
@@ -40642,6 +40748,14 @@ func (m *MockRegionTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key
 // Obj wraps the object for use in the mock.
 func (m *MockRegionTargetHttpsProxies) Obj(o *computega.TargetHttpsProxy) *MockRegionTargetHttpsProxiesObj {
 	return &MockRegionTargetHttpsProxiesObj{o}
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockRegionTargetHttpsProxies) Patch(ctx context.Context, key *meta.Key, arg0 *computega.TargetHttpsProxy) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetSslCertificates is a mock for the corresponding method.
@@ -40824,6 +40938,48 @@ func (g *GCERegionTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key)
 
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCERegionTargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// Patch is a method on GCERegionTargetHttpsProxies.
+func (g *GCERegionTargetHttpsProxies) Patch(ctx context.Context, key *meta.Key, arg0 *computega.TargetHttpsProxy) error {
+	klog.V(5).Infof("GCERegionTargetHttpsProxies.Patch(%v, %v, ...): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCERegionTargetHttpsProxies.Patch(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionTargetHttpsProxies")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("ga"),
+		Service:   "RegionTargetHttpsProxies",
+	}
+	klog.V(5).Infof("GCERegionTargetHttpsProxies.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCERegionTargetHttpsProxies.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.RegionTargetHttpsProxies.Patch(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+
+	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCERegionTargetHttpsProxies.Patch(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
+	klog.V(4).Infof("GCERegionTargetHttpsProxies.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
 

@@ -927,6 +927,7 @@ var ComputeServices = []*ServiceInfo{
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&alpha.RegionTargetHttpsProxiesService{}),
 		additionalMethods: []string{
+			"Patch",
 			"SetSslCertificates",
 			"SetUrlMap",
 		},
@@ -939,6 +940,7 @@ var ComputeServices = []*ServiceInfo{
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&beta.RegionTargetHttpsProxiesService{}),
 		additionalMethods: []string{
+			"Patch",
 			"SetSslCertificates",
 			"SetUrlMap",
 		},
@@ -951,6 +953,7 @@ var ComputeServices = []*ServiceInfo{
 		keyType:     Regional,
 		serviceType: reflect.TypeOf(&ga.RegionTargetHttpsProxiesService{}),
 		additionalMethods: []string{
+			"Patch",
 			"SetSslCertificates",
 			"SetUrlMap",
 		},

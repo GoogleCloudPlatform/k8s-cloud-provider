@@ -39,9 +39,9 @@ type Tracer func(RunInfo)
 
 // RunInfo records the details of a task.
 type RunInfo struct {
-	// ID for the execution.
+	// ID for the execution. This is item.String().
 	ID string
-	// Queued is the timestamp of when the task was queued.
+	// Queued is the timestamp of when the task was Add()ed.
 	Queued time.Time
 	// Start is the timestamp of when the task was started as a goroutine.
 	Start time.Time
@@ -71,12 +71,22 @@ func NewParallelQueue[T fmt.Stringer](opts ...QueueOption) *ParallelQueue[T] {
 type ParallelQueue[T fmt.Stringer] struct {
 	c config
 
-	lock    sync.Mutex
-	state   queueState
+	// lock guards the queue state below.
+	lock sync.Mutex
+	// state of the queue.
+	state queueState
+	// pending are all of the queue elements that still need to be
+	// processed with op.
 	pending []queueElement[T]
-	in      chan struct{}
-	done    chan RunInfo
-	active  int
+	// in channel is signaled whenever a new element has been
+	// Add()ed. This is 1-1 with the number of Add() calls.
+	in chan struct{}
+	// done channel is signaled when an element is done i.e. op()
+	// completes.
+	done chan RunInfo
+	// active is the count of outstanding operations that have
+	// running goroutines.
+	active int
 }
 
 type queueElement[T fmt.Stringer] struct {
@@ -87,14 +97,23 @@ type queueElement[T fmt.Stringer] struct {
 type queueState int
 
 const (
+	// stateNotStarted is the initial state of the queue.
 	stateNotStarted queueState = iota
+	// stateRunning means there are active goroutines executing.
 	stateRunning
+	// stateDone is reached when:
+	// - all items are complete
+	// - OR an error has been returned by op()
+	// - OR the context passed to Run() was canceled.
 	stateDone
 )
 
 // Add an item to the queue. This method is threadsafe within op() and
 // can be called during Run(). It is NOT safe to call Add() from
 // a different, unassociated thread.
+//
+// Calling Add(item) from the op() given to Run() guarantees that item
+// will be processed.
 func (q *ParallelQueue[T]) Add(item T) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
@@ -124,12 +143,13 @@ func (q *ParallelQueue[T]) Add(item T) {
 // as this can result in a deadlock.
 //
 // Queue execution will stop if op() returns an error or the context
-// is canceled. When an error occurs, there may be goroutines that are
-// continuing to execute. Use q.WaitForOrphans() to wait for them
-// remaining goroutines.
+// is canceled. When an error occurs, goroutines may continue to
+// execute. Use q.WaitForOrphans() to wait for the remaining
+// goroutines.
 func (q *ParallelQueue[T]) Run(ctx context.Context, op func(context.Context, T) error) error {
 	q.lock.Lock()
 	if q.state != stateNotStarted {
+		q.lock.Unlock()
 		return fmt.Errorf("Run() can only be called once (state=%d)", q.state)
 	}
 	q.state = stateRunning
@@ -170,7 +190,7 @@ func (q *ParallelQueue[T]) Run(ctx context.Context, op func(context.Context, T) 
 			q.lock.Unlock()
 		case <-q.in:
 			klog.V(4).Info("<-q.in")
-			// Fall through to launch().
+			// Wake up from sleep to (maybe) launch new items.
 		}
 	}
 }
@@ -212,6 +232,7 @@ func (q *ParallelQueue[T]) launch(ctx context.Context, op func(context.Context, 
 func (q *ParallelQueue[T]) WaitForOrphans(ctx context.Context) error {
 	q.lock.Lock()
 	if q.state != stateDone {
+		q.lock.Unlock()
 		return fmt.Errorf("WaitForOrphans called when not done (state = %d)", q.state)
 	}
 	q.lock.Unlock()

@@ -37,6 +37,7 @@ type FakeResource struct {
 func ID(project string, key *meta.Key) *cloud.ResourceID {
 	return &cloud.ResourceID{
 		Resource:  "fakes",
+		APIGroup:  "",
 		ProjectID: project,
 		Key:       key,
 	}

@@ -19,9 +19,11 @@ package fake
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode"
+	"k8s.io/klog/v2"
 )
 
 // NewBuilder returns a Node builder.
@@ -56,7 +58,9 @@ func (b *Builder) SetResource(u rnode.UntypedResource) error {
 }
 
 func (b *Builder) SyncFromCloud(ctx context.Context, gcp cloud.Cloud) error {
-	return fmt.Errorf("fake cannot SyncFromCloud")
+	// TODO: add ability to inject errors for the SyncFromCloud.
+	Mocks.initialize(b)
+	return nil
 }
 
 func (b *Builder) OutRefs() ([]rnode.ResourceRef, error) {
@@ -72,4 +76,55 @@ func (b *Builder) Build() (rnode.Node, error) {
 		return nil, err
 	}
 	return ret, nil
+}
+
+var Mocks = newFakeBuilderMocks()
+
+func newFakeBuilderMocks() *FakeBuilderMocks {
+	return &FakeBuilderMocks{
+		m: map[string]*Builder{},
+	}
+}
+
+type FakeBuilderMocks struct {
+	lock sync.Mutex
+	m    map[string]*Builder
+}
+
+func (m *FakeBuilderMocks) Clear() {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.m = map[string]*Builder{}
+}
+
+// Add the mocked fake. Returns true if the mock exists for the given b.ID().
+// Warning: this is a global, which means that tests that depend on this CANNOT
+// be run in parallel.
+func (m *FakeBuilderMocks) Add(b *Builder) bool {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	if _, ok := m.m[b.ID().String()]; ok {
+		return true
+	}
+	m.m[b.ID().String()] = b
+	return false
+}
+
+func (m *FakeBuilderMocks) initialize(b *Builder) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	klog.Infof("FakeBuilderMocks.initialize(%s)", b.ID())
+
+	if mock, ok := m.m[b.ID().String()]; ok {
+		b.SetState(mock.State())
+		b.SetOwnership(mock.Ownership())
+		b.SetResource(mock.Resource())
+		b.FakeOutRefs = mock.FakeOutRefs
+		b.OutRefsErr = mock.OutRefsErr
+	} else {
+		// If the mock doesn't exist, we view this as the resource not existing.
+		b.SetState(rnode.NodeDoesNotExist)
+	}
 }

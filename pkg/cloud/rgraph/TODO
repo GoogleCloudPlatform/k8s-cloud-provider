@@ -1,0 +1,34 @@
+TODOs
+=====
+
+* DropRef needs to track InRef counts if a resource is referenced more
+  than once.
+
+* ParallelExecutor needs to be designed and implemented.
+
+* Resource types need to be completed: TargetHTTPSProxy.
+
+* Implement support for AppNet APIs.
+
+* E2E test for each type that can be run independently to test the
+  CRUD, diff, transition and planning.
+
+* Chaos testing of the planner and executor.
+
+* [done] Project ID needs to be plumbed through to the Cloud Provider layer.
+
+* Fill out the testlib/* with all of the different resource trees that
+  we can think of.
+
+* Add support for coverage testing in the integration tests (look up
+  how to do this in the Godocs)
+
+* Finish action_update.go for the generic update function.
+
+* Check that trclosure is threadsafe for the work items (e.g. Node
+  sync). It seems like the Graph lock is sufficient as it gaurrantees
+  only one thread is executing the sync at a given time.
+
+* Generic update hasn't been implemented.
+
+* Support injecting errors in Fake resource SyncFromCloud

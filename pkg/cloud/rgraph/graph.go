@@ -70,7 +70,9 @@ func (g *Graph) AddTombstone(n rnode.Node) error {
 	return nil
 }
 
-// add a note to the graph. This is package internal on purpose.
+// add a note to the graph. This is package internal on purpose and
+// should not be used outside of internal implementation of the graph
+// package.
 func (g *Graph) add(n rnode.Node) {
 	g.nodes[n.ID().MapKey()] = n
 }

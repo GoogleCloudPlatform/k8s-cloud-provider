@@ -29,7 +29,7 @@ func newArg(t reflect.Type) *arg {
 Loop:
 	for {
 		switch t.Kind() {
-		case reflect.Ptr:
+		case reflect.Pointer:
 			ret.numPtr++
 			t = t.Elem()
 		default:
@@ -194,7 +194,7 @@ func (m *Method) init() {
 		}
 	}
 	// Return of the method must return a single value of type *xxxCall.
-	if fType.NumOut() != 1 || fType.Out(0).Kind() != reflect.Ptr || !strings.HasSuffix(fType.Out(0).Elem().Name(), "Call") {
+	if fType.NumOut() != 1 || fType.Out(0).Kind() != reflect.Pointer || !strings.HasSuffix(fType.Out(0).Elem().Name(), "Call") {
 		panic(fmt.Errorf("method %q.%q: generator only supports methods returning an *xxxCall object",
 			m.Service, m.Name()))
 	}
@@ -211,7 +211,7 @@ func (m *Method) init() {
 	switch doMethod.Func.Type().NumOut() {
 	case 2:
 		out0 := doMethod.Func.Type().Out(0)
-		if out0.Kind() != reflect.Ptr {
+		if out0.Kind() != reflect.Pointer {
 			panic(fmt.Errorf("method %q.%q: return type %q of Do() = S, _; S must be pointer type (%v)",
 				m.Service, m.Name(), returnTypeName, out0))
 		}
@@ -231,7 +231,7 @@ func (m *Method) init() {
 			// itemsField will be a []*ItemType. Dereference to
 			// extract the ItemType.
 			itemsType := itemsField.Type
-			if itemsType.Kind() != reflect.Slice && itemsType.Elem().Kind() != reflect.Ptr {
+			if itemsType.Kind() != reflect.Slice || itemsType.Elem().Kind() != reflect.Pointer {
 				panic(fmt.Errorf("method %q.%q: paged return type %q.Items is not an array of pointers", m.Service, m.Name(), listType.Name()))
 			}
 			m.ItemType = itemsType.Elem().Elem().Name()
@@ -243,7 +243,6 @@ func (m *Method) init() {
 			panic(fmt.Errorf("method %q.%q: return type %q of Do() = S, T; T must be 'error'",
 				m.Service, m.Name(), returnTypeName))
 		}
-		break
 	default:
 		panic(fmt.Errorf("method %q.%q: %q Do() return type is not handled by the generator",
 			m.Service, m.Name(), returnTypeName))

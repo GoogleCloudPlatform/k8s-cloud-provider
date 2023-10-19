@@ -282,8 +282,8 @@ func (m *Method) MockHook() string {
 	if m.kind == MethodPaged {
 		args = append(args, "*filter.F")
 	}
-
 	args = append(args, fmt.Sprintf("*%s", m.MockWrapType()))
+	args = append(args, "...Option")
 
 	switch m.kind {
 	case MethodOperation:
@@ -306,6 +306,7 @@ func (m *Method) FcnArgs() string {
 	if m.kind == MethodPaged {
 		args = append(args, "fl *filter.F")
 	}
+	args = append(args, "options ...Option")
 
 	switch m.kind {
 	case MethodOperation:
@@ -329,6 +330,7 @@ func (m *Method) InterfaceFunc() string {
 	if m.kind == MethodPaged {
 		args = append(args, "*filter.F")
 	}
+	args = append(args, "...Option")
 
 	switch m.kind {
 	case MethodOperation:

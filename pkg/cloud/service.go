@@ -19,13 +19,19 @@ package cloud
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/meta"
 	alpha "google.golang.org/api/compute/v0.alpha"
 	beta "google.golang.org/api/compute/v0.beta"
+	compute "google.golang.org/api/compute/v1"
 	ga "google.golang.org/api/compute/v1"
+	"google.golang.org/api/networkservices/v1"
 	networkservicesga "google.golang.org/api/networkservices/v1"
 	networkservicesbeta "google.golang.org/api/networkservices/v1beta1"
+	"google.golang.org/api/option"
 	"k8s.io/klog/v2"
 )
 
@@ -39,6 +45,44 @@ type Service struct {
 	NetworkServicesBeta *networkservicesbeta.ProjectsLocationsService
 	ProjectRouter       ProjectRouter
 	RateLimiter         RateLimiter
+}
+
+// NewService returns a new Service instance initialized with from an HTTP
+// client to the API endpoints.
+func NewService(ctx context.Context, client *http.Client, pr ProjectRouter, rl RateLimiter) (*Service, error) {
+	alpha, err := alpha.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return nil, err
+	}
+	beta, err := beta.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return nil, err
+	}
+	ga, err := compute.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return nil, err
+	}
+
+	nsGA, err := networkservicesga.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return nil, err
+	}
+	nsBeta, err := networkservicesbeta.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return nil, err
+	}
+
+	svc := &Service{
+		GA:                  ga,
+		Alpha:               alpha,
+		Beta:                beta,
+		NetworkServicesGA:   nsGA.Projects.Locations,
+		NetworkServicesBeta: nsBeta.Projects.Locations,
+		ProjectRouter:       pr,
+		RateLimiter:         rl,
+	}
+
+	return svc, nil
 }
 
 // wrapOperation wraps a GCE anyOP in a version generic operation type.
@@ -62,6 +106,16 @@ func (s *Service) wrapOperation(anyOp interface{}) (operation, error) {
 			return nil, err
 		}
 		return &betaOperation{s: s, projectID: r.ProjectID, key: r.Key}, nil
+	case *networkservices.Operation:
+		// XXX: for some reason, the URL for TD is different
+		// projects/bowei-gke/locations/global/operations/operation-1697834507582-6082be6b63b66-3d155ce4-4330820f
+		split := strings.Split(o.Name, "/")
+		klog.Infof("split: %v", split)
+		var err error
+		if err != nil {
+			return nil, fmt.Errorf("wrapOperation: %w", err)
+		}
+		return &networkServicesOperation{s: s, projectID: split[1], key: meta.GlobalKey(split[5])}, nil
 	default:
 		return nil, fmt.Errorf("invalid type %T", anyOp)
 	}

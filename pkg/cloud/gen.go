@@ -46592,7 +46592,7 @@ func (g *TDTcpRoutes) Get(ctx context.Context, key *meta.Key, options ...Option)
 		klog.V(4).Infof("TDTcpRoutes.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
-	name := fmt.Sprintf("projects/%s/locations/global/TcpRoutes/%s", projectID, key.Name)
+	name := fmt.Sprintf("projects/%s/locations/global/tcpRoutes/%s", projectID, key.Name)
 	call := g.s.NetworkServicesGA.TcpRoutes.Get(name)
 	call.Context(ctx)
 	v, err := call.Do()
@@ -46720,7 +46720,7 @@ func (g *TDTcpRoutes) Delete(ctx context.Context, key *meta.Key, options ...Opti
 		klog.V(4).Infof("TDTcpRoutes.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	name := fmt.Sprintf("projects/%s/locations/global/TcpRoutes/%s", projectID, key.Name)
+	name := fmt.Sprintf("projects/%s/locations/global/tcpRoutes/%s", projectID, key.Name)
 	call := g.s.NetworkServicesGA.TcpRoutes.Delete(name)
 
 	call.Context(ctx)
@@ -46762,7 +46762,7 @@ func (g *TDTcpRoutes) Patch(ctx context.Context, key *meta.Key, arg0 *networkser
 		klog.V(4).Infof("TDTcpRoutes.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	name := fmt.Sprintf("projects/%s/locations/global/TcpRoutes/%s", projectID, key.Name)
+	name := fmt.Sprintf("projects/%s/locations/global/tcpRoutes/%s", projectID, key.Name)
 	call := g.s.NetworkServicesGA.TcpRoutes.Patch(name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
@@ -47013,7 +47013,7 @@ func (g *TDBetaTcpRoutes) Get(ctx context.Context, key *meta.Key, options ...Opt
 		klog.V(4).Infof("TDBetaTcpRoutes.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
-	name := fmt.Sprintf("projects/%s/locations/global/TcpRoutes/%s", projectID, key.Name)
+	name := fmt.Sprintf("projects/%s/locations/global/tcpRoutes/%s", projectID, key.Name)
 	call := g.s.NetworkServicesBeta.TcpRoutes.Get(name)
 	call.Context(ctx)
 	v, err := call.Do()
@@ -47141,7 +47141,7 @@ func (g *TDBetaTcpRoutes) Delete(ctx context.Context, key *meta.Key, options ...
 		klog.V(4).Infof("TDBetaTcpRoutes.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	name := fmt.Sprintf("projects/%s/locations/global/TcpRoutes/%s", projectID, key.Name)
+	name := fmt.Sprintf("projects/%s/locations/global/tcpRoutes/%s", projectID, key.Name)
 	call := g.s.NetworkServicesBeta.TcpRoutes.Delete(name)
 
 	call.Context(ctx)
@@ -47183,7 +47183,7 @@ func (g *TDBetaTcpRoutes) Patch(ctx context.Context, key *meta.Key, arg0 *networ
 		klog.V(4).Infof("TDBetaTcpRoutes.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	name := fmt.Sprintf("projects/%s/locations/global/TcpRoutes/%s", projectID, key.Name)
+	name := fmt.Sprintf("projects/%s/locations/global/tcpRoutes/%s", projectID, key.Name)
 	call := g.s.NetworkServicesBeta.TcpRoutes.Patch(name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
@@ -47434,7 +47434,7 @@ func (g *TDMeshes) Get(ctx context.Context, key *meta.Key, options ...Option) (*
 		klog.V(4).Infof("TDMeshes.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
-	name := fmt.Sprintf("projects/%s/locations/global/Meshes/%s", projectID, key.Name)
+	name := fmt.Sprintf("projects/%s/locations/global/meshes/%s", projectID, key.Name)
 	call := g.s.NetworkServicesGA.Meshes.Get(name)
 	call.Context(ctx)
 	v, err := call.Do()
@@ -47561,7 +47561,7 @@ func (g *TDMeshes) Delete(ctx context.Context, key *meta.Key, options ...Option)
 		klog.V(4).Infof("TDMeshes.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	name := fmt.Sprintf("projects/%s/locations/global/Meshes/%s", projectID, key.Name)
+	name := fmt.Sprintf("projects/%s/locations/global/meshes/%s", projectID, key.Name)
 	call := g.s.NetworkServicesGA.Meshes.Delete(name)
 
 	call.Context(ctx)
@@ -47603,7 +47603,7 @@ func (g *TDMeshes) Patch(ctx context.Context, key *meta.Key, arg0 *networkservic
 		klog.V(4).Infof("TDMeshes.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	name := fmt.Sprintf("projects/%s/locations/global/Meshes/%s", projectID, key.Name)
+	name := fmt.Sprintf("projects/%s/locations/global/meshes/%s", projectID, key.Name)
 	call := g.s.NetworkServicesGA.Meshes.Patch(name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
@@ -47854,7 +47854,7 @@ func (g *TDBetaMeshes) Get(ctx context.Context, key *meta.Key, options ...Option
 		klog.V(4).Infof("TDBetaMeshes.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
-	name := fmt.Sprintf("projects/%s/locations/global/Meshes/%s", projectID, key.Name)
+	name := fmt.Sprintf("projects/%s/locations/global/meshes/%s", projectID, key.Name)
 	call := g.s.NetworkServicesBeta.Meshes.Get(name)
 	call.Context(ctx)
 	v, err := call.Do()
@@ -47981,7 +47981,7 @@ func (g *TDBetaMeshes) Delete(ctx context.Context, key *meta.Key, options ...Opt
 		klog.V(4).Infof("TDBetaMeshes.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	name := fmt.Sprintf("projects/%s/locations/global/Meshes/%s", projectID, key.Name)
+	name := fmt.Sprintf("projects/%s/locations/global/meshes/%s", projectID, key.Name)
 	call := g.s.NetworkServicesBeta.Meshes.Delete(name)
 
 	call.Context(ctx)
@@ -48023,7 +48023,7 @@ func (g *TDBetaMeshes) Patch(ctx context.Context, key *meta.Key, arg0 *networkse
 		klog.V(4).Infof("TDBetaMeshes.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	name := fmt.Sprintf("projects/%s/locations/global/Meshes/%s", projectID, key.Name)
+	name := fmt.Sprintf("projects/%s/locations/global/meshes/%s", projectID, key.Name)
 	call := g.s.NetworkServicesBeta.Meshes.Patch(name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()

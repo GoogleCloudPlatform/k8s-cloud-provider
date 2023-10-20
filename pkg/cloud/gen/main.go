@@ -319,30 +319,30 @@ type {{.WrapType}} interface {
 	{{.WrapTypeOps}}
 {{- end}}
 {{- if .GenerateGet}}
-	Get(ctx context.Context, key *meta.Key) (*{{.FQObjectType}}, error)
+	Get(ctx context.Context, key *meta.Key, options... Option) (*{{.FQObjectType}}, error)
 {{- end -}}
 {{- if .GenerateList}}
 {{- if .KeyIsGlobal}}
-	List(ctx context.Context, fl *filter.F) ([]*{{.FQObjectType}}, error)
+	List(ctx context.Context, fl *filter.F, options... Option) ([]*{{.FQObjectType}}, error)
 {{- end -}}
 {{- if .KeyIsRegional}}
-	List(ctx context.Context, region string, fl *filter.F) ([]*{{.FQObjectType}}, error)
+	List(ctx context.Context, region string, fl *filter.F, options... Option) ([]*{{.FQObjectType}}, error)
 {{- end -}}
 {{- if .KeyIsZonal}}
-	List(ctx context.Context, zone string, fl *filter.F) ([]*{{.FQObjectType}}, error)
+	List(ctx context.Context, zone string, fl *filter.F, options... Option) ([]*{{.FQObjectType}}, error)
 {{- end -}}
 {{- end -}}
 {{- if .GenerateInsert}}
-	Insert(ctx context.Context, key *meta.Key, obj *{{.FQObjectType}}) error
+	Insert(ctx context.Context, key *meta.Key, obj *{{.FQObjectType}}, options... Option) error
 {{- end -}}
 {{- if .GenerateDelete}}
-	Delete(ctx context.Context, key *meta.Key) error
+	Delete(ctx context.Context, key *meta.Key, options... Option) error
 {{- end -}}
 {{- if .AggregatedList}}
-	AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*{{.FQObjectType}}, error)
+	AggregatedList(ctx context.Context, fl *filter.F, options... Option) (map[string][]*{{.FQObjectType}}, error)
 {{- end}}
 {{- if .ListUsable}}
-	ListUsable(ctx context.Context, fl *filter.F) ([]*{{.FQListUsableObjectType}}, error)
+	ListUsable(ctx context.Context, fl *filter.F, options... Option) ([]*{{.FQListUsableObjectType}}, error)
 {{- end}}
 {{- with .Methods -}}
 {{- range .}}
@@ -405,30 +405,30 @@ type {{.MockWrapType}} struct {
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
 	{{- if .GenerateGet}}
-	GetHook    func(ctx context.Context, key *meta.Key, m *{{.MockWrapType}}) (bool, *{{.FQObjectType}}, error)
+	GetHook    func(ctx context.Context, key *meta.Key, m *{{.MockWrapType}}, options ...Option) (bool, *{{.FQObjectType}}, error)
 	{{- end -}}
 	{{- if .GenerateList}}
 	{{- if .KeyIsGlobal}}
-	ListHook   func(ctx context.Context, fl *filter.F, m *{{.MockWrapType}}) (bool, []*{{.FQObjectType}}, error)
+	ListHook   func(ctx context.Context, fl *filter.F, m *{{.MockWrapType}}, options ...Option) (bool, []*{{.FQObjectType}}, error)
 	{{- end -}}
 	{{- if .KeyIsRegional}}
-	ListHook   func(ctx context.Context, region string, fl *filter.F, m *{{.MockWrapType}}) (bool, []*{{.FQObjectType}}, error)
+	ListHook   func(ctx context.Context, region string, fl *filter.F, m *{{.MockWrapType}}, options ...Option) (bool, []*{{.FQObjectType}}, error)
 	{{- end -}}
 	{{- if .KeyIsZonal}}
-	ListHook   func(ctx context.Context, zone string, fl *filter.F, m *{{.MockWrapType}}) (bool, []*{{.FQObjectType}}, error)
+	ListHook   func(ctx context.Context, zone string, fl *filter.F, m *{{.MockWrapType}}, options ...Option) (bool, []*{{.FQObjectType}}, error)
 	{{- end}}
 	{{- end -}}
 	{{- if .GenerateInsert}}
-	InsertHook func(ctx context.Context, key *meta.Key, obj *{{.FQObjectType}}, m *{{.MockWrapType}}) (bool, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *{{.FQObjectType}}, m *{{.MockWrapType}}, options ...Option) (bool, error)
 	{{- end -}}
 	{{- if .GenerateDelete}}
-	DeleteHook func(ctx context.Context, key *meta.Key, m *{{.MockWrapType}}) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *{{.MockWrapType}}, options ...Option) (bool, error)
 	{{- end -}}
 	{{- if .AggregatedList}}
-	AggregatedListHook func(ctx context.Context, fl *filter.F, m *{{.MockWrapType}}) (bool, map[string][]*{{.FQObjectType}}, error)
+	AggregatedListHook func(ctx context.Context, fl *filter.F, m *{{.MockWrapType}}, options ...Option) (bool, map[string][]*{{.FQObjectType}}, error)
 	{{- end}}
 	{{- if .ListUsable}}
-	ListUsableHook   func(ctx context.Context, fl *filter.F, m *{{.MockWrapType}}) (bool, []*{{.FQListUsableObjectType}}, error)
+	ListUsableHook   func(ctx context.Context, fl *filter.F, m *{{.MockWrapType}}, options ...Option) (bool, []*{{.FQListUsableObjectType}}, error)
 	{{- end}}
 
 {{- with .Methods -}}
@@ -444,9 +444,9 @@ type {{.MockWrapType}} struct {
 
 {{- if .GenerateGet}}
 // Get returns the object from the mock.
-func (m *{{.MockWrapType}}) Get(ctx context.Context, key *meta.Key) (*{{.FQObjectType}}, error) {
+func (m *{{.MockWrapType}}) Get(ctx context.Context, key *meta.Key, options... Option) (*{{.FQObjectType}}, error) {
 	if m.GetHook != nil {
-		if intercept, obj, err := m.GetHook(ctx, key, m);  intercept {
+		if intercept, obj, err := m.GetHook(ctx, key, m, options...);  intercept {
 			klog.V(5).Infof("{{.MockWrapType}}.Get(%v, %s) = %+v, %v", ctx, key, obj ,err)
 			return obj, err
 		}
@@ -480,27 +480,27 @@ func (m *{{.MockWrapType}}) Get(ctx context.Context, key *meta.Key) (*{{.FQObjec
 {{- if .GenerateList}}
 {{if .KeyIsGlobal -}}
 // List all of the objects in the mock.
-func (m *{{.MockWrapType}}) List(ctx context.Context, fl *filter.F) ([]*{{.FQObjectType}}, error) {
+func (m *{{.MockWrapType}}) List(ctx context.Context, fl *filter.F, options... Option) ([]*{{.FQObjectType}}, error) {
 {{- end -}}
 {{- if .KeyIsRegional -}}
 // List all of the objects in the mock in the given region.
-func (m *{{.MockWrapType}}) List(ctx context.Context, region string, fl *filter.F) ([]*{{.FQObjectType}}, error) {
+func (m *{{.MockWrapType}}) List(ctx context.Context, region string, fl *filter.F, options... Option) ([]*{{.FQObjectType}}, error) {
 {{- end -}}
 {{- if .KeyIsZonal -}}
 // List all of the objects in the mock in the given zone.
-func (m *{{.MockWrapType}}) List(ctx context.Context, zone string, fl *filter.F) ([]*{{.FQObjectType}}, error) {
+func (m *{{.MockWrapType}}) List(ctx context.Context, zone string, fl *filter.F, options... Option) ([]*{{.FQObjectType}}, error) {
 {{- end}}
 	if m.ListHook != nil {
 		{{if .KeyIsGlobal -}}
-		if intercept, objs, err := m.ListHook(ctx, fl, m);  intercept {
+		if intercept, objs, err := m.ListHook(ctx, fl, m, options...);  intercept {
 			klog.V(5).Infof("{{.MockWrapType}}.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
 		{{- end -}}
 		{{- if .KeyIsRegional -}}
-		if intercept, objs, err := m.ListHook(ctx, region, fl, m);  intercept {
+		if intercept, objs, err := m.ListHook(ctx, region, fl, m, options...);  intercept {
 			klog.V(5).Infof("{{.MockWrapType}}.List(%v, %q, %v) = [%v items], %v", ctx, region, fl, len(objs), err)
 		{{- end -}}
 		{{- if .KeyIsZonal -}}
-		if intercept, objs, err := m.ListHook(ctx, zone, fl, m);  intercept {
+		if intercept, objs, err := m.ListHook(ctx, zone, fl, m, options...);  intercept {
 			klog.V(5).Infof("{{.MockWrapType}}.List(%v, %q, %v) = [%v items], %v", ctx, zone, fl, len(objs), err)
 		{{- end}}
 			return objs, err
@@ -562,13 +562,14 @@ func (m *{{.MockWrapType}}) List(ctx context.Context, zone string, fl *filter.F)
 
 {{- if .GenerateInsert}}
 // Insert is a mock for inserting/creating a new object.
-func (m *{{.MockWrapType}}) Insert(ctx context.Context, key *meta.Key, obj *{{.FQObjectType}}) error {
+func (m *{{.MockWrapType}}) Insert(ctx context.Context, key *meta.Key, obj *{{.FQObjectType}}, options... Option) error {
 	if m.InsertHook != nil {
-		if intercept, err := m.InsertHook(ctx, key, obj, m);  intercept {
+		if intercept, err := m.InsertHook(ctx, key, obj, m, options...);  intercept {
 			klog.V(5).Infof("{{.MockWrapType}}.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
 			return err
 		}
 	}
+        opts := mergeOptions(options)
 	if !key.Valid() {
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
@@ -590,7 +591,7 @@ func (m *{{.MockWrapType}}) Insert(ctx context.Context, key *meta.Key, obj *{{.F
 	}
 
 	obj.Name = key.Name
-	projectID := m.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Resource}}")
+	projectID := getProjectID(ctx, m.ProjectRouter, opts, "{{.Version}}", "{{.Resource}}")
 	obj.SelfLink = SelfLinkWithGroup("{{.APIGroup}}", meta.Version{{.VersionTitle}}, projectID, "{{.Resource}}", key)
 
 	m.Objects[*key] = &Mock{{.Service}}Obj{obj}
@@ -601,9 +602,9 @@ func (m *{{.MockWrapType}}) Insert(ctx context.Context, key *meta.Key, obj *{{.F
 
 {{- if .GenerateDelete}}
 // Delete is a mock for deleting the object.
-func (m *{{.MockWrapType}}) Delete(ctx context.Context, key *meta.Key) error {
+func (m *{{.MockWrapType}}) Delete(ctx context.Context, key *meta.Key, options... Option) error {
 	if m.DeleteHook != nil {
-		if intercept, err := m.DeleteHook(ctx, key, m);  intercept {
+		if intercept, err := m.DeleteHook(ctx, key, m, options...);  intercept {
 			klog.V(5).Infof("{{.MockWrapType}}.Delete(%v, %v) = %v", ctx, key, err)
 			return err
 		}
@@ -636,9 +637,9 @@ func (m *{{.MockWrapType}}) Delete(ctx context.Context, key *meta.Key) error {
 
 {{- if .AggregatedList}}
 // AggregatedList is a mock for AggregatedList.
-func (m *{{.MockWrapType}}) AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*{{.FQObjectType}}, error) {
+func (m *{{.MockWrapType}}) AggregatedList(ctx context.Context, fl *filter.F, options... Option) (map[string][]*{{.FQObjectType}}, error) {
 	if m.AggregatedListHook != nil {
-		if intercept, objs, err := m.AggregatedListHook(ctx, fl, m); intercept {
+		if intercept, objs, err := m.AggregatedListHook(ctx, fl, m, options...); intercept {
 			klog.V(5).Infof("{{.MockWrapType}}.AggregatedList(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
 			return objs, err
 		}
@@ -673,9 +674,9 @@ func (m *{{.MockWrapType}}) AggregatedList(ctx context.Context, fl *filter.F) (m
 
 {{- if .ListUsable}}
 // List all of the objects in the mock.
-func (m *{{.MockWrapType}}) ListUsable(ctx context.Context, fl *filter.F) ([]*{{.FQListUsableObjectType}}, error) {
+func (m *{{.MockWrapType}}) ListUsable(ctx context.Context, fl *filter.F, options... Option) ([]*{{.FQListUsableObjectType}}, error) {
 	if m.ListUsableHook != nil {
-		if intercept, objs, err := m.ListUsableHook(ctx, fl, m);  intercept {
+		if intercept, objs, err := m.ListUsableHook(ctx, fl, m, options...);  intercept {
 			klog.V(5).Infof("{{.MockWrapType}}.ListUsable(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
 			return objs, err
 		}
@@ -744,14 +745,16 @@ type {{.GCPWrapType}} struct {
 
 {{- if .GenerateGet}}
 // Get the {{.Object}} named by key.
-func (g *{{.GCPWrapType}}) Get(ctx context.Context, key *meta.Key) (*{{.FQObjectType}}, error) {
-	klog.V(5).Infof("{{.GCPWrapType}}.Get(%v, %v): called", ctx, key)
+func (g *{{.GCPWrapType}}) Get(ctx context.Context, key *meta.Key, options... Option) (*{{.FQObjectType}}, error) {
+        opts := mergeOptions(options)
+	klog.V(5).Infof("{{.GCPWrapType}}.Get(%v, %v, %v): called", ctx, key, opts)
 
 	if !key.Valid() {
 		klog.V(2).Infof("{{.GCPWrapType}}.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
 		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
 	}
-	projectID := g.s.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Service}}")
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "{{.Version}}", "{{.Service}}")
+
 	ck:= &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Get",
@@ -793,18 +796,22 @@ func (g *{{.GCPWrapType}}) Get(ctx context.Context, key *meta.Key) (*{{.FQObject
 {{- if .GenerateList}}
 // List all {{.Object}} objects.
 {{- if .KeyIsGlobal}}
-func (g *{{.GCPWrapType}}) List(ctx context.Context, fl *filter.F) ([]*{{.FQObjectType}}, error) {
-	klog.V(5).Infof("{{.GCPWrapType}}.List(%v, %v) called", ctx, fl)
+func (g *{{.GCPWrapType}}) List(ctx context.Context, fl *filter.F, options... Option) ([]*{{.FQObjectType}}, error) {
+        opts := mergeOptions(options)
+	klog.V(5).Infof("{{.GCPWrapType}}.List(%v, %v, %v) called", ctx, fl, opts)
 {{- end -}}
 {{- if .KeyIsRegional}}
-func (g *{{.GCPWrapType}}) List(ctx context.Context, region string, fl *filter.F) ([]*{{.FQObjectType}}, error) {
-	klog.V(5).Infof("{{.GCPWrapType}}.List(%v, %v, %v) called", ctx, region, fl)
+func (g *{{.GCPWrapType}}) List(ctx context.Context, region string, fl *filter.F, options... Option) ([]*{{.FQObjectType}}, error) {
+        opts := mergeOptions(options)
+	klog.V(5).Infof("{{.GCPWrapType}}.List(%v, %v, %v, %v) called", ctx, region, fl, opts)
 {{- end -}}
 {{- if .KeyIsZonal}}
-func (g *{{.GCPWrapType}}) List(ctx context.Context, zone string, fl *filter.F) ([]*{{.FQObjectType}}, error) {
-	klog.V(5).Infof("{{.GCPWrapType}}.List(%v, %v, %v) called", ctx, zone, fl)
+func (g *{{.GCPWrapType}}) List(ctx context.Context, zone string, fl *filter.F, options... Option) ([]*{{.FQObjectType}}, error) {
+        opts := mergeOptions(options)
+	klog.V(5).Infof("{{.GCPWrapType}}.List(%v, %v, %v, %v) called", ctx, zone, fl, opts)
 {{- end}}
-	projectID := g.s.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Service}}")
+        projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "{{.Version}}", "{{.Service}}")
+
 	ck:= &CallContextKey{
 		ProjectID: projectID,
 		Operation: "List",
@@ -849,7 +856,7 @@ func (g *{{.GCPWrapType}}) List(ctx context.Context, zone string, fl *filter.F) 
 		return nil, err
 	}
 
-    callObserverEnd(ctx, ck, nil)
+        callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
 	if kLogEnabled(4) {
@@ -868,13 +875,16 @@ func (g *{{.GCPWrapType}}) List(ctx context.Context, zone string, fl *filter.F) 
 
 {{- if .GenerateInsert}}
 // Insert {{.Object}} with key of value obj.
-func (g *{{.GCPWrapType}}) Insert(ctx context.Context, key *meta.Key, obj *{{.FQObjectType}}) error {
-	klog.V(5).Infof("{{.GCPWrapType}}.Insert(%v, %v, %+v): called", ctx, key, obj)
+func (g *{{.GCPWrapType}}) Insert(ctx context.Context, key *meta.Key, obj *{{.FQObjectType}}, options... Option) error {
+    opts := mergeOptions(options)
+	klog.V(5).Infof("{{.GCPWrapType}}.Insert(%v, %v, %+v, %v): called", ctx, key, obj, opts)
 	if !key.Valid() {
 		klog.V(2).Infof("{{.GCPWrapType}}.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
-	projectID := g.s.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Service}}")
+
+    projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "{{.Version}}", "{{.Service}}")
+
 	ck:= &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Insert",
@@ -930,13 +940,15 @@ func (g *{{.GCPWrapType}}) Insert(ctx context.Context, key *meta.Key, obj *{{.FQ
 
 {{- if .GenerateDelete}}
 // Delete the {{.Object}} referenced by key.
-func (g *{{.GCPWrapType}}) Delete(ctx context.Context, key *meta.Key) error {
-	klog.V(5).Infof("{{.GCPWrapType}}.Delete(%v, %v): called", ctx, key)
+func (g *{{.GCPWrapType}}) Delete(ctx context.Context, key *meta.Key, options... Option) error {
+        opts := mergeOptions(options)
+	klog.V(5).Infof("{{.GCPWrapType}}.Delete(%v, %v, %v): called", ctx, key, opts)
 	if !key.Valid() {
 		klog.V(2).Infof("{{.GCPWrapType}}.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 	}
-	projectID := g.s.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Service}}")
+
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts,  "{{.Version}}", "{{.Service}}")
 	ck:= &CallContextKey{
 		ProjectID: projectID,
 		Operation: "Delete",
@@ -984,10 +996,11 @@ func (g *{{.GCPWrapType}}) Delete(ctx context.Context, key *meta.Key) error {
 
 {{- if .AggregatedList}}
 // AggregatedList lists all resources of the given type across all locations.
-func (g *{{.GCPWrapType}}) AggregatedList(ctx context.Context, fl *filter.F) (map[string][]*{{.FQObjectType}}, error) {
+func (g *{{.GCPWrapType}}) AggregatedList(ctx context.Context, fl *filter.F, options... Option) (map[string][]*{{.FQObjectType}}, error) {
+    opts := mergeOptions(options)
 	klog.V(5).Infof("{{.GCPWrapType}}.AggregatedList(%v, %v) called", ctx, fl)
 
-	projectID := g.s.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Service}}")
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "{{.Version}}", "{{.Service}}")
 	ck:= &CallContextKey{
 		ProjectID: projectID,
 		Operation: "AggregatedList",
@@ -1041,16 +1054,17 @@ func (g *{{.GCPWrapType}}) AggregatedList(ctx context.Context, fl *filter.F) (ma
 
 {{- if .ListUsable}}
 // List all Usable {{.Object}} objects.
-func (g *{{.GCPWrapType}}) ListUsable(ctx context.Context, fl *filter.F) ([]*{{.FQListUsableObjectType}}, error) {
-	klog.V(5).Infof("{{.GCPWrapType}}.ListUsable(%v, %v) called", ctx, fl)
-	projectID := g.s.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Service}}")
+func (g *{{.GCPWrapType}}) ListUsable(ctx context.Context, fl *filter.F, options... Option) ([]*{{.FQListUsableObjectType}}, error) {
+    opts := mergeOptions(options)
+	klog.V(5).Infof("{{.GCPWrapType}}.ListUsable(%v, %v, %v) called", ctx, fl, opts)
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "{{.Version}}", "{{.Service}}")
 	ck:= &CallContextKey{
 		ProjectID: projectID,
 		Operation: "ListUsable",
 		Version: meta.Version("{{.Version}}"),
 		Service: "{{.Service}}",
 	}
-    callObserverStart(ctx, ck)
+        callObserverStart(ctx, ck)
 	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
@@ -1094,10 +1108,11 @@ func (g *{{.GCPWrapType}}) ListUsable(ctx context.Context, fl *filter.F) ([]*{{.
 {{- range .}}
 // {{.Name}} is a method on {{.GCPWrapType}}.
 func (g *{{.GCPWrapType}}) {{.FcnArgs}} {
-	klog.V(5).Infof("{{.GCPWrapType}}.{{.Name}}(%v, %v, ...): called", ctx, key)
+    opts := mergeOptions(options)
+	klog.V(5).Infof("{{.GCPWrapType}}.{{.Name}}(%v, %v, %v, ...): called", ctx, key, opts)
 
 	if !key.Valid() {
-		klog.V(2).Infof("{{.GCPWrapType}}.{{.Name}}(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		klog.V(2).Infof("{{.GCPWrapType}}.{{.Name}}(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
 {{- if .IsOperation}}
 		return fmt.Errorf("invalid GCE key (%+v)", key)
 {{- else if .IsGet}}
@@ -1106,7 +1121,7 @@ func (g *{{.GCPWrapType}}) {{.FcnArgs}} {
 		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
 {{- end}}
 	}
-	projectID := g.s.ProjectRouter.ProjectID(ctx, "{{.Version}}", "{{.Service}}")
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "{{.Version}}", "{{.Service}}")
 	ck:= &CallContextKey{
 		ProjectID: projectID,
 		Operation: "{{.Name}}",
@@ -1151,8 +1166,7 @@ func (g *{{.GCPWrapType}}) {{.FcnArgs}} {
 	}
 
 	err = g.s.WaitForCompletion(ctx, op)
-
-    callObserverEnd(ctx, ck, err)
+        callObserverEnd(ctx, ck, err)
 	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
 
 	klog.V(4).Infof("{{.GCPWrapType}}.{{.Name}}(%v, %v, ...) = %+v", ctx, key, err)
@@ -1161,7 +1175,7 @@ func (g *{{.GCPWrapType}}) {{.FcnArgs}} {
 	call.Context(ctx)
 	v, err := call.Do()
 
-    callObserverEnd(ctx, ck, err)
+        callObserverEnd(ctx, ck, err)
 	g.s.RateLimiter.Observe(ctx, err, ck)
 
 	klog.V(4).Infof("{{.GCPWrapType}}.{{.Name}}(%v, %v, ...) = %+v, %v", ctx, key, v, err)
@@ -1181,7 +1195,7 @@ func (g *{{.GCPWrapType}}) {{.FcnArgs}} {
 		return nil, err
 	}
 
-    callObserverEnd(ctx, ck, nil)
+        callObserverEnd(ctx, ck, nil)
 	g.s.RateLimiter.Observe(ctx, nil, ck)
 
 	if kLogEnabled(4) {

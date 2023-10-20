@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"unicode"
 )
 
 // ServiceInfo defines the entry for a Service that code will be generated for.
@@ -114,6 +115,19 @@ func (i *ServiceInfo) ListItemName() string {
 		return i.Service
 	}
 	return "Items"
+}
+
+func (i *ServiceInfo) NetworkServicesFmt() string {
+	var scope string
+	switch i.keyType {
+	case Global:
+		scope = "global"
+	}
+
+	runes := []rune(i.Service)
+	serviceLower := append([]rune{unicode.ToLower(runes[0])}, runes[1:]...)
+
+	return `projects/%s/locations/` + scope + `/` + string(serviceLower) + `/%s`
 }
 
 // ObjectAggregatedListType is the compute List type for the object (contains Items field).

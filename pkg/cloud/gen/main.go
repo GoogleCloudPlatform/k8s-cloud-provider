@@ -769,7 +769,7 @@ func (g *{{.GCPWrapType}}) Get(ctx context.Context, key *meta.Key, options... Op
 		return nil, err
 	}
 {{- if .IsNetworkServices}}
-	name := fmt.Sprintf("projects/%s/locations/global/{{.Service}}/%s", projectID, key.Name)
+    name := fmt.Sprintf("{{.NetworkServicesFmt}}", projectID, key.Name)
 	call := g.s.{{.GroupVersionTitle}}.{{.Service}}.Get(name)
 {{- else}}
 	{{- if .KeyIsGlobal}}
@@ -962,7 +962,7 @@ func (g *{{.GCPWrapType}}) Delete(ctx context.Context, key *meta.Key, options...
 		return err
 	}
 {{- if .IsNetworkServices}}
-	name := fmt.Sprintf("projects/%s/locations/global/{{.Service}}/%s", projectID, key.Name)
+	name := fmt.Sprintf("{{.NetworkServicesFmt}}", projectID, key.Name)
 	call := g.s.{{.GroupVersionTitle}}.{{.Service}}.Delete(name)
 {{- else}}
 	{{- if .KeyIsGlobal}}
@@ -1140,7 +1140,7 @@ func (g *{{.GCPWrapType}}) {{.FcnArgs}} {
 	}
 
 {{- if .IsNetworkServices}}
-	name := fmt.Sprintf("projects/%s/locations/global/{{.Service}}/%s", projectID, key.Name)
+    name := fmt.Sprintf("{{.NetworkServicesFmt}}", projectID, key.Name)
 	call := g.s.{{.GroupVersionTitle}}.{{.Service}}.{{.Name}}(name {{.CallArgs}})
 {{- else}}
 	{{- if .KeyIsGlobal}}

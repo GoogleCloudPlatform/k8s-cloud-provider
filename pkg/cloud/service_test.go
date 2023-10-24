@@ -21,6 +21,12 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	alpha "google.golang.org/api/compute/v0.alpha"
+	beta "google.golang.org/api/compute/v0.beta"
+	ga "google.golang.org/api/compute/v1"
+	"google.golang.org/api/networkservices/v1"
+	networkservicesbeta "google.golang.org/api/networkservices/v1beta1"
 )
 
 func TestPollOperation(t *testing.T) {
@@ -72,7 +78,7 @@ func TestPollOperation(t *testing.T) {
 				t.Errorf("pollOperation: got %v, want %v", gotErr, test.wantErr)
 			}
 			if test.op.attemptsRemaining != test.wantRemainingAttempts {
-        t.Errorf("%d attempts remaining, want %d", test.op.attemptsRemaining, test.wantRemainingAttempts)
+				t.Errorf("%d attempts remaining, want %d", test.op.attemptsRemaining, test.wantRemainingAttempts)
 			}
 		})
 	}
@@ -98,4 +104,97 @@ func (f *fakeOperation) error() error {
 
 func (f *fakeOperation) rateLimitKey() *RateLimitKey {
 	return nil
+}
+
+func TestWrapOperation(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		in      any
+		want    string // oneof(ga, alpha, beta, nsga)
+		wantErr bool
+	}{
+		{
+			in: &ga.Operation{
+				Kind:          "compute#operation",
+				Id:            4697186249068962421,
+				Name:          "operation-1698127001961-6087000bc4354-7d13ece8-99e595cb",
+				OperationType: "insert",
+				TargetLink:    "https://www.googleapis.com/compute/v1/projects/my-project/global/healthChecks/foo",
+				TargetId:      462163996302828149,
+				Status:        "DONE",
+				SelfLink:      "https://www.googleapis.com/compute/v1/projects/my-project/global/operations/operation-1698127001961-6087000bc4354-7d13ece8-99e595cb",
+			},
+			want: "ga",
+		},
+		{
+			in: &alpha.Operation{
+				Kind:          "compute#operation",
+				Id:            4697186249068962421,
+				Name:          "operation-1698127001961-6087000bc4354-7d13ece8-99e595cb",
+				OperationType: "insert",
+				TargetLink:    "https://www.googleapis.com/compute/v1/projects/my-project/global/healthChecks/foo",
+				TargetId:      462163996302828149,
+				Status:        "DONE",
+				SelfLink:      "https://www.googleapis.com/compute/v1/projects/my-project/global/operations/operation-1698127001961-6087000bc4354-7d13ece8-99e595cb",
+			},
+			want: "alpha",
+		},
+		{
+			in: &beta.Operation{
+				Kind:          "compute#operation",
+				Id:            4697186249068962421,
+				Name:          "operation-1698127001961-6087000bc4354-7d13ece8-99e595cb",
+				OperationType: "insert",
+				TargetLink:    "https://www.googleapis.com/compute/v1/projects/my-project/global/healthChecks/foo",
+				TargetId:      462163996302828149,
+				Status:        "DONE",
+				SelfLink:      "https://www.googleapis.com/compute/v1/projects/my-project/global/operations/operation-1698127001961-6087000bc4354-7d13ece8-99e595cb",
+			},
+			want: "beta",
+		},
+		{
+			in: &networkservices.Operation{
+				Name: "projects/my-project/locations/global/operations/operation-1234",
+			},
+			want: "nsga",
+		},
+		{
+			in: &networkservicesbeta.Operation{
+				Name: "projects/my-project/locations/global/operations/operation-1234",
+			},
+			want: "nsga",
+		},
+		{
+			in:      struct{}{},
+			wantErr: true,
+		},
+	} {
+		t.Run(tc.want, func(t *testing.T) {
+			svc := Service{}
+			op, err := svc.wrapOperation(tc.in)
+			if gotErr := err != nil; gotErr != tc.wantErr {
+				t.Fatalf("gotErr = %t, want %t", gotErr, tc.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			var gotType string
+			switch op.(type) {
+			case *gaOperation:
+				gotType = "ga"
+			case *alphaOperation:
+				gotType = "alpha"
+			case *betaOperation:
+				gotType = "beta"
+			case *networkServicesOperation:
+				gotType = "nsga"
+			default:
+				gotType = "invalid"
+			}
+			if gotType != tc.want {
+				t.Errorf("gotType = %q, want %q", gotType, tc.want)
+			}
+		})
+	}
 }

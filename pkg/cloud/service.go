@@ -19,13 +19,17 @@ package cloud
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	alpha "google.golang.org/api/compute/v0.alpha"
 	beta "google.golang.org/api/compute/v0.beta"
+	compute "google.golang.org/api/compute/v1"
 	ga "google.golang.org/api/compute/v1"
+	"google.golang.org/api/networkservices/v1"
 	networkservicesga "google.golang.org/api/networkservices/v1"
 	networkservicesbeta "google.golang.org/api/networkservices/v1beta1"
+	"google.golang.org/api/option"
 	"k8s.io/klog/v2"
 )
 
@@ -41,27 +45,97 @@ type Service struct {
 	RateLimiter         RateLimiter
 }
 
+// NewService returns a new Service instance initialized with from an HTTP
+// client to the API endpoints.
+func NewService(ctx context.Context, client *http.Client, pr ProjectRouter, rl RateLimiter) (*Service, error) {
+	alpha, err := alpha.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return nil, err
+	}
+	beta, err := beta.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return nil, err
+	}
+	ga, err := compute.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return nil, err
+	}
+
+	nsGA, err := networkservicesga.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return nil, err
+	}
+	nsBeta, err := networkservicesbeta.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return nil, err
+	}
+
+	svc := &Service{
+		GA:                  ga,
+		Alpha:               alpha,
+		Beta:                beta,
+		NetworkServicesGA:   nsGA.Projects.Locations,
+		NetworkServicesBeta: nsBeta.Projects.Locations,
+		ProjectRouter:       pr,
+		RateLimiter:         rl,
+	}
+
+	return svc, nil
+}
+
 // wrapOperation wraps a GCE anyOP in a version generic operation type.
-func (s *Service) wrapOperation(anyOp interface{}) (operation, error) {
+func (s *Service) wrapOperation(anyOp any) (operation, error) {
 	switch o := anyOp.(type) {
 	case *ga.Operation:
 		r, err := ParseResourceURL(o.SelfLink)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("wrapOperation: %w", err)
 		}
-		return &gaOperation{s: s, projectID: r.ProjectID, key: r.Key}, nil
+		return &gaOperation{
+			s:         s,
+			projectID: r.ProjectID,
+			key:       r.Key,
+		}, nil
 	case *alpha.Operation:
 		r, err := ParseResourceURL(o.SelfLink)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("wrapOperation: %w", err)
 		}
-		return &alphaOperation{s: s, projectID: r.ProjectID, key: r.Key}, nil
+		return &alphaOperation{
+			s:         s,
+			projectID: r.ProjectID,
+			key:       r.Key,
+		}, nil
 	case *beta.Operation:
 		r, err := ParseResourceURL(o.SelfLink)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("wrapOperation: %w", err)
 		}
-		return &betaOperation{s: s, projectID: r.ProjectID, key: r.Key}, nil
+		return &betaOperation{
+			s: s, projectID: r.ProjectID,
+			key: r.Key,
+		}, nil
+	case *networkservices.Operation:
+		result, err := parseNetworkServiceOpURL(o.Name)
+		if err != nil {
+			return nil, fmt.Errorf("wrapOperation: %w", err)
+		}
+		return &networkServicesOperation{
+			s:         s,
+			projectID: result.projectID,
+			key:       result.key,
+		}, nil
+	case *networkservicesbeta.Operation:
+		result, err := parseNetworkServiceOpURL(o.Name)
+		if err != nil {
+			return nil, fmt.Errorf("wrapOperation: %w", err)
+		}
+		// Reuse the GA operation stream for Beta.
+		return &networkServicesOperation{
+			s:         s,
+			projectID: result.projectID,
+			key:       result.key,
+		}, nil
 	default:
 		return nil, fmt.Errorf("invalid type %T", anyOp)
 	}

@@ -29,8 +29,6 @@ import (
 	"golang.org/x/oauth2/google"
 	"k8s.io/klog/v2"
 
-	alpha "google.golang.org/api/compute/v0.alpha"
-	beta "google.golang.org/api/compute/v0.beta"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"
 )
@@ -79,26 +77,9 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	alpha, err := alpha.New(client)
+	svc, err := cloud.NewService(ctx, client, &cloud.SingleProjectRouter{ID: testFlags.project}, &cloud.NopRateLimiter{})
 	if err != nil {
 		log.Fatal(err)
-	}
-	beta, err := beta.New(client)
-	if err != nil {
-		log.Fatal(err)
-	}
-	ga, err := compute.New(client)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	svc := &cloud.Service{
-		GA:            ga,
-		Alpha:         alpha,
-		Beta:          beta,
-		ProjectRouter: &cloud.SingleProjectRouter{ID: testFlags.project},
-		RateLimiter:   &cloud.NopRateLimiter{},
 	}
 	theCloud = cloud.NewGCE(svc)
 

@@ -17,7 +17,7 @@ import (
 func TestTransitiveClosure(t *testing.T) {
 	// No t.Parallel() due to use of fake.Mocks.Add().
 	const project = "proj1"
-	mockCloud := cloud.NewMockGCE(nil) // TODO: project router
+	mockCloud := cloud.NewMockGCE(&cloud.SingleProjectRouter{ID: project})
 
 	addNode := func(from string, toList []string, opts ...func(*fake.Builder)) *fake.Builder {
 		id := fake.ID(project, meta.GlobalKey(from))
@@ -71,6 +71,8 @@ func TestTransitiveClosure(t *testing.T) {
 	}
 
 	nodeIsExternal := func(b *fake.Builder) { b.SetOwnership(rnode.OwnershipExternal) }
+	nodeIsInError := func(b *fake.Builder) { b.FakeSyncError = fmt.Errorf("SyncFromCloud error") }
+	outsRefsAreInError := func(b *fake.Builder) { b.OutRefsErr = fmt.Errorf("OutRefs error") }
 
 	for _, tc := range []struct {
 		name    string
@@ -123,6 +125,7 @@ func TestTransitiveClosure(t *testing.T) {
 			graph: func() *rgraph.Builder {
 				g := rgraph.NewBuilder()
 				addNodeToGraph(g, "a", []string{"b"})
+				addNode("b", nil)
 				return g
 			},
 			want: wantGraph{ids: []string{"a", "b"}},
@@ -133,6 +136,8 @@ func TestTransitiveClosure(t *testing.T) {
 			graph: func() *rgraph.Builder {
 				g := rgraph.NewBuilder()
 				addNodeToGraph(g, "a", []string{"b", "c"})
+				addNode("b", nil)
+				addNode("c", nil)
 				return g
 			},
 			want: wantGraph{ids: []string{"a", "b", "c"}},
@@ -144,6 +149,7 @@ func TestTransitiveClosure(t *testing.T) {
 				g := rgraph.NewBuilder()
 				addNodeToGraph(g, "a", []string{"b"})
 				addNode("b", []string{"c"})
+				addNode("c", nil)
 				return g
 			},
 			want: wantGraph{ids: []string{"a", "b", "c"}},
@@ -155,6 +161,8 @@ func TestTransitiveClosure(t *testing.T) {
 				g := rgraph.NewBuilder()
 				addNodeToGraph(g, "a", []string{"b", "c"})
 				addNode("c", []string{"d"})
+				addNode("b", nil)
+				addNode("d", nil)
 				return g
 			},
 			want: wantGraph{ids: []string{"a", "b", "c", "d"}},
@@ -167,6 +175,7 @@ func TestTransitiveClosure(t *testing.T) {
 				addNodeToGraph(g, "a", []string{"b", "c"})
 				addNode("b", []string{"d"})
 				addNode("c", []string{"d"})
+				addNode("d", nil)
 				return g
 			},
 			want: wantGraph{ids: []string{"a", "b", "c", "d"}},
@@ -233,11 +242,49 @@ func TestTransitiveClosure(t *testing.T) {
 				addNode("b", []string{"d", "e"}, nodeIsExternal)
 				addNode("d", []string{"a"})
 				addNode("e", []string{"b"})
+				addNode("c", nil)
 				return g
 			},
 			want: wantGraph{ids: []string{"a", "b", "c"}},
 		},
-		// TODO(bowei): add error test cases.
+		{
+			name:  "nodes with error results in err",
+			cloud: mockCloud,
+			graph: func() *rgraph.Builder {
+				g := rgraph.NewBuilder()
+				addNodeToGraph(g, "a", []string{"b"})
+				addNode("b", []string{"d"}, nodeIsInError)
+				addNode("d", nil)
+				return g
+			},
+			wantErr: true,
+		},
+		{
+			name:  "nodes with error results in err - parent error",
+			cloud: mockCloud,
+			graph: func() *rgraph.Builder {
+				g := rgraph.NewBuilder()
+				addNodeToGraph(g, "a", []string{"b", "c"}, nodeIsInError)
+				addNode("b", nil)
+				addNode("c", nil)
+				return g
+			},
+			want:    wantGraph{ids: []string{"a"}},
+			wantErr: true,
+		},
+		{
+			name:  "outrefs with error results in err ",
+			cloud: mockCloud,
+			graph: func() *rgraph.Builder {
+				g := rgraph.NewBuilder()
+				addNodeToGraph(g, "a", []string{"b", "c"}, outsRefsAreInError)
+				addNode("b", []string{"d"})
+				addNode("c", nil)
+				addNode("d", nil)
+				return g
+			},
+			wantErr: true,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// No t.Parallel() due to use of fake.Mocks.Add().

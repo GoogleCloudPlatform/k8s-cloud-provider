@@ -41,6 +41,8 @@ type Builder struct {
 	OutRefsErr  error
 
 	resource Fake
+
+	FakeSyncError error
 }
 
 // builder implements node.Builder.
@@ -58,9 +60,8 @@ func (b *Builder) SetResource(u rnode.UntypedResource) error {
 }
 
 func (b *Builder) SyncFromCloud(ctx context.Context, gcp cloud.Cloud) error {
-	// TODO(bowei): add ability to inject errors for the SyncFromCloud.
 	Mocks.initialize(b)
-	return nil
+	return b.FakeSyncError
 }
 
 func (b *Builder) OutRefs() ([]rnode.ResourceRef, error) {
@@ -132,6 +133,7 @@ func (m *FakeBuilderMocks) initialize(b *Builder) {
 		b.SetResource(mock.Resource())
 		b.FakeOutRefs = mock.FakeOutRefs
 		b.OutRefsErr = mock.OutRefsErr
+		b.FakeSyncError = mock.FakeSyncError
 	} else {
 		// If the mock doesn't exist, treat this as the resource not existing.
 		b.SetState(rnode.NodeDoesNotExist)

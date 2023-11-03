@@ -39,19 +39,35 @@ var _ rnode.Node = (*forwardingRuleNode)(nil)
 
 func (n *forwardingRuleNode) Resource() rnode.UntypedResource { return n.resource }
 
-type changedFields struct{ target, labels, other bool }
+// changedFields is a helper that interprets the set of fields that have been changed in a Diff.
+type changedFields struct {
+	target bool
+	labels bool
+	other  bool
 
+	// messages are human-readable descriptions of the changed fields.
+	messages []string
+}
+
+// process an item from the diff. returns true if the item can be handled
+// without recreating the resource.
 func (c *changedFields) process(item api.DiffItem) bool {
+	var messages []string
+
 	switch {
 	case api.Path{}.Pointer().Field("Target").Equal(item.Path):
+		c.messages = append(messages, fmt.Sprintf("Target (%q -> %q)", item.A, item.B))
 		c.target = true
 		return true
 	case item.Path.HasPrefix(api.Path{}.Pointer().Field("Labels")):
+		c.messages = append(messages, fmt.Sprintf("Labels (%v -> %v)", item.A, item.B))
 		c.labels = true
 		return true
 	default:
+		c.messages = append(messages, fmt.Sprintf("%s (%v -> %v)", item.Path, item.A, item.B))
 		c.other = true
 	}
+
 	return false
 }
 

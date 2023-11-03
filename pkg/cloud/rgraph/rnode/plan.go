@@ -17,6 +17,7 @@ limitations under the License.
 package rnode
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/api"
@@ -106,10 +107,26 @@ func (p *Plan) GraphvizString() string {
 	if curAction.Diff != nil {
 		if len(curAction.Diff.Items) > 0 {
 			s += "<br/>"
-		}
-		for _, item := range curAction.Diff.Items {
-			s += fmt.Sprintf("[DIFF] %s: %s<br/>", item.State, item.Path)
+			for _, item := range curAction.Diff.Items {
+				s += fmt.Sprintf("[DIFF] %s: %s<br/>", item.State, item.Path)
+			}
 		}
 	}
 	return s
+}
+
+// Explain returns a human-readable string that is suitable for analysis. It
+// will be rather verbose.
+func (p *Plan) Explain() string {
+	buf := &bytes.Buffer{}
+
+	details := p.Details()
+	fmt.Fprintf(buf, "%s: %s", details.Operation, details.Why)
+	if details.Diff != nil && len(details.Diff.Items) > 0 {
+		fmt.Fprintln(buf)
+		for _, item := range details.Diff.Items {
+			fmt.Fprintf(buf, "  [DIFF] %s: %s\n", item.State, item.Path)
+		}
+	}
+	return buf.String()
 }

@@ -17,6 +17,7 @@ limitations under the License.
 package rgraph
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
@@ -75,4 +76,21 @@ func (g *Graph) AddTombstone(n rnode.Node) error {
 // package.
 func (g *Graph) add(n rnode.Node) {
 	g.nodes[n.ID().MapKey()] = n
+}
+
+// ExplainPlan returns a human-readable string describing the plan attached to
+// this Graph. The string will be rather verbose.
+func (g *Graph) ExplainPlan() string {
+	buf := &bytes.Buffer{}
+	// TODO: sort nodes
+	for _, node := range g.nodes {
+		if node.Plan() == nil {
+			fmt.Fprintf(buf, "%s: no plan\n", node.ID())
+			continue
+		}
+
+		fmt.Fprintf(buf, "%s: plan:\n", node.ID())
+		fmt.Fprintln(buf, node.Plan().Explain())
+	}
+	return buf.String()
 }

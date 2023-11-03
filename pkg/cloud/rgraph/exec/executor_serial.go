@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
+	"k8s.io/klog/v2"
 )
 
 // NewSerialExecutor returns a new Executor that runs tasks single-threaded.
@@ -78,6 +79,8 @@ func (ex *serialExecutor) Run(ctx context.Context, c cloud.Cloud) (*Result, erro
 }
 
 func (ex *serialExecutor) runAction(ctx context.Context, c cloud.Cloud, a Action) error {
+	klog.Infof("runAction %s", a)
+
 	te := &TraceEntry{
 		Action: a,
 		Start:  time.Now(),
@@ -92,7 +95,7 @@ func (ex *serialExecutor) runAction(ctx context.Context, c cloud.Cloud, a Action
 		switch ex.config.ErrorStrategy {
 		case ContinueOnError:
 		case StopOnError:
-			return fmt.Errorf("serialExecutor: stopping execution (got %v)", runErr)
+			return fmt.Errorf("serialExecutor: stopping execution for Action %s (got %v)", a, runErr)
 		default:
 			return fmt.Errorf("serialExecutor: invalid ErrorStrategy %q", ex.config.ErrorStrategy)
 		}

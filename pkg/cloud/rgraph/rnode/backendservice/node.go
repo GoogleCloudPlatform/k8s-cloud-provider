@@ -60,16 +60,16 @@ func (n *backendServiceNode) Diff(gotNode rnode.Node) (*rnode.PlanDetails, error
 	)
 
 	planRecreate := func(s string, args ...any) {
-		details = append(details, fmt.Sprintf("BackendService needs to be recreated: "+s, args...))
+		details = append(details, fmt.Sprintf(s, args...))
 		needsRecreate = true
 	}
 
 	for _, delta := range diff.Items {
 		switch {
 		case delta.Path.Equal(api.Path{}.Pointer().Field("LoadBalancingScheme")):
-			planRecreate("LoadBalancingScheme change: %s -> %s", delta.A, delta.B)
+			planRecreate("LoadBalancingScheme change: '%v' -> '%v'", delta.A, delta.B)
 		default:
-			planRecreate("%s change: %s -> %s", delta.Path)
+			planRecreate("%s change: '%v' -> '%v'", delta.Path, delta.A, delta.B)
 		}
 	}
 

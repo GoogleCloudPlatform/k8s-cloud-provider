@@ -92,15 +92,24 @@ func (b *builder) OutRefs() ([]rnode.ResourceRef, error) {
 		}
 	}
 
-	// Target
-	if obj.Target != "" {
-		id, err := cloud.ParseResourceURL(obj.Target)
+	// .BackendService, .Target
+	for _, fieldSpec := range []struct {
+		name string
+		val  string
+	}{
+		{"BackendService", obj.BackendService},
+		{"Target", obj.Target},
+	} {
+		if fieldSpec.val == "" {
+			continue
+		}
+		id, err := cloud.ParseResourceURL(fieldSpec.val)
 		if err != nil {
-			return nil, fmt.Errorf("ForwardingRuleNode Target: %w", err)
+			return nil, fmt.Errorf("ForwardingRuleNode %s: %w", fieldSpec.name, err)
 		}
 		ret = append(ret, rnode.ResourceRef{
 			From: b.resource.ResourceID(),
-			Path: api.Path{}.Pointer().Field("Target"),
+			Path: api.Path{}.Pointer().Field(fieldSpec.name),
 			To:   id,
 		})
 	}

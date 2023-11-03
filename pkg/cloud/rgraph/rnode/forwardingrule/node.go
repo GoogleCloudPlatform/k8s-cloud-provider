@@ -18,6 +18,7 @@ package forwardingrule
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/api"
@@ -39,19 +40,32 @@ var _ rnode.Node = (*forwardingRuleNode)(nil)
 
 func (n *forwardingRuleNode) Resource() rnode.UntypedResource { return n.resource }
 
-type changedFields struct{ target, labels, other bool }
+type changedFields struct {
+	target  bool
+	labels  bool
+	other   bool
+	message string
+}
 
 func (c *changedFields) process(item api.DiffItem) bool {
+	var messages []string
+
 	switch {
 	case api.Path{}.Pointer().Field("Target").Equal(item.Path):
+		messages = append(messages, fmt.Sprintf("Target (%q -> %q)", item.A, item.B))
 		c.target = true
 		return true
 	case item.Path.HasPrefix(api.Path{}.Pointer().Field("Labels")):
+		messages = append(messages, fmt.Sprintf("Labels (%v -> %v)", item.A, item.B))
 		c.labels = true
 		return true
 	default:
+		messages = append(messages, fmt.Sprintf("%s (%v -> %v)", item.Path, item.A, item.B))
 		c.other = true
 	}
+
+	c.message = strings.Join(messages, ", ")
+
 	return false
 }
 

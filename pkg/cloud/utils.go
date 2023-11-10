@@ -135,10 +135,12 @@ func (r *ResourceID) String() string {
 }
 
 // apiGroupRegex is used to extract the API Group out of a Resource URL.
-// This regex expects API Group to be followed by <ver>/projects/ path
-// segments. Unfortunately it cannot predict what comes before the API
+// This regex expects API Group to be followed ine one of 2 patterns:
+// <ver>/projects/ path or legacy one <api_group>.googleapis.com/<ver>/projects/.
+// Unfortunately it cannot predict what comes before the API
 // group since that is configurable via SetAPIDomain.
-var apiGroupRegex = regexp.MustCompile(`([a-z]*)\/(alpha|beta|v1|v1alpha1|v1beta1)/projects`)
+// legacyApiGroupRegex is used to extract API Group from legacy path in format
+var apiGroupRegex = regexp.MustCompile(`([a-z]*)(\.googleapis\.com)?\/(alpha|beta|v1|v1alpha1|v1beta1)/projects`)
 
 // ParseResourceURL parses resource URLs of the following formats:
 //
@@ -152,25 +154,37 @@ var apiGroupRegex = regexp.MustCompile(`([a-z]*)\/(alpha|beta|v1|v1alpha1|v1beta
 //	[https://www.googleapis.com/<apigroup>/<ver>]/projects/<proj>/global/<res>/<name>
 //	[https://www.googleapis.com/<apigroup>/<ver>]/projects/<proj>/regions/<region>/<res>/<name>
 //	[https://www.googleapis.com/<apigroup>/<ver>]/projects/<proj>/zones/<zone>/<res>/<name>
+//	[https://<apigroup>.googleapis.com/<ver>]/projects/<proj>/global/<res>/<name>
+//	[https://<apigroup>.googleapis.com/<ver>]/projects/<proj>/regions/<region>/<res>/<name>
+//	[https://<apigroup>.googleapis.com/<ver>]/projects/<proj>/zones/<zone>/<res>/<name>
 //
 // Note that ParseResourceURL can't round trip partial paths that do not
 // include an API Group.
 func ParseResourceURL(url string) (*ResourceID, error) {
-	errNotValid := fmt.Errorf("%q is not a valid resource URL", url)
-
 	matches := apiGroupRegex.FindStringSubmatch(url)
-	var apiGroup meta.APIGroup
-	if len(matches) >= 2 {
-		switch matches[1] {
-		case "compute":
-			apiGroup = meta.APIGroupCompute
-		case "networkservices":
-			apiGroup = meta.APIGroupNetworkServices
-		default:
-			return nil, fmt.Errorf("%q does not contain a supported API Group", url)
-		}
+	apiGroup, err := apiGroupFromMatches(matches)
+	if err != nil {
+		return nil, fmt.Errorf("ParseResourceURL(%q) returned error: %v", url, err)
+	}
+	return parseURL(url, apiGroup)
+}
+
+func apiGroupFromMatches(matches []string) (meta.APIGroup, error) {
+	if len(matches) < 2 {
+		return meta.APIGroup(""), nil
 	}
 
+	switch matches[1] {
+	case "compute":
+		return meta.APIGroupCompute, nil
+	case "networkservices":
+		return meta.APIGroupNetworkServices, nil
+	}
+	return meta.APIGroup(""), fmt.Errorf("matches does not contain a supported API Group: %v", matches)
+}
+
+func parseURL(url string, apiGroup meta.APIGroup) (*ResourceID, error) {
+	errNotValid := fmt.Errorf("%q is not a valid resource URL", url)
 	// Trim prefix off URL leaving "projects/..."
 	projectsIndex := strings.Index(url, "/projects/")
 	if projectsIndex >= 0 {

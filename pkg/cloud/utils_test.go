@@ -118,7 +118,15 @@ func TestParseResourceURL(t *testing.T) {
 			&ResourceID{"some-gce-project", meta.APIGroupCompute, "projects", nil},
 		},
 		{
+			"https://compute.googleapis.com/v1/projects/some-gce-project",
+			&ResourceID{"some-gce-project", meta.APIGroupCompute, "projects", nil},
+		},
+		{
 			"https://www.googleapis.com/compute/v1/projects/some-gce-project/regions/us-central1",
+			&ResourceID{"some-gce-project", meta.APIGroupCompute, "regions", meta.GlobalKey("us-central1")},
+		},
+		{
+			"https://compute.googleapis.com/v1/projects/some-gce-project/regions/us-central1",
 			&ResourceID{"some-gce-project", meta.APIGroupCompute, "regions", meta.GlobalKey("us-central1")},
 		},
 		{
@@ -126,7 +134,15 @@ func TestParseResourceURL(t *testing.T) {
 			&ResourceID{"some-gce-project", meta.APIGroupNetworkServices, "regions", meta.GlobalKey("us-central1")},
 		},
 		{
+			"https://networkservices.googleapis.com/v1/projects/some-gce-project/regions/us-central1",
+			&ResourceID{"some-gce-project", meta.APIGroupNetworkServices, "regions", meta.GlobalKey("us-central1")},
+		},
+		{
 			"https://www.googleapis.com/compute/v1/projects/some-gce-project/zones/us-central1-b",
+			&ResourceID{"some-gce-project", meta.APIGroupCompute, "zones", meta.GlobalKey("us-central1-b")},
+		},
+		{
+			"https://compute.googleapis.com/v1/projects/some-gce-project/zones/us-central1-b",
 			&ResourceID{"some-gce-project", meta.APIGroupCompute, "zones", meta.GlobalKey("us-central1-b")},
 		},
 		{
@@ -134,11 +150,23 @@ func TestParseResourceURL(t *testing.T) {
 			&ResourceID{"some-gce-project", meta.APIGroupCompute, "operations", meta.GlobalKey("operation-1513289952196-56054460af5a0-b1dae0c3-9bbf9dbf")},
 		},
 		{
+			"https://compute.googleapis.com/v1/projects/some-gce-project/global/operations/operation-1513289952196-56054460af5a0-b1dae0c3-9bbf9dbf",
+			&ResourceID{"some-gce-project", meta.APIGroupCompute, "operations", meta.GlobalKey("operation-1513289952196-56054460af5a0-b1dae0c3-9bbf9dbf")},
+		},
+		{
 			"https://www.googleapis.com/compute/alpha/projects/some-gce-project/regions/us-central1/addresses/my-address",
 			&ResourceID{"some-gce-project", meta.APIGroupCompute, "addresses", meta.RegionalKey("my-address", "us-central1")},
 		},
 		{
+			"https://compute.googleapis.com/alpha/projects/some-gce-project/regions/us-central1/addresses/my-address",
+			&ResourceID{"some-gce-project", meta.APIGroupCompute, "addresses", meta.RegionalKey("my-address", "us-central1")},
+		},
+		{
 			"https://www.googleapis.com/compute/v1/projects/some-gce-project/zones/us-central1-c/instances/instance-1",
+			&ResourceID{"some-gce-project", meta.APIGroupCompute, "instances", meta.ZonalKey("instance-1", "us-central1-c")},
+		},
+		{
+			"https://compute.googleapis.com/v1/projects/some-gce-project/zones/us-central1-c/instances/instance-1",
 			&ResourceID{"some-gce-project", meta.APIGroupCompute, "instances", meta.ZonalKey("instance-1", "us-central1-c")},
 		},
 		{

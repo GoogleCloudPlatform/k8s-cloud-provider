@@ -72,3 +72,13 @@ var AllVersions = []Version{
 // AllServices are a list of all the services to generate code for. Keep
 // this list in lexicographical order by object type.
 var AllServices = []*ServiceInfo{}
+
+// Scope represents scope for GCE resources.
+// Can be one of Global, Zonal, Regional.
+type Scope string
+
+const (
+	GlobalScope   Scope = Global
+	RegionalScope Scope = Regional
+	ZonalScope    Scope = Zonal
+)

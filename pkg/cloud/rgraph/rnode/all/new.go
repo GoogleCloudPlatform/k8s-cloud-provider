@@ -39,8 +39,6 @@ func NewBuilderByID(id *cloud.ResourceID) (rnode.Builder, error) {
 		return address.NewBuilder(id), nil
 	case "backendServices":
 		return backendservice.NewBuilder(id), nil
-	case "fakes":
-		return fake.NewBuilder(id), nil
 	case "forwardingRules":
 		return forwardingrule.NewBuilder(id), nil
 	case "healthChecks":

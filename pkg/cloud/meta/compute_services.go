@@ -778,6 +778,14 @@ var ComputeServices = []*ServiceInfo{
 		options:     NoList, // List() naming convention is different in GCE API for this resource
 	},
 	{
+		Object:      "SslPolicy",
+		Service:     "RegionSslPolicies",
+		Resource:    "sslPolicies",
+		keyType:     Regional,
+		serviceType: reflect.TypeOf(&ga.RegionSslPoliciesService{}),
+		options:     NoList, // List() naming convention is different in GCE API for this resource
+	},
+	{
 		Object:      "Subnetwork",
 		Service:     "Subnetworks",
 		Resource:    "subnetworks",

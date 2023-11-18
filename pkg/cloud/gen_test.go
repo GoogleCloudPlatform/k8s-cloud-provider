@@ -2624,6 +2624,55 @@ func TestRegionSslCertificatesGroup(t *testing.T) {
 	}
 }
 
+func TestRegionSslPoliciesGroup(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pr := &SingleProjectRouter{"mock-project"}
+	mock := NewMockGCE(pr)
+
+	var key *meta.Key
+	keyGA := meta.RegionalKey("key-ga", "location")
+	key = keyGA
+	// Ignore unused variables.
+	_, _, _ = ctx, mock, key
+
+	// Get not found.
+	if _, err := mock.RegionSslPolicies().Get(ctx, key); err == nil {
+		t.Errorf("RegionSslPolicies().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+
+	// Insert.
+	{
+		obj := &computega.SslPolicy{}
+		if err := mock.RegionSslPolicies().Insert(ctx, keyGA, obj); err != nil {
+			t.Errorf("RegionSslPolicies().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
+		}
+	}
+
+	// Get across versions.
+	if obj, err := mock.RegionSslPolicies().Get(ctx, key); err != nil {
+		t.Errorf("RegionSslPolicies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+
+	// List.
+	mock.MockRegionSslPolicies.Objects[*keyGA] = mock.MockRegionSslPolicies.Obj(&computega.SslPolicy{Name: keyGA.Name})
+	want := map[string]bool{
+		"key-ga": true,
+	}
+	_ = want // ignore unused variables.
+
+	// Delete across versions.
+	if err := mock.RegionSslPolicies().Delete(ctx, keyGA); err != nil {
+		t.Errorf("RegionSslPolicies().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
+	}
+
+	// Delete not found.
+	if err := mock.RegionSslPolicies().Delete(ctx, keyGA); err == nil {
+		t.Errorf("RegionSslPolicies().Delete(%v, %v) = nil; want error", ctx, keyGA)
+	}
+}
+
 func TestRegionTargetHttpProxiesGroup(t *testing.T) {
 	t.Parallel()
 
@@ -4571,6 +4620,7 @@ func TestResourceIDConversion(t *testing.T) {
 		NewRegionHealthChecksResourceID("some-project", "us-central1", "my-healthChecks-resource"),
 		NewRegionNetworkFirewallPoliciesResourceID("some-project", "us-central1", "my-regionNetworkFirewallPolicies-resource"),
 		NewRegionSslCertificatesResourceID("some-project", "us-central1", "my-sslCertificates-resource"),
+		NewRegionSslPoliciesResourceID("some-project", "us-central1", "my-sslPolicies-resource"),
 		NewRegionTargetHttpProxiesResourceID("some-project", "us-central1", "my-targetHttpProxies-resource"),
 		NewRegionTargetHttpsProxiesResourceID("some-project", "us-central1", "my-targetHttpsProxies-resource"),
 		NewRegionUrlMapsResourceID("some-project", "us-central1", "my-urlMaps-resource"),

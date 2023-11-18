@@ -109,6 +109,7 @@ type Cloud interface {
 	BetaRegionSslCertificates() BetaRegionSslCertificates
 	RegionSslCertificates() RegionSslCertificates
 	SslPolicies() SslPolicies
+	RegionSslPolicies() RegionSslPolicies
 	AlphaSubnetworks() AlphaSubnetworks
 	BetaSubnetworks() BetaSubnetworks
 	Subnetworks() Subnetworks
@@ -209,6 +210,7 @@ func NewGCE(s *Service) *GCE {
 		gceBetaRegionSslCertificates:          &GCEBetaRegionSslCertificates{s},
 		gceRegionSslCertificates:              &GCERegionSslCertificates{s},
 		gceSslPolicies:                        &GCESslPolicies{s},
+		gceRegionSslPolicies:                  &GCERegionSslPolicies{s},
 		gceAlphaSubnetworks:                   &GCEAlphaSubnetworks{s},
 		gceBetaSubnetworks:                    &GCEBetaSubnetworks{s},
 		gceSubnetworks:                        &GCESubnetworks{s},
@@ -313,6 +315,7 @@ type GCE struct {
 	gceBetaRegionSslCertificates          *GCEBetaRegionSslCertificates
 	gceRegionSslCertificates              *GCERegionSslCertificates
 	gceSslPolicies                        *GCESslPolicies
+	gceRegionSslPolicies                  *GCERegionSslPolicies
 	gceAlphaSubnetworks                   *GCEAlphaSubnetworks
 	gceBetaSubnetworks                    *GCEBetaSubnetworks
 	gceSubnetworks                        *GCESubnetworks
@@ -670,6 +673,11 @@ func (gce *GCE) SslPolicies() SslPolicies {
 	return gce.gceSslPolicies
 }
 
+// RegionSslPolicies returns the interface for the ga RegionSslPolicies.
+func (gce *GCE) RegionSslPolicies() RegionSslPolicies {
+	return gce.gceRegionSslPolicies
+}
+
 // AlphaSubnetworks returns the interface for the alpha Subnetworks.
 func (gce *GCE) AlphaSubnetworks() AlphaSubnetworks {
 	return gce.gceAlphaSubnetworks
@@ -847,6 +855,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 	mockRegionHealthChecksObjs := map[meta.Key]*MockRegionHealthChecksObj{}
 	mockRegionNetworkFirewallPoliciesObjs := map[meta.Key]*MockRegionNetworkFirewallPoliciesObj{}
 	mockRegionSslCertificatesObjs := map[meta.Key]*MockRegionSslCertificatesObj{}
+	mockRegionSslPoliciesObjs := map[meta.Key]*MockRegionSslPoliciesObj{}
 	mockRegionTargetHttpProxiesObjs := map[meta.Key]*MockRegionTargetHttpProxiesObj{}
 	mockRegionTargetHttpsProxiesObjs := map[meta.Key]*MockRegionTargetHttpsProxiesObj{}
 	mockRegionUrlMapsObjs := map[meta.Key]*MockRegionUrlMapsObj{}
@@ -932,6 +941,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockBetaRegionSslCertificates:          NewMockBetaRegionSslCertificates(projectRouter, mockRegionSslCertificatesObjs),
 		MockRegionSslCertificates:              NewMockRegionSslCertificates(projectRouter, mockRegionSslCertificatesObjs),
 		MockSslPolicies:                        NewMockSslPolicies(projectRouter, mockSslPoliciesObjs),
+		MockRegionSslPolicies:                  NewMockRegionSslPolicies(projectRouter, mockRegionSslPoliciesObjs),
 		MockAlphaSubnetworks:                   NewMockAlphaSubnetworks(projectRouter, mockSubnetworksObjs),
 		MockBetaSubnetworks:                    NewMockBetaSubnetworks(projectRouter, mockSubnetworksObjs),
 		MockSubnetworks:                        NewMockSubnetworks(projectRouter, mockSubnetworksObjs),
@@ -1036,6 +1046,7 @@ type MockGCE struct {
 	MockBetaRegionSslCertificates          *MockBetaRegionSslCertificates
 	MockRegionSslCertificates              *MockRegionSslCertificates
 	MockSslPolicies                        *MockSslPolicies
+	MockRegionSslPolicies                  *MockRegionSslPolicies
 	MockAlphaSubnetworks                   *MockAlphaSubnetworks
 	MockBetaSubnetworks                    *MockBetaSubnetworks
 	MockSubnetworks                        *MockSubnetworks
@@ -1391,6 +1402,11 @@ func (mock *MockGCE) RegionSslCertificates() RegionSslCertificates {
 // SslPolicies returns the interface for the ga SslPolicies.
 func (mock *MockGCE) SslPolicies() SslPolicies {
 	return mock.MockSslPolicies
+}
+
+// RegionSslPolicies returns the interface for the ga RegionSslPolicies.
+func (mock *MockGCE) RegionSslPolicies() RegionSslPolicies {
+	return mock.MockRegionSslPolicies
 }
 
 // AlphaSubnetworks returns the interface for the alpha Subnetworks.
@@ -2416,6 +2432,26 @@ func (m *MockRegionSslCertificatesObj) ToGA() *computega.SslCertificate {
 	ret := &computega.SslCertificate{}
 	if err := copyViaJSON(ret, m.Obj); err != nil {
 		klog.Errorf("Could not convert %T to *computega.SslCertificate via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// MockRegionSslPoliciesObj is used to store the various object versions in the shared
+// map of mocked objects. This allows for multiple API versions to co-exist and
+// share the same "view" of the objects in the backend.
+type MockRegionSslPoliciesObj struct {
+	Obj interface{}
+}
+
+// ToGA retrieves the given version of the object.
+func (m *MockRegionSslPoliciesObj) ToGA() *computega.SslPolicy {
+	if ret, ok := m.Obj.(*computega.SslPolicy); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &computega.SslPolicy{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *computega.SslPolicy via JSON: %v", m.Obj, err)
 	}
 	return ret
 }
@@ -33861,6 +33897,278 @@ func (g *GCESslPolicies) Delete(ctx context.Context, key *meta.Key) error {
 	return err
 }
 
+// RegionSslPolicies is an interface that allows for mocking of RegionSslPolicies.
+type RegionSslPolicies interface {
+	Get(ctx context.Context, key *meta.Key) (*computega.SslPolicy, error)
+	Insert(ctx context.Context, key *meta.Key, obj *computega.SslPolicy) error
+	Delete(ctx context.Context, key *meta.Key) error
+}
+
+// NewMockRegionSslPolicies returns a new mock for RegionSslPolicies.
+func NewMockRegionSslPolicies(pr ProjectRouter, objs map[meta.Key]*MockRegionSslPoliciesObj) *MockRegionSslPolicies {
+	mock := &MockRegionSslPolicies{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockRegionSslPolicies is the mock for RegionSslPolicies.
+type MockRegionSslPolicies struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockRegionSslPoliciesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockRegionSslPolicies) (bool, *computega.SslPolicy, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *computega.SslPolicy, m *MockRegionSslPolicies) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockRegionSslPolicies) (bool, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockRegionSslPolicies) Get(ctx context.Context, key *meta.Key) (*computega.SslPolicy, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockRegionSslPolicies.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockRegionSslPolicies.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToGA()
+		klog.V(5).Infof("MockRegionSslPolicies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockRegionSslPolicies %v not found", key),
+	}
+	klog.V(5).Infof("MockRegionSslPolicies.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockRegionSslPolicies) Insert(ctx context.Context, key *meta.Key, obj *computega.SslPolicy) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m); intercept {
+			klog.V(5).Infof("MockRegionSslPolicies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockRegionSslPolicies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockRegionSslPolicies %v exists", key),
+		}
+		klog.V(5).Infof("MockRegionSslPolicies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := m.ProjectRouter.ProjectID(ctx, "ga", "sslPolicies")
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "sslPolicies", key)
+
+	m.Objects[*key] = &MockRegionSslPoliciesObj{obj}
+	klog.V(5).Infof("MockRegionSslPolicies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockRegionSslPolicies) Delete(ctx context.Context, key *meta.Key) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m); intercept {
+			klog.V(5).Infof("MockRegionSslPolicies.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockRegionSslPolicies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockRegionSslPolicies %v not found", key),
+		}
+		klog.V(5).Infof("MockRegionSslPolicies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockRegionSslPolicies.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockRegionSslPolicies) Obj(o *computega.SslPolicy) *MockRegionSslPoliciesObj {
+	return &MockRegionSslPoliciesObj{o}
+}
+
+// GCERegionSslPolicies is a simplifying adapter for the GCE RegionSslPolicies.
+type GCERegionSslPolicies struct {
+	s *Service
+}
+
+// Get the SslPolicy named by key.
+func (g *GCERegionSslPolicies) Get(ctx context.Context, key *meta.Key) (*computega.SslPolicy, error) {
+	klog.V(5).Infof("GCERegionSslPolicies.Get(%v, %v): called", ctx, key)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCERegionSslPolicies.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionSslPolicies")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("ga"),
+		Service:   "RegionSslPolicies",
+	}
+
+	klog.V(5).Infof("GCERegionSslPolicies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCERegionSslPolicies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.GA.RegionSslPolicies.Get(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCERegionSslPolicies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	return v, err
+}
+
+// Insert SslPolicy with key of value obj.
+func (g *GCERegionSslPolicies) Insert(ctx context.Context, key *meta.Key, obj *computega.SslPolicy) error {
+	klog.V(5).Infof("GCERegionSslPolicies.Insert(%v, %v, %+v): called", ctx, key, obj)
+	if !key.Valid() {
+		klog.V(2).Infof("GCERegionSslPolicies.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionSslPolicies")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("ga"),
+		Service:   "RegionSslPolicies",
+	}
+	klog.V(5).Infof("GCERegionSslPolicies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCERegionSslPolicies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.GA.RegionSslPolicies.Insert(projectID, key.Region, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	if err != nil {
+		klog.V(4).Infof("GCERegionSslPolicies.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCERegionSslPolicies.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the SslPolicy referenced by key.
+func (g *GCERegionSslPolicies) Delete(ctx context.Context, key *meta.Key) error {
+	klog.V(5).Infof("GCERegionSslPolicies.Delete(%v, %v): called", ctx, key)
+	if !key.Valid() {
+		klog.V(2).Infof("GCERegionSslPolicies.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := g.s.ProjectRouter.ProjectID(ctx, "ga", "RegionSslPolicies")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("ga"),
+		Service:   "RegionSslPolicies",
+	}
+	klog.V(5).Infof("GCERegionSslPolicies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCERegionSslPolicies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.RegionSslPolicies.Delete(projectID, key.Region, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	if err != nil {
+		klog.V(4).Infof("GCERegionSslPolicies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCERegionSslPolicies.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
 // AlphaSubnetworks is an interface that allows for mocking of Subnetworks.
 type AlphaSubnetworks interface {
 	Get(ctx context.Context, key *meta.Key) (*computealpha.Subnetwork, error)
@@ -47056,6 +47364,12 @@ func NewRegionNetworkFirewallPoliciesResourceID(project, region, name string) *R
 func NewRegionSslCertificatesResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
 	return &ResourceID{project, "compute", "sslCertificates", key}
+}
+
+// NewRegionSslPoliciesResourceID creates a ResourceID for the RegionSslPolicies resource.
+func NewRegionSslPoliciesResourceID(project, region, name string) *ResourceID {
+	key := meta.RegionalKey(name, region)
+	return &ResourceID{project, "compute", "sslPolicies", key}
 }
 
 // NewRegionTargetHttpProxiesResourceID creates a ResourceID for the RegionTargetHttpProxies resource.

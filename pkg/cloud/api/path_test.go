@@ -59,8 +59,11 @@ func TestPathEqual(t *testing.T) {
 		{a: Path{}.Pointer(), b: Path{}.Pointer(), want: true},
 		{a: Path{}, b: Path{}.Pointer(), want: false},
 		{a: Path{}.Index(0), b: Path{}.MapIndex(0), want: false},
-		{a: Path{}.Index(0), b: Path{}.ArrayElements(), want: false},
-		{a: Path{}.MapIndex(0), b: Path{}.ArrayElements(), want: false},
+		{a: Path{}.Index(0), b: Path{}.AnySliceIndex(), want: false},
+		{a: Path{}.MapIndex(0), b: Path{}.AnySliceIndex(), want: false},
+		{a: Path{}.MapIndex(0), b: Path{}.AnyMapIndex(), want: false},
+		{a: Path{}.Index(0), b: Path{}.AnyMapIndex(), want: false},
+		{a: Path{}.AnySliceIndex(), b: Path{}.AnyMapIndex(), want: false},
 	} {
 		got := tc.a.Equal(tc.b)
 		if got != tc.want {
@@ -69,7 +72,7 @@ func TestPathEqual(t *testing.T) {
 	}
 }
 
-func TestPathSimilar(t *testing.T) {
+func TestPathMatch(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -83,12 +86,24 @@ func TestPathSimilar(t *testing.T) {
 		{a: Path{}.Pointer(), b: Path{}.Pointer(), want: true},
 		{a: Path{}, b: Path{}.Pointer(), want: false},
 		{a: Path{}.Index(0), b: Path{}.MapIndex(0), want: false},
-		{a: Path{}.Index(0), b: Path{}.ArrayElements(), want: true},
-		{a: Path{}.MapIndex(0), b: Path{}.ArrayElements(), want: false},
+		{a: Path{}.Index(0), b: Path{}.AnySliceIndex(), want: true},
+		{a: Path{}.Index(0).Field("abcd").Field("cde"), b: Path{}.AnySliceIndex().Field("abcd"), want: false},
+		{a: Path{}.MapIndex(0), b: Path{}.AnySliceIndex(), want: false},
+		{a: Path{}.MapIndex(10), b: Path{}.AnyMapIndex(), want: true},
+		{a: Path{}.Index(0), b: Path{}.AnyMapIndex(), want: false},
+		{a: Path{}.AnySliceIndex(), b: Path{}.Index(8), want: true},
+		{a: Path{}.AnySliceIndex().Field("abcd").Field("cde"), b: Path{}.Index(2).Field("abcd"), want: false},
+		{a: Path{}.AnySliceIndex(), b: Path{}.MapIndex(0), want: false},
+		{a: Path{}.AnyMapIndex(), b: Path{}.MapIndex(1), want: true},
+		{a: Path{}.AnyMapIndex(), b: Path{}.Index(9), want: false},
+		{a: Path{}.AnyMapIndex(), b: Path{}.AnySliceIndex(), want: false},
 	} {
-		got := tc.a.Similar(tc.b)
-		if got != tc.want {
-			t.Errorf("Equal(%s, %s) = %t, want %t", tc.a, tc.b, got, tc.want)
+		if got := tc.a.Match(tc.b); got != tc.want {
+			t.Errorf("%s.Match(%s) = %t, want %t", tc.a, tc.b, got, tc.want)
+		}
+		// Match is symmetrical. Check reversed order.
+		if got := tc.b.Match(tc.a); got != tc.want {
+			t.Errorf("%s.Match(%s) = %t, want %t", tc.b, tc.a, got, tc.want)
 		}
 	}
 }
@@ -114,12 +129,14 @@ func TestPathHasPrefix(t *testing.T) {
 		{a: Path{}.Pointer(), b: Path{}.Field("x").Field("x"), want: false},
 		{a: Path{}.Field("x").Field("x"), b: Path{}.Pointer(), want: false},
 		{a: Path{}.Field("x").Field("x"), b: Path{}.Field("x"), want: true},
-		{a: Path{}.Field("x").Index(10), b: Path{}.Field("x").ArrayElements(), want: true},
-		{a: Path{}.Field("x").Field("x").Index(10), b: Path{}.Field("x").ArrayElements(), want: false},
-		{a: Path{}.Field("x").ArrayElements(), b: Path{}.Field("x").Index(0), want: false},
+		{a: Path{}.Field("x").Index(10), b: Path{}.Field("x").AnySliceIndex(), want: true},
+		{a: Path{}.Field("x").AnySliceIndex(), b: Path{}.Field("x").Index(10), want: true},
+		{a: Path{}.Field("x").Field("x").Index(10), b: Path{}.Field("x").AnySliceIndex(), want: false},
+		{a: Path{}.Field("x").Index(10), b: Path{}.Field("x").AnyMapIndex(), want: false},
+		{a: Path{}.Field("x").MapIndex(10), b: Path{}.Field("x").AnyMapIndex(), want: true},
+		{a: Path{}.Field("x").AnyMapIndex(), b: Path{}.Field("x").MapIndex(10), want: true},
 	} {
-		got := tc.a.HasPrefix(tc.b)
-		if got != tc.want {
+		if got := tc.a.HasPrefix(tc.b); got != tc.want {
 			t.Errorf("%q.HasPrefix(%q) = %t, want %t", tc.a, tc.b, got, tc.want)
 		}
 	}
@@ -234,6 +251,195 @@ func TestResolveType(t *testing.T) {
 			}
 			if ty != tc.wantType {
 				t.Fatalf("ResolveType() = %v, want %v", ty, tc.wantType)
+			}
+		})
+	}
+}
+
+func TestIsSliceIndex(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		desc    string
+		element string
+		want    bool
+	}{
+		{
+			desc:    "slice index short number",
+			element: "!0",
+			want:    true,
+		},
+		{
+			desc:    "slice index long number",
+			element: "!5679",
+			want:    true,
+		},
+		{
+			desc:    "slice any index",
+			element: "!#",
+		},
+		{
+			desc:    "slice key with string",
+			element: "!abcd",
+		},
+		{
+			desc:    "slice key",
+			element: "!",
+		},
+		{
+			desc:    "map key",
+			element: ":0",
+		},
+		{
+			desc:    "pointer key",
+			element: "*0",
+		},
+		{
+			desc:    "single number",
+			element: "10",
+		},
+		{
+			desc:    "field reference with number",
+			element: ".10",
+		},
+		{
+			desc:    "string",
+			element: "abcd",
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			if got := isSliceIndex(tc.element); got != tc.want {
+				t.Errorf("isSliceIndex(%s) = %v, want = %v", tc.element, got, tc.want)
+			}
+		})
+	}
+}
+func TestIsMatchElement(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		desc string
+		a    string
+		b    string
+		want bool
+	}{
+		{
+			desc: "slice index short number",
+			a:    "!0",
+			b:    "!0",
+			want: true,
+		},
+		{
+			desc: "slice index long number",
+			a:    "!100",
+			b:    "!100",
+			want: true,
+		},
+		{
+			desc: "slice index wildcard matching",
+			a:    "!#",
+			b:    "!0",
+			want: true,
+		},
+		{
+			desc: "slice index long wildcard matching",
+			a:    "!#",
+			b:    "!500",
+			want: true,
+		},
+		{
+			desc: "map key ",
+			a:    ":abc",
+			b:    ":abc",
+			want: true,
+		},
+		{
+			desc: "map key wildcard matching",
+			a:    ":abc",
+			b:    ":#",
+			want: true,
+		},
+		{
+			desc: "struct field",
+			a:    ".a",
+			b:    ".a",
+			want: true,
+		},
+		{
+			desc: "pointer field",
+			a:    "*a",
+			b:    "*a",
+			want: true,
+		},
+		{
+			desc: "slice index does not match",
+			a:    "!10",
+			b:    "!0",
+		},
+		{
+			desc: "slice index does not match map key",
+			a:    ":0",
+			b:    "!0",
+		},
+		{
+			desc: "slice any index does not match map key",
+			a:    ":0",
+			b:    "!#",
+		},
+		{
+			desc: "slice index does not match map any key",
+			a:    ":0",
+			b:    "!#",
+		},
+		{
+			desc: "slice index does not match map index wildcard matching",
+			a:    ":#",
+			b:    "!#",
+		},
+		{
+			desc: "slice index does not match struct",
+			a:    "!0",
+			b:    ".a",
+		},
+		{
+			desc: "map key does not match",
+			a:    ":a",
+			b:    ":abc",
+		},
+		{
+			desc: "map key does not match struct",
+			a:    ":a",
+			b:    ".a",
+		},
+		{
+			desc: "map key does not match pointer",
+			a:    ":abc",
+			b:    "*abc",
+		},
+		{
+			desc: "struct does not match pointer",
+			a:    ".abc",
+			b:    "*abc",
+		},
+		{
+			desc: "struct does not match",
+			a:    ".abc",
+			b:    ".a",
+		},
+		{
+			desc: "pointer does not match",
+			a:    "*abc",
+			b:    "*a",
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			got := isMatch(tc.a, tc.b)
+			if got != tc.want {
+				t.Errorf("isMatch(%s, %s) = %v, want = %v", tc.a, tc.b, got, tc.want)
+			}
+			// isMatch is symmetrical, check that reversed order returned the
+			// same value
+
+			if revGot := isMatch(tc.b, tc.a); got != revGot {
+				t.Errorf("isMatch(%s, %s) = %v, want = %v", tc.b, tc.a, revGot, got)
 			}
 		})
 	}

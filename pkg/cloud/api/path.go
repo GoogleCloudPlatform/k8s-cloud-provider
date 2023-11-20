@@ -19,6 +19,7 @@ package api
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -37,7 +38,11 @@ const (
 	pathSliceIndex = '!'
 	pathMapIndex   = ':'
 	pathPointer    = '*'
-	arrayAllElem   = '#'
+
+	// anySliceIndex is a slice path with wildcard index to match any index number.
+	anySliceIndex = string(pathSliceIndex) + "#"
+	// anyMapIndex is a map path with wildcard index to match any string key.
+	anyMapIndex = string(pathMapIndex) + "#"
 )
 
 // Field returns the path extended with a struct field reference.
@@ -45,13 +50,17 @@ func (p Path) Field(name string) Path {
 	return append(p, string(pathField)+name)
 }
 
-// Field returns the path extended with a all array element symbol.
-// This is needed for matching array's nested fields.
-func (p Path) ArrayElements() Path {
-	return append(p, string(pathSliceIndex)+string(arrayAllElem))
+// AnySliceIndex returns a path extended to match any slice index.
+func (p Path) AnySliceIndex() Path {
+	return append(p, anySliceIndex)
 }
 
-// Field returns the path extended with a slice dereference.
+// AnyMapIndex returns a path extended to match any map index.
+func (p Path) AnyMapIndex() Path {
+	return append(p, anyMapIndex)
+}
+
+// Index returns the path extended with a slice dereference.
 func (p Path) Index(i int) Path {
 	return append(p, fmt.Sprintf("%c%d", pathSliceIndex, i))
 }
@@ -66,7 +75,11 @@ func (p Path) Pointer() Path {
 	return append(p, string(pathPointer))
 }
 
-// Equal returns true if other is the same path.
+// Equal returns true if other is the same path. Note that this equality
+// comparison does NOT interpret wildcard matches, e.g. .AnyIndex is only
+// Equal() to .AnyIndex, not Equal to .Index(x).
+//
+// Use Match() instead to match interpreting wildcards.
 func (p Path) Equal(other Path) bool {
 	if len(p) != len(other) {
 		return false
@@ -79,27 +92,41 @@ func (p Path) Equal(other Path) bool {
 	return true
 }
 
-// Similar returns true if other is the same path.
-// For arrays this function does not check indices.
-func (p Path) Similar(other Path) bool {
+// Match the given path, interpreting wildcard matching for the comparison. This
+// function is symmetrical. Use Equal() instead to compare Paths for absolute
+// equality (no wildcard interpretation).
+func (p Path) Match(other Path) bool {
 	if len(p) != len(other) {
 		return false
 	}
 	for i := range p {
-		if isAllElemPrefix(p[i]) && isArrayIndex(other[i]) {
-			continue
-		}
-		if isAllElemPrefix(other[i]) && isArrayIndex(p[i]) {
-			continue
-		}
-		if p[i] != other[i] {
+		if !isMatch(p[i], other[i]) {
 			return false
 		}
 	}
 	return true
 }
 
-// HasPrefix returns true if prefix is the prefix of this path.
+// isMatch compares elements from the path, interpreting wildcard matching for
+// the comparison.
+func isMatch(a, b string) bool {
+	if a == anySliceIndex && isSliceIndex(b) {
+		return true
+	}
+	if b == anySliceIndex && isSliceIndex(a) {
+		return true
+	}
+	if a == anyMapIndex && isMapIndex(b) {
+		return true
+	}
+	if b == anyMapIndex && isMapIndex(a) {
+		return true
+	}
+	return a == b
+}
+
+// HasPrefix returns true if prefix is the prefix of this path. Prefix uses
+// Match() semantics for wildcards.
 func (p Path) HasPrefix(prefix Path) bool {
 	if len(prefix) == 0 {
 		return true
@@ -110,27 +137,25 @@ func (p Path) HasPrefix(prefix Path) bool {
 
 	var i int
 	for i = range prefix {
-		if isAllElemPrefix(prefix[i]) && isArrayIndex(p[i]) {
-			continue
-		}
-		if p[i] != prefix[i] {
+		if !isMatch(prefix[i], p[i]) {
 			return false
 		}
-	}
-	if i != len(prefix)-1 {
-		return false
 	}
 	return true
 }
 
-func isAllElemPrefix(path string) bool {
-	if len(path) != 2 {
+// isSliceIndex returns true if the element is a SliceIndex
+func isSliceIndex(element string) bool {
+	if len(element) < 2 || element[0] != pathSliceIndex {
 		return false
 	}
-	if path[0] != pathSliceIndex {
-		return false
-	}
-	return path[1] == arrayAllElem
+	_, err := strconv.Atoi(element[1:])
+	return err == nil
+}
+
+// isMapIndex returns true if the element is a MapIndex
+func isMapIndex(element string) bool {
+	return len(element) > 1 && element[0] == pathMapIndex
 }
 
 func isArrayIndex(path string) bool {

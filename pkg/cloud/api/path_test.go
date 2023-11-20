@@ -59,8 +59,34 @@ func TestPathEqual(t *testing.T) {
 		{a: Path{}.Pointer(), b: Path{}.Pointer(), want: true},
 		{a: Path{}, b: Path{}.Pointer(), want: false},
 		{a: Path{}.Index(0), b: Path{}.MapIndex(0), want: false},
+		{a: Path{}.Index(0), b: Path{}.ArrayElements(), want: false},
+		{a: Path{}.MapIndex(0), b: Path{}.ArrayElements(), want: false},
 	} {
 		got := tc.a.Equal(tc.b)
+		if got != tc.want {
+			t.Errorf("Equal(%s, %s) = %t, want %t", tc.a, tc.b, got, tc.want)
+		}
+	}
+}
+
+func TestPathSimilar(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		a, b Path
+		want bool
+	}{
+		{a: Path{}, b: Path{}, want: true},
+		{a: Path{}.Field("abc"), b: Path{}.Field("abc"), want: true},
+		{a: Path{}.Index(1), b: Path{}.Index(1), want: true},
+		{a: Path{}.MapIndex("abc"), b: Path{}.MapIndex("abc"), want: true},
+		{a: Path{}.Pointer(), b: Path{}.Pointer(), want: true},
+		{a: Path{}, b: Path{}.Pointer(), want: false},
+		{a: Path{}.Index(0), b: Path{}.MapIndex(0), want: false},
+		{a: Path{}.Index(0), b: Path{}.ArrayElements(), want: true},
+		{a: Path{}.MapIndex(0), b: Path{}.ArrayElements(), want: false},
+	} {
+		got := tc.a.Similar(tc.b)
 		if got != tc.want {
 			t.Errorf("Equal(%s, %s) = %t, want %t", tc.a, tc.b, got, tc.want)
 		}
@@ -88,6 +114,9 @@ func TestPathHasPrefix(t *testing.T) {
 		{a: Path{}.Pointer(), b: Path{}.Field("x").Field("x"), want: false},
 		{a: Path{}.Field("x").Field("x"), b: Path{}.Pointer(), want: false},
 		{a: Path{}.Field("x").Field("x"), b: Path{}.Field("x"), want: true},
+		{a: Path{}.Field("x").Index(10), b: Path{}.Field("x").ArrayElements(), want: true},
+		{a: Path{}.Field("x").Field("x").Index(10), b: Path{}.Field("x").ArrayElements(), want: false},
+		{a: Path{}.Field("x").ArrayElements(), b: Path{}.Field("x").Index(0), want: false},
 	} {
 		got := tc.a.HasPrefix(tc.b)
 		if got != tc.want {

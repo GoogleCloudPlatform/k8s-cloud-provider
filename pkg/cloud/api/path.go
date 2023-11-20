@@ -29,6 +29,7 @@ import (
 // - "!" is a slice index
 // - ":" is a map key
 // - "*" is a pointer deref.
+// - "#" is all array elements reference
 type Path []string
 
 const (
@@ -36,11 +37,18 @@ const (
 	pathSliceIndex = '!'
 	pathMapIndex   = ':'
 	pathPointer    = '*'
+	arrayAllElem   = '#'
 )
 
 // Field returns the path extended with a struct field reference.
 func (p Path) Field(name string) Path {
 	return append(p, string(pathField)+name)
+}
+
+// Field returns the path extended with a all array element symbol.
+// This is needed for matching array's nested fields.
+func (p Path) ArrayElements() Path {
+	return append(p, string(pathSliceIndex)+string(arrayAllElem))
 }
 
 // Field returns the path extended with a slice dereference.
@@ -71,6 +79,26 @@ func (p Path) Equal(other Path) bool {
 	return true
 }
 
+// Similar returns true if other is the same path.
+// For arrays this function does not check indices.
+func (p Path) Similar(other Path) bool {
+	if len(p) != len(other) {
+		return false
+	}
+	for i := range p {
+		if isAllElemPrefix(p[i]) && isArrayIndex(other[i]) {
+			continue
+		}
+		if isAllElemPrefix(other[i]) && isArrayIndex(p[i]) {
+			continue
+		}
+		if p[i] != other[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // HasPrefix returns true if prefix is the prefix of this path.
 func (p Path) HasPrefix(prefix Path) bool {
 	if len(prefix) == 0 {
@@ -82,6 +110,9 @@ func (p Path) HasPrefix(prefix Path) bool {
 
 	var i int
 	for i = range prefix {
+		if isAllElemPrefix(prefix[i]) && isArrayIndex(p[i]) {
+			continue
+		}
 		if p[i] != prefix[i] {
 			return false
 		}
@@ -90,6 +121,23 @@ func (p Path) HasPrefix(prefix Path) bool {
 		return false
 	}
 	return true
+}
+
+func isAllElemPrefix(path string) bool {
+	if len(path) != 2 {
+		return false
+	}
+	if path[0] != pathSliceIndex {
+		return false
+	}
+	return path[1] == arrayAllElem
+}
+
+func isArrayIndex(path string) bool {
+	if len(path) < 2 {
+		return false
+	}
+	return path[0] == pathSliceIndex
 }
 
 // String implements Stringer.

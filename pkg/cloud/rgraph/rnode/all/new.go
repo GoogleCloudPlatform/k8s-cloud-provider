@@ -28,6 +28,7 @@ import (
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/healthcheck"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/networkendpointgroup"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/targethttpproxy"
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/tcproute"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/urlmap"
 )
 
@@ -49,6 +50,8 @@ func NewBuilderByID(id *cloud.ResourceID) (rnode.Builder, error) {
 		return targethttpproxy.NewBuilder(id), nil
 	case "urlMaps":
 		return urlmap.NewBuilder(id), nil
+	case "tcpRoute":
+		return tcproute.NewBuilder(id), nil
 	}
 	return nil, fmt.Errorf("NewBuilderByID: invalid Resource %q", id.Resource)
 }

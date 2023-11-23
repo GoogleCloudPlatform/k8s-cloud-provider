@@ -29,8 +29,10 @@ import (
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/healthcheck"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/networkendpointgroup"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/targethttpproxy"
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/tcproute"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/urlmap"
 	"google.golang.org/api/compute/v1"
+	"google.golang.org/api/networkservices/v1"
 )
 
 var (
@@ -43,6 +45,7 @@ var (
 		negFactory{},
 		targetHttpProxyFactory{},
 		urlMapFactory{},
+		tcpRouteFactory{},
 	}
 )
 
@@ -467,6 +470,70 @@ func (f urlMapFactory) builder(g *Graph, n *Node) rnode.Builder {
 		})
 		if g.Options&PanicOnAccessErr != 0 && err != nil {
 			panicf("urlMapFactory %s: Access: %v", id, err)
+		}
+		r, err := ma.Freeze()
+		if err != nil {
+			panic(err)
+		}
+		err = b.SetResource(r)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return b
+}
+
+type tcpRouteFactory struct{}
+
+func (tcpRouteFactory) match(name string) bool { return strings.HasPrefix(name, "tcp-route") }
+
+func (tcpRouteFactory) id(g *Graph, n *Node) *cloud.ResourceID {
+	switch {
+	case n.Region == "" && n.Zone == "":
+		return tcproute.ID(getProject(g, n), meta.GlobalKey(n.Name))
+	default:
+		panicf("invalid id: %+v", n)
+	}
+	panic("not reached")
+}
+
+func (f tcpRouteFactory) builder(g *Graph, n *Node) rnode.Builder {
+	id := f.id(g, n)
+	b := tcproute.NewBuilder(id)
+	setCommonOptions(n, b)
+
+	if b.State() == rnode.NodeExists {
+		ma := tcproute.NewMutableTcpRoute(id.ProjectID, id.Key)
+		err := ma.Access(func(x *networkservices.TcpRoute) {
+			for _, ref := range n.Refs {
+				switch ref.Field {
+				case "Rules.Action.Destinations.ServiceName":
+					if len(x.Rules) == 0 || x.Rules[0] == nil {
+						trrr := &networkservices.TcpRouteRouteRule{
+							Action: &networkservices.TcpRouteRouteAction{},
+						}
+						x.Rules = []*networkservices.TcpRouteRouteRule{trrr}
+					}
+					dst := &networkservices.TcpRouteRouteDestination{
+						ServiceName: g.ids.legacySelfLink(ref.To),
+					}
+					x.Rules[0].Action.Destinations = append(x.Rules[0].Action.Destinations, dst)
+
+				default:
+					panicf("invalid Ref Field: %q (must be one of [Rules.Destinations.ServiceName])", ref.Field)
+				}
+			}
+
+			if n.SetupFunc != nil {
+				sf, ok := n.SetupFunc.(func(x *networkservices.TcpRoute))
+				if !ok {
+					panicf("invalid type for SetupFunc: %T", n.SetupFunc)
+				}
+				sf(x)
+			}
+		})
+		if g.Options&PanicOnAccessErr != 0 && err != nil {
+			panicf("tcpRouteFactory %s: Access: %v", id, err)
 		}
 		r, err := ma.Freeze()
 		if err != nil {

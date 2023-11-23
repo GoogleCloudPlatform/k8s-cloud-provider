@@ -64,6 +64,22 @@ func (m idMap) selfLink(name string) string {
 	return r.SelfLink(meta.VersionGA)
 }
 
+// legacySelfLink returns self link with format:
+// https://<service-name>.googleapis.com/v1/project/<project-name>/<resource-path>
+func (m idMap) legacySelfLink(name string) string {
+	r, ok := m[name]
+	if !ok {
+		panicf("selfLink: %q is not in the map", name)
+	}
+	apiGroup := r.APIGroup
+	if apiGroup == "" {
+		apiGroup = meta.APIGroupCompute
+	}
+	relName := cloud.RelativeResourceName(r.ProjectID, r.Resource, r.Key)
+	prefix := fmt.Sprintf("https://%s.googleapis.com/v1", apiGroup)
+	return prefix + "/" + relName
+}
+
 // Clone a copy of the Graph.
 func (g *Graph) Clone() *Graph {
 	return &Graph{

@@ -28,8 +28,10 @@ import (
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/healthcheck"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/networkendpointgroup"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/targethttpproxy"
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/tcproute"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/urlmap"
 	"google.golang.org/api/compute/v1"
+	"google.golang.org/api/networkservices/v1"
 )
 
 // ResourceBuilder is a convenience wrapper for tests. Do not use this in production.
@@ -234,6 +236,26 @@ func (b *UrlMapBuilder) Build(f func(*compute.UrlMap)) rnode.Builder {
 	}
 	r, _ := m.Freeze()
 	nb := urlmap.NewBuilderWithResource(r)
+	nb.SetOwnership(rnode.OwnershipManaged)
+	nb.SetState(rnode.NodeExists)
+	return nb
+}
+
+type TcpRouteBuilder struct{ ResourceBuilder }
+
+func (b *TcpRouteBuilder) ID() *cloud.ResourceID { return tcproute.ID(b.Project, b.Key()) }
+func (b *TcpRouteBuilder) SelfLink() string      { return b.ID().SelfLink(meta.VersionGA) }
+func (b *TcpRouteBuilder) Resource() tcproute.MutableTcpRoute {
+	return tcproute.NewMutableTcpRoute(b.Project, b.Key())
+}
+
+func (b *TcpRouteBuilder) Build(f func(*networkservices.TcpRoute)) rnode.Builder {
+	m := b.Resource()
+	if f != nil {
+		m.Access(f)
+	}
+	r, _ := m.Freeze()
+	nb := tcproute.NewBuilderWithResource(r)
 	nb.SetOwnership(rnode.OwnershipManaged)
 	nb.SetState(rnode.NodeExists)
 	return nb

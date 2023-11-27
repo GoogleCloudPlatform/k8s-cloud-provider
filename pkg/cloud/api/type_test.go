@@ -80,3 +80,60 @@ func TestTypeIsShortcuts(t *testing.T) {
 		}
 	}
 }
+
+func TestPlaceholerType(t *testing.T) {
+	type s1 struct{}
+	type s2 struct {
+		Name     string
+		SelfLink string
+
+		NullFields      []string
+		ForceSendFields []string
+	}
+
+	tcs := []struct {
+		desc string
+		t    interface{}
+		want bool
+	}{
+		{
+			desc: "PlaceholderType",
+			t:    PlaceholderType{},
+			want: true,
+		},
+		{
+			desc: "*PlaceholderType",
+			t:    &PlaceholderType{},
+			want: true,
+		},
+		{
+			desc: "empty struct type",
+			t:    s1{},
+			want: false,
+		},
+		{
+			desc: "pointer to an empty struct type",
+			t:    &s1{},
+			want: false,
+		},
+		{
+			desc: "struct with the same fields as PlaceholderType",
+			t:    s2{},
+			want: false,
+		},
+		{
+			desc: "pointer to a struct with the same fields as PlaceholderType",
+			t:    &s2{},
+			want: false,
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.desc, func(t *testing.T) {
+			got := isPlaceholderType(tc.t)
+			if got != tc.want {
+				t.Errorf("isPlaceholderType(%T) = %v, want = %v", tc.t, got, tc.want)
+			}
+		})
+	}
+}

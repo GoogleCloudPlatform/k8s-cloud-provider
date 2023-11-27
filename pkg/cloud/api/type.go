@@ -20,6 +20,34 @@ import (
 	"reflect"
 )
 
+// PlaceholderType is used to represent GCE resource type versions that either
+// don't exist (e.g. there is not alpha version of the given resource) or we do
+// not intend to use (e.g. we omitted the type/version from being included in
+// pkg/cloud/meta).
+//
+// Example
+//
+//	// MyRes does not have an Alpha type:
+//	type MyRes Resource[ga.MyRes, PlaceholderType, beta.MyRes]
+type PlaceholderType struct {
+	// Standard fields that the system expects to always exist on a valid
+	// resource.
+	Name, SelfLink              string
+	NullFields, ForceSendFields []string
+}
+
+// isPlaceholderType returns true if T is of type PlaceHolderType or
+// *PlaceHolderType.
+func isPlaceholderType(t any) bool {
+	vb := reflect.ValueOf(t)
+	if vb.Kind() == reflect.Pointer {
+		_, ok := vb.Interface().(*PlaceholderType)
+		return ok
+	}
+	_, ok := vb.Interface().(PlaceholderType)
+	return ok
+}
+
 type kindPredicate func(t reflect.Type) bool
 
 func makeKindPredicate(kl ...reflect.Kind) kindPredicate {

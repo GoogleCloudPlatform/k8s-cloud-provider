@@ -54,6 +54,21 @@ func (e *ConversionError) Error() string {
 	return fmt.Sprintf("ConversionError: missing fields %v", e.MissingFields)
 }
 
+// useOfPlaceholderTypeError is raised when code attempts to convert or operate
+// on a Resource type that is a placeholder. For example, given:
+//
+//	 Resource[ga.Res, /*alpha*/ PlaceholderType, beta.Res]
+//
+//	if the code tries to convert the Resource to the Alpha type,
+//	the operation will fail with this error.
+type useOfPlaceholderTypeError struct {
+	msg string
+}
+
+func (m useOfPlaceholderTypeError) Error() string {
+	return "UseOfPlaceholderTypeError: " + m.msg
+}
+
 // MissingField describes a field that was lost when converting between API
 // versions due to the field not being present in struct.
 type MissingField struct {
@@ -168,6 +183,10 @@ type mutableResource[GA any, Alpha any, Beta any] struct {
 }
 
 func (u *mutableResource[GA, Alpha, Beta]) CheckSchema() error {
+	if isPlaceholderType(u.ga) {
+		return fmt.Errorf("GA has unsupported type (type is %T)", u)
+	}
+
 	err := checkSchema(reflect.TypeOf(&u.ga))
 	if err != nil {
 		return err
@@ -180,6 +199,7 @@ func (u *mutableResource[GA, Alpha, Beta]) CheckSchema() error {
 	if err != nil {
 		return err
 	}
+	// TODOD(kl52752) Add validation that GA is a subset of Beta and Alpha.
 	return nil
 }
 
@@ -202,40 +222,52 @@ func (u *mutableResource[GA, Alpha, Beta]) postAccess(srcVer meta.Version, flags
 	switch srcVer {
 	case meta.VersionGA:
 		src = reflect.ValueOf(&u.ga)
-		conversions = append(conversions, convert{
-			dest:       reflect.ValueOf(&u.alpha),
-			copyHelper: func() error { return u.typeTrait.CopyHelperGAtoAlpha(&u.alpha, &u.ga) },
-			errors:     &u.errors[GAToAlphaConversion],
-		})
-		conversions = append(conversions, convert{
-			dest:       reflect.ValueOf(&u.beta),
-			copyHelper: func() error { return u.typeTrait.CopyHelperGAtoBeta(&u.beta, &u.ga) },
-			errors:     &u.errors[GAToBetaConversion],
-		})
+		if !isPlaceholderType(u.alpha) {
+			conversions = append(conversions, convert{
+				dest:       reflect.ValueOf(&u.alpha),
+				copyHelper: func() error { return u.typeTrait.CopyHelperGAtoAlpha(&u.alpha, &u.ga) },
+				errors:     &u.errors[GAToAlphaConversion],
+			})
+		}
+		if !isPlaceholderType(u.beta) {
+			conversions = append(conversions, convert{
+				dest:       reflect.ValueOf(&u.beta),
+				copyHelper: func() error { return u.typeTrait.CopyHelperGAtoBeta(&u.beta, &u.ga) },
+				errors:     &u.errors[GAToBetaConversion],
+			})
+		}
 	case meta.VersionAlpha:
 		src = reflect.ValueOf(&u.alpha)
-		conversions = append(conversions, convert{
-			dest:       reflect.ValueOf(&u.ga),
-			copyHelper: func() error { return u.typeTrait.CopyHelperAlphaToGA(&u.ga, &u.alpha) },
-			errors:     &u.errors[AlphaToGAConversion],
-		})
-		conversions = append(conversions, convert{
-			dest:       reflect.ValueOf(&u.beta),
-			copyHelper: func() error { return u.typeTrait.CopyHelperAlphaToBeta(&u.beta, &u.alpha) },
-			errors:     &u.errors[AlphaToBetaConversion],
-		})
+		if !isPlaceholderType(u.ga) {
+			conversions = append(conversions, convert{
+				dest:       reflect.ValueOf(&u.ga),
+				copyHelper: func() error { return u.typeTrait.CopyHelperAlphaToGA(&u.ga, &u.alpha) },
+				errors:     &u.errors[AlphaToGAConversion],
+			})
+		}
+		if !isPlaceholderType(u.beta) {
+			conversions = append(conversions, convert{
+				dest:       reflect.ValueOf(&u.beta),
+				copyHelper: func() error { return u.typeTrait.CopyHelperAlphaToBeta(&u.beta, &u.alpha) },
+				errors:     &u.errors[AlphaToBetaConversion],
+			})
+		}
 	case meta.VersionBeta:
 		src = reflect.ValueOf(&u.beta)
-		conversions = append(conversions, convert{
-			dest:       reflect.ValueOf(&u.ga),
-			copyHelper: func() error { return u.typeTrait.CopyHelperBetaToGA(&u.ga, &u.beta) },
-			errors:     &u.errors[BetaToGAConversion],
-		})
-		conversions = append(conversions, convert{
-			dest:       reflect.ValueOf(&u.alpha),
-			copyHelper: func() error { return u.typeTrait.CopyHelperBetaToAlpha(&u.alpha, &u.beta) },
-			errors:     &u.errors[BetaToAlphaConversion],
-		})
+		if !isPlaceholderType(u.ga) {
+			conversions = append(conversions, convert{
+				dest:       reflect.ValueOf(&u.ga),
+				copyHelper: func() error { return u.typeTrait.CopyHelperBetaToGA(&u.ga, &u.beta) },
+				errors:     &u.errors[BetaToGAConversion],
+			})
+		}
+		if !isPlaceholderType(u.alpha) {
+			conversions = append(conversions, convert{
+				dest:       reflect.ValueOf(&u.alpha),
+				copyHelper: func() error { return u.typeTrait.CopyHelperBetaToAlpha(&u.alpha, &u.beta) },
+				errors:     &u.errors[BetaToAlphaConversion],
+			})
+		}
 	}
 
 	if flags&postAccessSkipValidation == 0 {
@@ -272,21 +304,34 @@ func (u *mutableResource[GA, Alpha, Beta]) AccessBeta(f func(x *Beta)) error {
 	return u.postAccess(meta.VersionBeta, 0)
 }
 
+// ImpliedVersion returns the implied version of the underlying resource.
+// This is determined by the convertibility of the resource.
+//
+// Note:
+//   - CheckSchema validates that GA is not a PlaceholderType and that it is
+//     convertible to Alpha and Beta so we don't need to do this check here.
+//   - Nothing converts to PlaceholderType.
+//
+// Imply rules:
+// * It is GA version if it is possible to convert to GA
+// * It is Beta if the resource is not convertible to GA but convertible to Beta.
+// * It is Alpha if the resource is not convertible to GA and Beta.
 func (u *mutableResource[GA, Alpha, Beta]) ImpliedVersion() (meta.Version, error) {
 	_, gaErr := u.ToGA()
-	_, alphaErr := u.ToAlpha()
-	_, betaErr := u.ToBeta()
-
-	switch {
-	case gaErr == nil && alphaErr == nil && betaErr == nil:
+	if gaErr == nil {
 		return meta.VersionGA, nil
-	case gaErr != nil && alphaErr == nil && betaErr != nil:
-		return meta.VersionAlpha, nil
-	case gaErr != nil && alphaErr != nil && betaErr == nil:
-		return meta.VersionBeta, nil
-	default:
-		return meta.VersionGA, fmt.Errorf("indeterminant version (ga=%v, alpha=%v, beta=%v)", gaErr, alphaErr, betaErr)
 	}
+
+	_, betaErr := u.ToBeta()
+	if betaErr == nil {
+		return meta.VersionBeta, nil
+	}
+
+	_, alphaErr := u.ToAlpha()
+	if alphaErr == nil {
+		return meta.VersionAlpha, nil
+	}
+	return meta.VersionGA, fmt.Errorf("indeterminant version (ga=%v, alpha=%v, beta=%v)", gaErr, alphaErr, betaErr)
 }
 
 func (u *mutableResource[GA, Alpha, Beta]) ToGA() (*GA, error) {
@@ -307,6 +352,9 @@ func (u *mutableResource[GA, Alpha, Beta]) ToGA() (*GA, error) {
 }
 
 func (u *mutableResource[GA, Alpha, Beta]) ToAlpha() (*Alpha, error) {
+	if isPlaceholderType(u.alpha) {
+		return nil, useOfPlaceholderTypeError{msg: u.resourceID.String()}
+	}
 	var errs ConversionError
 	for _, cc := range []ConversionContext{GAToAlphaConversion, BetaToAlphaConversion} {
 		for _, mf := range u.errors[cc].missingFields {
@@ -324,6 +372,9 @@ func (u *mutableResource[GA, Alpha, Beta]) ToAlpha() (*Alpha, error) {
 }
 
 func (u *mutableResource[GA, Alpha, Beta]) ToBeta() (*Beta, error) {
+	if isPlaceholderType(u.beta) {
+		return nil, useOfPlaceholderTypeError{msg: u.resourceID.String()}
+	}
 	var errs ConversionError
 	for _, cc := range []ConversionContext{GAToBetaConversion, AlphaToBetaConversion} {
 		for _, mf := range u.errors[cc].missingFields {

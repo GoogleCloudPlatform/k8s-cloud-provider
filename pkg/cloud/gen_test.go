@@ -910,6 +910,141 @@ func TestGlobalForwardingRulesGroup(t *testing.T) {
 	}
 }
 
+func TestGlobalNetworkEndpointGroupsGroup(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pr := &SingleProjectRouter{"mock-project"}
+	mock := NewMockGCE(pr)
+
+	var key *meta.Key
+	keyAlpha := meta.GlobalKey("key-alpha")
+	key = keyAlpha
+	keyBeta := meta.GlobalKey("key-beta")
+	key = keyBeta
+	keyGA := meta.GlobalKey("key-ga")
+	key = keyGA
+	// Ignore unused variables.
+	_, _, _ = ctx, mock, key
+
+	// Get not found.
+	if _, err := mock.AlphaGlobalNetworkEndpointGroups().Get(ctx, key); err == nil {
+		t.Errorf("AlphaGlobalNetworkEndpointGroups().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.BetaGlobalNetworkEndpointGroups().Get(ctx, key); err == nil {
+		t.Errorf("BetaGlobalNetworkEndpointGroups().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.GlobalNetworkEndpointGroups().Get(ctx, key); err == nil {
+		t.Errorf("GlobalNetworkEndpointGroups().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+
+	// Insert.
+	{
+		obj := &computealpha.NetworkEndpointGroup{}
+		if err := mock.AlphaGlobalNetworkEndpointGroups().Insert(ctx, keyAlpha, obj); err != nil {
+			t.Errorf("AlphaGlobalNetworkEndpointGroups().Insert(%v, %v, %v) = %v; want nil", ctx, keyAlpha, obj, err)
+		}
+	}
+	{
+		obj := &computebeta.NetworkEndpointGroup{}
+		if err := mock.BetaGlobalNetworkEndpointGroups().Insert(ctx, keyBeta, obj); err != nil {
+			t.Errorf("BetaGlobalNetworkEndpointGroups().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
+		}
+	}
+	{
+		obj := &computega.NetworkEndpointGroup{}
+		if err := mock.GlobalNetworkEndpointGroups().Insert(ctx, keyGA, obj); err != nil {
+			t.Errorf("GlobalNetworkEndpointGroups().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
+		}
+	}
+
+	// Get across versions.
+	if obj, err := mock.AlphaGlobalNetworkEndpointGroups().Get(ctx, key); err != nil {
+		t.Errorf("AlphaGlobalNetworkEndpointGroups().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+	if obj, err := mock.BetaGlobalNetworkEndpointGroups().Get(ctx, key); err != nil {
+		t.Errorf("BetaGlobalNetworkEndpointGroups().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+	if obj, err := mock.GlobalNetworkEndpointGroups().Get(ctx, key); err != nil {
+		t.Errorf("GlobalNetworkEndpointGroups().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+
+	// List.
+	mock.MockAlphaGlobalNetworkEndpointGroups.Objects[*keyAlpha] = mock.MockAlphaGlobalNetworkEndpointGroups.Obj(&computealpha.NetworkEndpointGroup{Name: keyAlpha.Name})
+	mock.MockBetaGlobalNetworkEndpointGroups.Objects[*keyBeta] = mock.MockBetaGlobalNetworkEndpointGroups.Obj(&computebeta.NetworkEndpointGroup{Name: keyBeta.Name})
+	mock.MockGlobalNetworkEndpointGroups.Objects[*keyGA] = mock.MockGlobalNetworkEndpointGroups.Obj(&computega.NetworkEndpointGroup{Name: keyGA.Name})
+	want := map[string]bool{
+		"key-alpha": true,
+		"key-beta":  true,
+		"key-ga":    true,
+	}
+	_ = want // ignore unused variables.
+	{
+		objs, err := mock.AlphaGlobalNetworkEndpointGroups().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("AlphaGlobalNetworkEndpointGroups().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("AlphaGlobalNetworkEndpointGroups().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.BetaGlobalNetworkEndpointGroups().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("BetaGlobalNetworkEndpointGroups().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("BetaGlobalNetworkEndpointGroups().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.GlobalNetworkEndpointGroups().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("GlobalNetworkEndpointGroups().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("GlobalNetworkEndpointGroups().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+
+	// Delete across versions.
+	if err := mock.AlphaGlobalNetworkEndpointGroups().Delete(ctx, keyAlpha); err != nil {
+		t.Errorf("AlphaGlobalNetworkEndpointGroups().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
+	}
+	if err := mock.BetaGlobalNetworkEndpointGroups().Delete(ctx, keyBeta); err != nil {
+		t.Errorf("BetaGlobalNetworkEndpointGroups().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
+	}
+	if err := mock.GlobalNetworkEndpointGroups().Delete(ctx, keyGA); err != nil {
+		t.Errorf("GlobalNetworkEndpointGroups().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
+	}
+
+	// Delete not found.
+	if err := mock.AlphaGlobalNetworkEndpointGroups().Delete(ctx, keyAlpha); err == nil {
+		t.Errorf("AlphaGlobalNetworkEndpointGroups().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+	if err := mock.BetaGlobalNetworkEndpointGroups().Delete(ctx, keyBeta); err == nil {
+		t.Errorf("BetaGlobalNetworkEndpointGroups().Delete(%v, %v) = nil; want error", ctx, keyBeta)
+	}
+	if err := mock.GlobalNetworkEndpointGroups().Delete(ctx, keyGA); err == nil {
+		t.Errorf("GlobalNetworkEndpointGroups().Delete(%v, %v) = nil; want error", ctx, keyGA)
+	}
+}
+
 func TestHealthChecksGroup(t *testing.T) {
 	t.Parallel()
 
@@ -4553,6 +4688,7 @@ func TestResourceIDConversion(t *testing.T) {
 		NewForwardingRulesResourceID("some-project", "us-central1", "my-forwardingRules-resource"),
 		NewGlobalAddressesResourceID("some-project", "my-addresses-resource"),
 		NewGlobalForwardingRulesResourceID("some-project", "my-forwardingRules-resource"),
+		NewGlobalNetworkEndpointGroupsResourceID("some-project", "my-networkEndpointGroups-resource"),
 		NewHealthChecksResourceID("some-project", "my-healthChecks-resource"),
 		NewHttpHealthChecksResourceID("some-project", "my-httpHealthChecks-resource"),
 		NewHttpsHealthChecksResourceID("some-project", "my-httpsHealthChecks-resource"),

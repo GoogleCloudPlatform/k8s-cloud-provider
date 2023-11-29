@@ -92,6 +92,9 @@ type Cloud interface {
 	AlphaNetworkEndpointGroups() AlphaNetworkEndpointGroups
 	BetaNetworkEndpointGroups() BetaNetworkEndpointGroups
 	NetworkEndpointGroups() NetworkEndpointGroups
+	AlphaGlobalNetworkEndpointGroups() AlphaGlobalNetworkEndpointGroups
+	BetaGlobalNetworkEndpointGroups() BetaGlobalNetworkEndpointGroups
+	GlobalNetworkEndpointGroups() GlobalNetworkEndpointGroups
 	Projects() Projects
 	Regions() Regions
 	AlphaRouters() AlphaRouters
@@ -192,6 +195,9 @@ func NewGCE(s *Service) *GCE {
 		gceAlphaNetworkEndpointGroups:         &GCEAlphaNetworkEndpointGroups{s},
 		gceBetaNetworkEndpointGroups:          &GCEBetaNetworkEndpointGroups{s},
 		gceNetworkEndpointGroups:              &GCENetworkEndpointGroups{s},
+		gceAlphaGlobalNetworkEndpointGroups:   &GCEAlphaGlobalNetworkEndpointGroups{s},
+		gceBetaGlobalNetworkEndpointGroups:    &GCEBetaGlobalNetworkEndpointGroups{s},
+		gceGlobalNetworkEndpointGroups:        &GCEGlobalNetworkEndpointGroups{s},
 		gceProjects:                           &GCEProjects{s},
 		gceRegions:                            &GCERegions{s},
 		gceAlphaRouters:                       &GCEAlphaRouters{s},
@@ -296,6 +302,9 @@ type GCE struct {
 	gceAlphaNetworkEndpointGroups         *GCEAlphaNetworkEndpointGroups
 	gceBetaNetworkEndpointGroups          *GCEBetaNetworkEndpointGroups
 	gceNetworkEndpointGroups              *GCENetworkEndpointGroups
+	gceAlphaGlobalNetworkEndpointGroups   *GCEAlphaGlobalNetworkEndpointGroups
+	gceBetaGlobalNetworkEndpointGroups    *GCEBetaGlobalNetworkEndpointGroups
+	gceGlobalNetworkEndpointGroups        *GCEGlobalNetworkEndpointGroups
 	gceProjects                           *GCEProjects
 	gceRegions                            *GCERegions
 	gceAlphaRouters                       *GCEAlphaRouters
@@ -585,6 +594,21 @@ func (gce *GCE) NetworkEndpointGroups() NetworkEndpointGroups {
 	return gce.gceNetworkEndpointGroups
 }
 
+// AlphaGlobalNetworkEndpointGroups returns the interface for the alpha GlobalNetworkEndpointGroups.
+func (gce *GCE) AlphaGlobalNetworkEndpointGroups() AlphaGlobalNetworkEndpointGroups {
+	return gce.gceAlphaGlobalNetworkEndpointGroups
+}
+
+// BetaGlobalNetworkEndpointGroups returns the interface for the beta GlobalNetworkEndpointGroups.
+func (gce *GCE) BetaGlobalNetworkEndpointGroups() BetaGlobalNetworkEndpointGroups {
+	return gce.gceBetaGlobalNetworkEndpointGroups
+}
+
+// GlobalNetworkEndpointGroups returns the interface for the ga GlobalNetworkEndpointGroups.
+func (gce *GCE) GlobalNetworkEndpointGroups() GlobalNetworkEndpointGroups {
+	return gce.gceGlobalNetworkEndpointGroups
+}
+
 // Projects returns the interface for the ga Projects.
 func (gce *GCE) Projects() Projects {
 	return gce.gceProjects
@@ -829,6 +853,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 	mockForwardingRulesObjs := map[meta.Key]*MockForwardingRulesObj{}
 	mockGlobalAddressesObjs := map[meta.Key]*MockGlobalAddressesObj{}
 	mockGlobalForwardingRulesObjs := map[meta.Key]*MockGlobalForwardingRulesObj{}
+	mockGlobalNetworkEndpointGroupsObjs := map[meta.Key]*MockGlobalNetworkEndpointGroupsObj{}
 	mockHealthChecksObjs := map[meta.Key]*MockHealthChecksObj{}
 	mockHttpHealthChecksObjs := map[meta.Key]*MockHttpHealthChecksObj{}
 	mockHttpsHealthChecksObjs := map[meta.Key]*MockHttpsHealthChecksObj{}
@@ -915,6 +940,9 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockAlphaNetworkEndpointGroups:         NewMockAlphaNetworkEndpointGroups(projectRouter, mockNetworkEndpointGroupsObjs),
 		MockBetaNetworkEndpointGroups:          NewMockBetaNetworkEndpointGroups(projectRouter, mockNetworkEndpointGroupsObjs),
 		MockNetworkEndpointGroups:              NewMockNetworkEndpointGroups(projectRouter, mockNetworkEndpointGroupsObjs),
+		MockAlphaGlobalNetworkEndpointGroups:   NewMockAlphaGlobalNetworkEndpointGroups(projectRouter, mockGlobalNetworkEndpointGroupsObjs),
+		MockBetaGlobalNetworkEndpointGroups:    NewMockBetaGlobalNetworkEndpointGroups(projectRouter, mockGlobalNetworkEndpointGroupsObjs),
+		MockGlobalNetworkEndpointGroups:        NewMockGlobalNetworkEndpointGroups(projectRouter, mockGlobalNetworkEndpointGroupsObjs),
 		MockProjects:                           NewMockProjects(projectRouter, mockProjectsObjs),
 		MockRegions:                            NewMockRegions(projectRouter, mockRegionsObjs),
 		MockAlphaRouters:                       NewMockAlphaRouters(projectRouter, mockRoutersObjs),
@@ -1019,6 +1047,9 @@ type MockGCE struct {
 	MockAlphaNetworkEndpointGroups         *MockAlphaNetworkEndpointGroups
 	MockBetaNetworkEndpointGroups          *MockBetaNetworkEndpointGroups
 	MockNetworkEndpointGroups              *MockNetworkEndpointGroups
+	MockAlphaGlobalNetworkEndpointGroups   *MockAlphaGlobalNetworkEndpointGroups
+	MockBetaGlobalNetworkEndpointGroups    *MockBetaGlobalNetworkEndpointGroups
+	MockGlobalNetworkEndpointGroups        *MockGlobalNetworkEndpointGroups
 	MockProjects                           *MockProjects
 	MockRegions                            *MockRegions
 	MockAlphaRouters                       *MockAlphaRouters
@@ -1306,6 +1337,21 @@ func (mock *MockGCE) BetaNetworkEndpointGroups() BetaNetworkEndpointGroups {
 // NetworkEndpointGroups returns the interface for the ga NetworkEndpointGroups.
 func (mock *MockGCE) NetworkEndpointGroups() NetworkEndpointGroups {
 	return mock.MockNetworkEndpointGroups
+}
+
+// AlphaGlobalNetworkEndpointGroups returns the interface for the alpha GlobalNetworkEndpointGroups.
+func (mock *MockGCE) AlphaGlobalNetworkEndpointGroups() AlphaGlobalNetworkEndpointGroups {
+	return mock.MockAlphaGlobalNetworkEndpointGroups
+}
+
+// BetaGlobalNetworkEndpointGroups returns the interface for the beta GlobalNetworkEndpointGroups.
+func (mock *MockGCE) BetaGlobalNetworkEndpointGroups() BetaGlobalNetworkEndpointGroups {
+	return mock.MockBetaGlobalNetworkEndpointGroups
+}
+
+// GlobalNetworkEndpointGroups returns the interface for the ga GlobalNetworkEndpointGroups.
+func (mock *MockGCE) GlobalNetworkEndpointGroups() GlobalNetworkEndpointGroups {
+	return mock.MockGlobalNetworkEndpointGroups
 }
 
 // Projects returns the interface for the ga Projects.
@@ -1835,6 +1881,52 @@ func (m *MockGlobalForwardingRulesObj) ToGA() *computega.ForwardingRule {
 	ret := &computega.ForwardingRule{}
 	if err := copyViaJSON(ret, m.Obj); err != nil {
 		klog.Errorf("Could not convert %T to *computega.ForwardingRule via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// MockGlobalNetworkEndpointGroupsObj is used to store the various object versions in the shared
+// map of mocked objects. This allows for multiple API versions to co-exist and
+// share the same "view" of the objects in the backend.
+type MockGlobalNetworkEndpointGroupsObj struct {
+	Obj interface{}
+}
+
+// ToAlpha retrieves the given version of the object.
+func (m *MockGlobalNetworkEndpointGroupsObj) ToAlpha() *computealpha.NetworkEndpointGroup {
+	if ret, ok := m.Obj.(*computealpha.NetworkEndpointGroup); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &computealpha.NetworkEndpointGroup{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *computealpha.NetworkEndpointGroup via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// ToBeta retrieves the given version of the object.
+func (m *MockGlobalNetworkEndpointGroupsObj) ToBeta() *computebeta.NetworkEndpointGroup {
+	if ret, ok := m.Obj.(*computebeta.NetworkEndpointGroup); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &computebeta.NetworkEndpointGroup{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *computebeta.NetworkEndpointGroup via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// ToGA retrieves the given version of the object.
+func (m *MockGlobalNetworkEndpointGroupsObj) ToGA() *computega.NetworkEndpointGroup {
+	if ret, ok := m.Obj.(*computega.NetworkEndpointGroup); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &computega.NetworkEndpointGroup{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *computega.NetworkEndpointGroup via JSON: %v", m.Obj, err)
 	}
 	return ret
 }
@@ -27656,6 +27748,1605 @@ func (g *GCENetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key
 	return all, nil
 }
 
+// AlphaGlobalNetworkEndpointGroups is an interface that allows for mocking of GlobalNetworkEndpointGroups.
+type AlphaGlobalNetworkEndpointGroups interface {
+	Get(ctx context.Context, key *meta.Key, options ...Option) (*computealpha.NetworkEndpointGroup, error)
+	List(ctx context.Context, fl *filter.F, options ...Option) ([]*computealpha.NetworkEndpointGroup, error)
+	Insert(ctx context.Context, key *meta.Key, obj *computealpha.NetworkEndpointGroup, options ...Option) error
+	Delete(ctx context.Context, key *meta.Key, options ...Option) error
+	AttachNetworkEndpoints(context.Context, *meta.Key, *computealpha.GlobalNetworkEndpointGroupsAttachEndpointsRequest, ...Option) error
+	DetachNetworkEndpoints(context.Context, *meta.Key, *computealpha.GlobalNetworkEndpointGroupsDetachEndpointsRequest, ...Option) error
+	ListNetworkEndpoints(context.Context, *meta.Key, *filter.F, ...Option) ([]*computealpha.NetworkEndpointWithHealthStatus, error)
+}
+
+// NewMockAlphaGlobalNetworkEndpointGroups returns a new mock for GlobalNetworkEndpointGroups.
+func NewMockAlphaGlobalNetworkEndpointGroups(pr ProjectRouter, objs map[meta.Key]*MockGlobalNetworkEndpointGroupsObj) *MockAlphaGlobalNetworkEndpointGroups {
+	mock := &MockAlphaGlobalNetworkEndpointGroups{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockAlphaGlobalNetworkEndpointGroups is the mock for GlobalNetworkEndpointGroups.
+type MockAlphaGlobalNetworkEndpointGroups struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockGlobalNetworkEndpointGroupsObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook                    func(ctx context.Context, key *meta.Key, m *MockAlphaGlobalNetworkEndpointGroups, options ...Option) (bool, *computealpha.NetworkEndpointGroup, error)
+	ListHook                   func(ctx context.Context, fl *filter.F, m *MockAlphaGlobalNetworkEndpointGroups, options ...Option) (bool, []*computealpha.NetworkEndpointGroup, error)
+	InsertHook                 func(ctx context.Context, key *meta.Key, obj *computealpha.NetworkEndpointGroup, m *MockAlphaGlobalNetworkEndpointGroups, options ...Option) (bool, error)
+	DeleteHook                 func(ctx context.Context, key *meta.Key, m *MockAlphaGlobalNetworkEndpointGroups, options ...Option) (bool, error)
+	AttachNetworkEndpointsHook func(context.Context, *meta.Key, *computealpha.GlobalNetworkEndpointGroupsAttachEndpointsRequest, *MockAlphaGlobalNetworkEndpointGroups, ...Option) error
+	DetachNetworkEndpointsHook func(context.Context, *meta.Key, *computealpha.GlobalNetworkEndpointGroupsDetachEndpointsRequest, *MockAlphaGlobalNetworkEndpointGroups, ...Option) error
+	ListNetworkEndpointsHook   func(context.Context, *meta.Key, *filter.F, *MockAlphaGlobalNetworkEndpointGroups, ...Option) ([]*computealpha.NetworkEndpointWithHealthStatus, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockAlphaGlobalNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key, options ...Option) (*computealpha.NetworkEndpointGroup, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m, options...); intercept {
+			klog.V(5).Infof("MockAlphaGlobalNetworkEndpointGroups.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockAlphaGlobalNetworkEndpointGroups.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToAlpha()
+		klog.V(5).Infof("MockAlphaGlobalNetworkEndpointGroups.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockAlphaGlobalNetworkEndpointGroups %v not found", key),
+	}
+	klog.V(5).Infof("MockAlphaGlobalNetworkEndpointGroups.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockAlphaGlobalNetworkEndpointGroups) List(ctx context.Context, fl *filter.F, options ...Option) ([]*computealpha.NetworkEndpointGroup, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m, options...); intercept {
+			klog.V(5).Infof("MockAlphaGlobalNetworkEndpointGroups.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockAlphaGlobalNetworkEndpointGroups.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*computealpha.NetworkEndpointGroup
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		objs = append(objs, obj.ToAlpha())
+	}
+
+	klog.V(5).Infof("MockAlphaGlobalNetworkEndpointGroups.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockAlphaGlobalNetworkEndpointGroups) Insert(ctx context.Context, key *meta.Key, obj *computealpha.NetworkEndpointGroup, options ...Option) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m, options...); intercept {
+			klog.V(5).Infof("MockAlphaGlobalNetworkEndpointGroups.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	opts := mergeOptions(options)
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockAlphaGlobalNetworkEndpointGroups.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockAlphaGlobalNetworkEndpointGroups %v exists", key),
+		}
+		klog.V(5).Infof("MockAlphaGlobalNetworkEndpointGroups.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := getProjectID(ctx, m.ProjectRouter, opts, "alpha", "networkEndpointGroups")
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "networkEndpointGroups", key)
+
+	m.Objects[*key] = &MockGlobalNetworkEndpointGroupsObj{obj}
+	klog.V(5).Infof("MockAlphaGlobalNetworkEndpointGroups.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockAlphaGlobalNetworkEndpointGroups) Delete(ctx context.Context, key *meta.Key, options ...Option) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m, options...); intercept {
+			klog.V(5).Infof("MockAlphaGlobalNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockAlphaGlobalNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockAlphaGlobalNetworkEndpointGroups %v not found", key),
+		}
+		klog.V(5).Infof("MockAlphaGlobalNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockAlphaGlobalNetworkEndpointGroups.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockAlphaGlobalNetworkEndpointGroups) Obj(o *computealpha.NetworkEndpointGroup) *MockGlobalNetworkEndpointGroupsObj {
+	return &MockGlobalNetworkEndpointGroupsObj{o}
+}
+
+// AttachNetworkEndpoints is a mock for the corresponding method.
+func (m *MockAlphaGlobalNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computealpha.GlobalNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
+	if m.AttachNetworkEndpointsHook != nil {
+		return m.AttachNetworkEndpointsHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// DetachNetworkEndpoints is a mock for the corresponding method.
+func (m *MockAlphaGlobalNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computealpha.GlobalNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
+	if m.DetachNetworkEndpointsHook != nil {
+		return m.DetachNetworkEndpointsHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// ListNetworkEndpoints is a mock for the corresponding method.
+func (m *MockAlphaGlobalNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, fl *filter.F, options ...Option) ([]*computealpha.NetworkEndpointWithHealthStatus, error) {
+	if m.ListNetworkEndpointsHook != nil {
+		return m.ListNetworkEndpointsHook(ctx, key, fl, m)
+	}
+	return nil, nil
+}
+
+// GCEAlphaGlobalNetworkEndpointGroups is a simplifying adapter for the GCE GlobalNetworkEndpointGroups.
+type GCEAlphaGlobalNetworkEndpointGroups struct {
+	s *Service
+}
+
+// Get the NetworkEndpointGroup named by key.
+func (g *GCEAlphaGlobalNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key, options ...Option) (*computealpha.NetworkEndpointGroup, error) {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.Get(%v, %v, %v): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaGlobalNetworkEndpointGroups.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "alpha", "GlobalNetworkEndpointGroups")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+
+	klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.GlobalNetworkEndpointGroups.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	return v, err
+}
+
+// List all NetworkEndpointGroup objects.
+func (g *GCEAlphaGlobalNetworkEndpointGroups) List(ctx context.Context, fl *filter.F, options ...Option) ([]*computealpha.NetworkEndpointGroup, error) {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.List(%v, %v, %v) called", ctx, fl, opts)
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "alpha", "GlobalNetworkEndpointGroups")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
+	call := g.s.Alpha.GlobalNetworkEndpointGroups.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+
+	var all []*computealpha.NetworkEndpointGroup
+	f := func(l *computealpha.NetworkEndpointGroupList) error {
+		klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
+	if kLogEnabled(4) {
+		klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if kLogEnabled(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert NetworkEndpointGroup with key of value obj.
+func (g *GCEAlphaGlobalNetworkEndpointGroups) Insert(ctx context.Context, key *meta.Key, obj *computealpha.NetworkEndpointGroup, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.Insert(%v, %v, %+v, %v): called", ctx, key, obj, opts)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaGlobalNetworkEndpointGroups.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "alpha", "GlobalNetworkEndpointGroups")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+	klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Alpha.GlobalNetworkEndpointGroups.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the NetworkEndpointGroup referenced by key.
+func (g *GCEAlphaGlobalNetworkEndpointGroups) Delete(ctx context.Context, key *meta.Key, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.Delete(%v, %v, %v): called", ctx, key, opts)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaGlobalNetworkEndpointGroups.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "alpha", "GlobalNetworkEndpointGroups")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+	klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.GlobalNetworkEndpointGroups.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	if err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// AttachNetworkEndpoints is a method on GCEAlphaGlobalNetworkEndpointGroups.
+func (g *GCEAlphaGlobalNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computealpha.GlobalNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "alpha", "GlobalNetworkEndpointGroups")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "AttachNetworkEndpoints",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+	klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.GlobalNetworkEndpointGroups.AttachNetworkEndpoints(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+
+	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
+	klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// DetachNetworkEndpoints is a method on GCEAlphaGlobalNetworkEndpointGroups.
+func (g *GCEAlphaGlobalNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computealpha.GlobalNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "alpha", "GlobalNetworkEndpointGroups")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "DetachNetworkEndpoints",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+	klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.GlobalNetworkEndpointGroups.DetachNetworkEndpoints(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+
+	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
+	klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// ListNetworkEndpoints is a method on GCEAlphaGlobalNetworkEndpointGroups.
+func (g *GCEAlphaGlobalNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, fl *filter.F, options ...Option) ([]*computealpha.NetworkEndpointWithHealthStatus, error) {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "alpha", "GlobalNetworkEndpointGroups")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "ListNetworkEndpoints",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+	klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.GlobalNetworkEndpointGroups.ListNetworkEndpoints(projectID, key.Name)
+	var all []*computealpha.NetworkEndpointWithHealthStatus
+	f := func(l *computealpha.NetworkEndpointGroupsListNetworkEndpoints) error {
+		klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): page %+v", ctx, key, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = %v, %v", ctx, key, nil, err)
+		return nil, err
+	}
+
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
+	if kLogEnabled(4) {
+		klog.V(4).Infof("GCEAlphaGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = [%v items], %v", ctx, key, len(all), nil)
+	} else if kLogEnabled(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = %v, %v", ctx, key, asStr, nil)
+	}
+	return all, nil
+}
+
+// BetaGlobalNetworkEndpointGroups is an interface that allows for mocking of GlobalNetworkEndpointGroups.
+type BetaGlobalNetworkEndpointGroups interface {
+	Get(ctx context.Context, key *meta.Key, options ...Option) (*computebeta.NetworkEndpointGroup, error)
+	List(ctx context.Context, fl *filter.F, options ...Option) ([]*computebeta.NetworkEndpointGroup, error)
+	Insert(ctx context.Context, key *meta.Key, obj *computebeta.NetworkEndpointGroup, options ...Option) error
+	Delete(ctx context.Context, key *meta.Key, options ...Option) error
+	AttachNetworkEndpoints(context.Context, *meta.Key, *computebeta.GlobalNetworkEndpointGroupsAttachEndpointsRequest, ...Option) error
+	DetachNetworkEndpoints(context.Context, *meta.Key, *computebeta.GlobalNetworkEndpointGroupsDetachEndpointsRequest, ...Option) error
+	ListNetworkEndpoints(context.Context, *meta.Key, *filter.F, ...Option) ([]*computebeta.NetworkEndpointWithHealthStatus, error)
+}
+
+// NewMockBetaGlobalNetworkEndpointGroups returns a new mock for GlobalNetworkEndpointGroups.
+func NewMockBetaGlobalNetworkEndpointGroups(pr ProjectRouter, objs map[meta.Key]*MockGlobalNetworkEndpointGroupsObj) *MockBetaGlobalNetworkEndpointGroups {
+	mock := &MockBetaGlobalNetworkEndpointGroups{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockBetaGlobalNetworkEndpointGroups is the mock for GlobalNetworkEndpointGroups.
+type MockBetaGlobalNetworkEndpointGroups struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockGlobalNetworkEndpointGroupsObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook                    func(ctx context.Context, key *meta.Key, m *MockBetaGlobalNetworkEndpointGroups, options ...Option) (bool, *computebeta.NetworkEndpointGroup, error)
+	ListHook                   func(ctx context.Context, fl *filter.F, m *MockBetaGlobalNetworkEndpointGroups, options ...Option) (bool, []*computebeta.NetworkEndpointGroup, error)
+	InsertHook                 func(ctx context.Context, key *meta.Key, obj *computebeta.NetworkEndpointGroup, m *MockBetaGlobalNetworkEndpointGroups, options ...Option) (bool, error)
+	DeleteHook                 func(ctx context.Context, key *meta.Key, m *MockBetaGlobalNetworkEndpointGroups, options ...Option) (bool, error)
+	AttachNetworkEndpointsHook func(context.Context, *meta.Key, *computebeta.GlobalNetworkEndpointGroupsAttachEndpointsRequest, *MockBetaGlobalNetworkEndpointGroups, ...Option) error
+	DetachNetworkEndpointsHook func(context.Context, *meta.Key, *computebeta.GlobalNetworkEndpointGroupsDetachEndpointsRequest, *MockBetaGlobalNetworkEndpointGroups, ...Option) error
+	ListNetworkEndpointsHook   func(context.Context, *meta.Key, *filter.F, *MockBetaGlobalNetworkEndpointGroups, ...Option) ([]*computebeta.NetworkEndpointWithHealthStatus, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockBetaGlobalNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key, options ...Option) (*computebeta.NetworkEndpointGroup, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m, options...); intercept {
+			klog.V(5).Infof("MockBetaGlobalNetworkEndpointGroups.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockBetaGlobalNetworkEndpointGroups.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToBeta()
+		klog.V(5).Infof("MockBetaGlobalNetworkEndpointGroups.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockBetaGlobalNetworkEndpointGroups %v not found", key),
+	}
+	klog.V(5).Infof("MockBetaGlobalNetworkEndpointGroups.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockBetaGlobalNetworkEndpointGroups) List(ctx context.Context, fl *filter.F, options ...Option) ([]*computebeta.NetworkEndpointGroup, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m, options...); intercept {
+			klog.V(5).Infof("MockBetaGlobalNetworkEndpointGroups.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockBetaGlobalNetworkEndpointGroups.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*computebeta.NetworkEndpointGroup
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToBeta()) {
+			continue
+		}
+		objs = append(objs, obj.ToBeta())
+	}
+
+	klog.V(5).Infof("MockBetaGlobalNetworkEndpointGroups.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockBetaGlobalNetworkEndpointGroups) Insert(ctx context.Context, key *meta.Key, obj *computebeta.NetworkEndpointGroup, options ...Option) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m, options...); intercept {
+			klog.V(5).Infof("MockBetaGlobalNetworkEndpointGroups.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	opts := mergeOptions(options)
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockBetaGlobalNetworkEndpointGroups.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockBetaGlobalNetworkEndpointGroups %v exists", key),
+		}
+		klog.V(5).Infof("MockBetaGlobalNetworkEndpointGroups.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := getProjectID(ctx, m.ProjectRouter, opts, "beta", "networkEndpointGroups")
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "networkEndpointGroups", key)
+
+	m.Objects[*key] = &MockGlobalNetworkEndpointGroupsObj{obj}
+	klog.V(5).Infof("MockBetaGlobalNetworkEndpointGroups.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockBetaGlobalNetworkEndpointGroups) Delete(ctx context.Context, key *meta.Key, options ...Option) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m, options...); intercept {
+			klog.V(5).Infof("MockBetaGlobalNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockBetaGlobalNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockBetaGlobalNetworkEndpointGroups %v not found", key),
+		}
+		klog.V(5).Infof("MockBetaGlobalNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockBetaGlobalNetworkEndpointGroups.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockBetaGlobalNetworkEndpointGroups) Obj(o *computebeta.NetworkEndpointGroup) *MockGlobalNetworkEndpointGroupsObj {
+	return &MockGlobalNetworkEndpointGroupsObj{o}
+}
+
+// AttachNetworkEndpoints is a mock for the corresponding method.
+func (m *MockBetaGlobalNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computebeta.GlobalNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
+	if m.AttachNetworkEndpointsHook != nil {
+		return m.AttachNetworkEndpointsHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// DetachNetworkEndpoints is a mock for the corresponding method.
+func (m *MockBetaGlobalNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computebeta.GlobalNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
+	if m.DetachNetworkEndpointsHook != nil {
+		return m.DetachNetworkEndpointsHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// ListNetworkEndpoints is a mock for the corresponding method.
+func (m *MockBetaGlobalNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, fl *filter.F, options ...Option) ([]*computebeta.NetworkEndpointWithHealthStatus, error) {
+	if m.ListNetworkEndpointsHook != nil {
+		return m.ListNetworkEndpointsHook(ctx, key, fl, m)
+	}
+	return nil, nil
+}
+
+// GCEBetaGlobalNetworkEndpointGroups is a simplifying adapter for the GCE GlobalNetworkEndpointGroups.
+type GCEBetaGlobalNetworkEndpointGroups struct {
+	s *Service
+}
+
+// Get the NetworkEndpointGroup named by key.
+func (g *GCEBetaGlobalNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key, options ...Option) (*computebeta.NetworkEndpointGroup, error) {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.Get(%v, %v, %v): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaGlobalNetworkEndpointGroups.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "beta", "GlobalNetworkEndpointGroups")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("beta"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+
+	klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.GlobalNetworkEndpointGroups.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	return v, err
+}
+
+// List all NetworkEndpointGroup objects.
+func (g *GCEBetaGlobalNetworkEndpointGroups) List(ctx context.Context, fl *filter.F, options ...Option) ([]*computebeta.NetworkEndpointGroup, error) {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.List(%v, %v, %v) called", ctx, fl, opts)
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "beta", "GlobalNetworkEndpointGroups")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("beta"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
+	call := g.s.Beta.GlobalNetworkEndpointGroups.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+
+	var all []*computebeta.NetworkEndpointGroup
+	f := func(l *computebeta.NetworkEndpointGroupList) error {
+		klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
+	if kLogEnabled(4) {
+		klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if kLogEnabled(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert NetworkEndpointGroup with key of value obj.
+func (g *GCEBetaGlobalNetworkEndpointGroups) Insert(ctx context.Context, key *meta.Key, obj *computebeta.NetworkEndpointGroup, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.Insert(%v, %v, %+v, %v): called", ctx, key, obj, opts)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaGlobalNetworkEndpointGroups.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "beta", "GlobalNetworkEndpointGroups")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("beta"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+	klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Beta.GlobalNetworkEndpointGroups.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	if err != nil {
+		klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the NetworkEndpointGroup referenced by key.
+func (g *GCEBetaGlobalNetworkEndpointGroups) Delete(ctx context.Context, key *meta.Key, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.Delete(%v, %v, %v): called", ctx, key, opts)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaGlobalNetworkEndpointGroups.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "beta", "GlobalNetworkEndpointGroups")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("beta"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+	klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.GlobalNetworkEndpointGroups.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	if err != nil {
+		klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// AttachNetworkEndpoints is a method on GCEBetaGlobalNetworkEndpointGroups.
+func (g *GCEBetaGlobalNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computebeta.GlobalNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "beta", "GlobalNetworkEndpointGroups")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "AttachNetworkEndpoints",
+		Version:   meta.Version("beta"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+	klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.GlobalNetworkEndpointGroups.AttachNetworkEndpoints(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+
+	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
+	klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// DetachNetworkEndpoints is a method on GCEBetaGlobalNetworkEndpointGroups.
+func (g *GCEBetaGlobalNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computebeta.GlobalNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "beta", "GlobalNetworkEndpointGroups")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "DetachNetworkEndpoints",
+		Version:   meta.Version("beta"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+	klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.GlobalNetworkEndpointGroups.DetachNetworkEndpoints(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+
+	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
+	klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// ListNetworkEndpoints is a method on GCEBetaGlobalNetworkEndpointGroups.
+func (g *GCEBetaGlobalNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, fl *filter.F, options ...Option) ([]*computebeta.NetworkEndpointWithHealthStatus, error) {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "beta", "GlobalNetworkEndpointGroups")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "ListNetworkEndpoints",
+		Version:   meta.Version("beta"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+	klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.GlobalNetworkEndpointGroups.ListNetworkEndpoints(projectID, key.Name)
+	var all []*computebeta.NetworkEndpointWithHealthStatus
+	f := func(l *computebeta.NetworkEndpointGroupsListNetworkEndpoints) error {
+		klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): page %+v", ctx, key, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = %v, %v", ctx, key, nil, err)
+		return nil, err
+	}
+
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
+	if kLogEnabled(4) {
+		klog.V(4).Infof("GCEBetaGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = [%v items], %v", ctx, key, len(all), nil)
+	} else if kLogEnabled(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEBetaGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = %v, %v", ctx, key, asStr, nil)
+	}
+	return all, nil
+}
+
+// GlobalNetworkEndpointGroups is an interface that allows for mocking of GlobalNetworkEndpointGroups.
+type GlobalNetworkEndpointGroups interface {
+	Get(ctx context.Context, key *meta.Key, options ...Option) (*computega.NetworkEndpointGroup, error)
+	List(ctx context.Context, fl *filter.F, options ...Option) ([]*computega.NetworkEndpointGroup, error)
+	Insert(ctx context.Context, key *meta.Key, obj *computega.NetworkEndpointGroup, options ...Option) error
+	Delete(ctx context.Context, key *meta.Key, options ...Option) error
+	AttachNetworkEndpoints(context.Context, *meta.Key, *computega.GlobalNetworkEndpointGroupsAttachEndpointsRequest, ...Option) error
+	DetachNetworkEndpoints(context.Context, *meta.Key, *computega.GlobalNetworkEndpointGroupsDetachEndpointsRequest, ...Option) error
+	ListNetworkEndpoints(context.Context, *meta.Key, *filter.F, ...Option) ([]*computega.NetworkEndpointWithHealthStatus, error)
+}
+
+// NewMockGlobalNetworkEndpointGroups returns a new mock for GlobalNetworkEndpointGroups.
+func NewMockGlobalNetworkEndpointGroups(pr ProjectRouter, objs map[meta.Key]*MockGlobalNetworkEndpointGroupsObj) *MockGlobalNetworkEndpointGroups {
+	mock := &MockGlobalNetworkEndpointGroups{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockGlobalNetworkEndpointGroups is the mock for GlobalNetworkEndpointGroups.
+type MockGlobalNetworkEndpointGroups struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockGlobalNetworkEndpointGroupsObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook                    func(ctx context.Context, key *meta.Key, m *MockGlobalNetworkEndpointGroups, options ...Option) (bool, *computega.NetworkEndpointGroup, error)
+	ListHook                   func(ctx context.Context, fl *filter.F, m *MockGlobalNetworkEndpointGroups, options ...Option) (bool, []*computega.NetworkEndpointGroup, error)
+	InsertHook                 func(ctx context.Context, key *meta.Key, obj *computega.NetworkEndpointGroup, m *MockGlobalNetworkEndpointGroups, options ...Option) (bool, error)
+	DeleteHook                 func(ctx context.Context, key *meta.Key, m *MockGlobalNetworkEndpointGroups, options ...Option) (bool, error)
+	AttachNetworkEndpointsHook func(context.Context, *meta.Key, *computega.GlobalNetworkEndpointGroupsAttachEndpointsRequest, *MockGlobalNetworkEndpointGroups, ...Option) error
+	DetachNetworkEndpointsHook func(context.Context, *meta.Key, *computega.GlobalNetworkEndpointGroupsDetachEndpointsRequest, *MockGlobalNetworkEndpointGroups, ...Option) error
+	ListNetworkEndpointsHook   func(context.Context, *meta.Key, *filter.F, *MockGlobalNetworkEndpointGroups, ...Option) ([]*computega.NetworkEndpointWithHealthStatus, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockGlobalNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key, options ...Option) (*computega.NetworkEndpointGroup, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m, options...); intercept {
+			klog.V(5).Infof("MockGlobalNetworkEndpointGroups.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockGlobalNetworkEndpointGroups.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToGA()
+		klog.V(5).Infof("MockGlobalNetworkEndpointGroups.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockGlobalNetworkEndpointGroups %v not found", key),
+	}
+	klog.V(5).Infof("MockGlobalNetworkEndpointGroups.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock.
+func (m *MockGlobalNetworkEndpointGroups) List(ctx context.Context, fl *filter.F, options ...Option) ([]*computega.NetworkEndpointGroup, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, fl, m, options...); intercept {
+			klog.V(5).Infof("MockGlobalNetworkEndpointGroups.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockGlobalNetworkEndpointGroups.List(%v, %v) = nil, %v", ctx, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*computega.NetworkEndpointGroup
+	for _, obj := range m.Objects {
+		if !fl.Match(obj.ToGA()) {
+			continue
+		}
+		objs = append(objs, obj.ToGA())
+	}
+
+	klog.V(5).Infof("MockGlobalNetworkEndpointGroups.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockGlobalNetworkEndpointGroups) Insert(ctx context.Context, key *meta.Key, obj *computega.NetworkEndpointGroup, options ...Option) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m, options...); intercept {
+			klog.V(5).Infof("MockGlobalNetworkEndpointGroups.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	opts := mergeOptions(options)
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockGlobalNetworkEndpointGroups.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockGlobalNetworkEndpointGroups %v exists", key),
+		}
+		klog.V(5).Infof("MockGlobalNetworkEndpointGroups.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := getProjectID(ctx, m.ProjectRouter, opts, "ga", "networkEndpointGroups")
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "networkEndpointGroups", key)
+
+	m.Objects[*key] = &MockGlobalNetworkEndpointGroupsObj{obj}
+	klog.V(5).Infof("MockGlobalNetworkEndpointGroups.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockGlobalNetworkEndpointGroups) Delete(ctx context.Context, key *meta.Key, options ...Option) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m, options...); intercept {
+			klog.V(5).Infof("MockGlobalNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockGlobalNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockGlobalNetworkEndpointGroups %v not found", key),
+		}
+		klog.V(5).Infof("MockGlobalNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockGlobalNetworkEndpointGroups.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockGlobalNetworkEndpointGroups) Obj(o *computega.NetworkEndpointGroup) *MockGlobalNetworkEndpointGroupsObj {
+	return &MockGlobalNetworkEndpointGroupsObj{o}
+}
+
+// AttachNetworkEndpoints is a mock for the corresponding method.
+func (m *MockGlobalNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computega.GlobalNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
+	if m.AttachNetworkEndpointsHook != nil {
+		return m.AttachNetworkEndpointsHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// DetachNetworkEndpoints is a mock for the corresponding method.
+func (m *MockGlobalNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computega.GlobalNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
+	if m.DetachNetworkEndpointsHook != nil {
+		return m.DetachNetworkEndpointsHook(ctx, key, arg0, m)
+	}
+	return nil
+}
+
+// ListNetworkEndpoints is a mock for the corresponding method.
+func (m *MockGlobalNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, fl *filter.F, options ...Option) ([]*computega.NetworkEndpointWithHealthStatus, error) {
+	if m.ListNetworkEndpointsHook != nil {
+		return m.ListNetworkEndpointsHook(ctx, key, fl, m)
+	}
+	return nil, nil
+}
+
+// GCEGlobalNetworkEndpointGroups is a simplifying adapter for the GCE GlobalNetworkEndpointGroups.
+type GCEGlobalNetworkEndpointGroups struct {
+	s *Service
+}
+
+// Get the NetworkEndpointGroup named by key.
+func (g *GCEGlobalNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key, options ...Option) (*computega.NetworkEndpointGroup, error) {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.Get(%v, %v, %v): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEGlobalNetworkEndpointGroups.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "ga", "GlobalNetworkEndpointGroups")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("ga"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+
+	klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.GA.GlobalNetworkEndpointGroups.Get(projectID, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	return v, err
+}
+
+// List all NetworkEndpointGroup objects.
+func (g *GCEGlobalNetworkEndpointGroups) List(ctx context.Context, fl *filter.F, options ...Option) ([]*computega.NetworkEndpointGroup, error) {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.List(%v, %v, %v) called", ctx, fl, opts)
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "ga", "GlobalNetworkEndpointGroups")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("ga"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
+	call := g.s.GA.GlobalNetworkEndpointGroups.List(projectID)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+
+	var all []*computega.NetworkEndpointGroup
+	f := func(l *computega.NetworkEndpointGroupList) error {
+		klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
+	if kLogEnabled(4) {
+		klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if kLogEnabled(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert NetworkEndpointGroup with key of value obj.
+func (g *GCEGlobalNetworkEndpointGroups) Insert(ctx context.Context, key *meta.Key, obj *computega.NetworkEndpointGroup, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.Insert(%v, %v, %+v, %v): called", ctx, key, obj, opts)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEGlobalNetworkEndpointGroups.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "ga", "GlobalNetworkEndpointGroups")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("ga"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+	klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.GA.GlobalNetworkEndpointGroups.Insert(projectID, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	if err != nil {
+		klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.Insert(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the NetworkEndpointGroup referenced by key.
+func (g *GCEGlobalNetworkEndpointGroups) Delete(ctx context.Context, key *meta.Key, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.Delete(%v, %v, %v): called", ctx, key, opts)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEGlobalNetworkEndpointGroups.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "ga", "GlobalNetworkEndpointGroups")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("ga"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+	klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.GlobalNetworkEndpointGroups.Delete(projectID, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	if err != nil {
+		klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// AttachNetworkEndpoints is a method on GCEGlobalNetworkEndpointGroups.
+func (g *GCEGlobalNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computega.GlobalNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "ga", "GlobalNetworkEndpointGroups")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "AttachNetworkEndpoints",
+		Version:   meta.Version("ga"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+	klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.GlobalNetworkEndpointGroups.AttachNetworkEndpoints(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+
+	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
+	klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// DetachNetworkEndpoints is a method on GCEGlobalNetworkEndpointGroups.
+func (g *GCEGlobalNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computega.GlobalNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "ga", "GlobalNetworkEndpointGroups")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "DetachNetworkEndpoints",
+		Version:   meta.Version("ga"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+	klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.GlobalNetworkEndpointGroups.DetachNetworkEndpoints(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+
+	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
+	klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
+// ListNetworkEndpoints is a method on GCEGlobalNetworkEndpointGroups.
+func (g *GCEGlobalNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, fl *filter.F, options ...Option) ([]*computega.NetworkEndpointWithHealthStatus, error) {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "ga", "GlobalNetworkEndpointGroups")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "ListNetworkEndpoints",
+		Version:   meta.Version("ga"),
+		Service:   "GlobalNetworkEndpointGroups",
+	}
+	klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.GA.GlobalNetworkEndpointGroups.ListNetworkEndpoints(projectID, key.Name)
+	var all []*computega.NetworkEndpointWithHealthStatus
+	f := func(l *computega.NetworkEndpointGroupsListNetworkEndpoints) error {
+		klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): page %+v", ctx, key, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = %v, %v", ctx, key, nil, err)
+		return nil, err
+	}
+
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
+	if kLogEnabled(4) {
+		klog.V(4).Infof("GCEGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = [%v items], %v", ctx, key, len(all), nil)
+	} else if kLogEnabled(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEGlobalNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...) = %v, %v", ctx, key, asStr, nil)
+	}
+	return all, nil
+}
+
 // Projects is an interface that allows for mocking of Projects.
 type Projects interface {
 	// ProjectsOps is an interface with additional non-CRUD type methods.
@@ -48084,6 +49775,12 @@ func NewGlobalAddressesResourceID(project, name string) *ResourceID {
 func NewGlobalForwardingRulesResourceID(project, name string) *ResourceID {
 	key := meta.GlobalKey(name)
 	return &ResourceID{project, "compute", "forwardingRules", key}
+}
+
+// NewGlobalNetworkEndpointGroupsResourceID creates a ResourceID for the GlobalNetworkEndpointGroups resource.
+func NewGlobalNetworkEndpointGroupsResourceID(project, name string) *ResourceID {
+	key := meta.GlobalKey(name)
+	return &ResourceID{project, "compute", "networkEndpointGroups", key}
 }
 
 // NewHealthChecksResourceID creates a ResourceID for the HealthChecks resource.

@@ -25,9 +25,12 @@ limitations under the License.
 // Resource is used to write version-agnostic code such as Kubernetes-style API
 // translators.
 //
-//	 // Instantiate the adapter.
-//	 type Address = NewResource[compute.Address, alpha.Address, beta.Address](...)
-//	 addr := Address{}
+// Every Resource is composed of three struct types: GA, Alpha and Beta types.
+// If a version is not used or is missing, the type should be set to
+// PlaceholderType. GA CANNOT be a PlaceholderType.
+
+// See MutableResource.ImpliedVersion() for resource version conversion
+// semantics.
 //
 //	// Manipulate the fields in Address.
 //	addr.Access(func(x *compute.Address) {
@@ -66,9 +69,8 @@ limitations under the License.
 //
 // # Customizing resource behavior
 //
-// Resource conversion behavior can be customized using
-// TypeTraits. TypeTraits give hooks to the Resource implementation on
-// version conversion and diff'ing.
+// Resource conversion behavior can be customized using TypeTraits. TypeTraits
+// give hooks to the Resource implementation on version conversion and diff'ing.
 //
 //	type myTypeTrait struct { BaseTypeTrait[myTypeGA, myTypeAlpha, myTypeBeta] }
 //

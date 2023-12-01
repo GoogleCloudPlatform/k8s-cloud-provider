@@ -61,7 +61,7 @@ func (g *Graph) NewBuilderWithEmptyNodes() *Builder {
 	return builder
 }
 
-// AddTombstone adds a node to represent the non-existance of a resource.
+// AddTombstone adds a node to represent the non-existence of a resource.
 func (g *Graph) AddTombstone(n rnode.Node) error {
 	if n.State() != rnode.NodeDoesNotExist {
 		return fmt.Errorf("graph: invalid tombstone (want state %s, but got %s)", rnode.NodeDoesNotExist, n.State())

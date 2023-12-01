@@ -38,7 +38,7 @@ type ActionWithErr struct {
 	Err    error
 }
 
-// Executor peforms the operations given by a list of Actions.
+// Executor performs the operations given by a list of Actions.
 type Executor interface {
 	// Run the actions. Returns non-nil if there was an error in execution of
 	// one or more Actions.

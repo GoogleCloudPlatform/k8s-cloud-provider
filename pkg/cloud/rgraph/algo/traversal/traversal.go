@@ -48,7 +48,7 @@ func ConnectedSubgraph(g *rgraph.Graph, n rnode.Node) ([]rnode.Node, error) {
 			}
 			to := g.Get(ref.To)
 			if to == nil {
-				return nil, fmt.Errorf("invalid graph: to node %s not in graph", to.ID())
+				return nil, fmt.Errorf("invalid graph: to node %v not in graph", ref.To)
 			}
 			work.Add(to)
 		}
@@ -59,7 +59,7 @@ func ConnectedSubgraph(g *rgraph.Graph, n rnode.Node) ([]rnode.Node, error) {
 			}
 			from := g.Get(ref.From)
 			if from == nil {
-				return nil, fmt.Errorf("invalid graph: from node %s not in graph", from.ID())
+				return nil, fmt.Errorf("invalid graph: from node %v not in graph", ref.From)
 			}
 			work.Add(from)
 		}
@@ -97,7 +97,7 @@ func TransitiveInRefs(g *rgraph.Graph, n rnode.Node) ([]rnode.Node, error) {
 			}
 			from := g.Get(ref.From)
 			if from == nil {
-				return nil, fmt.Errorf("invalid graph: from node %s not in graph", from.ID())
+				return nil, fmt.Errorf("invalid graph: from node %v not in graph", ref.From)
 			}
 			work.Add(from)
 		}

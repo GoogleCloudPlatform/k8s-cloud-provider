@@ -23,7 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestParseNewtorkServiceOpURL(t *testing.T) {
+func TestParseNetworkServiceOpURL(t *testing.T) {
 	t.Parallel()
 
 	type values struct {

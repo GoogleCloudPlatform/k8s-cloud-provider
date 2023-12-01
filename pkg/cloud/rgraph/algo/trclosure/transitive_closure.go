@@ -62,7 +62,7 @@ func (wi work) String() string { return wi.b.ID().String() }
 
 func makeErr(s string, args ...any) error { return fmt.Errorf("TransitiveClosure: "+s, args...) }
 
-// Do traverses and fetches the the graph, adding all of the dependencies into
+// Do traverses and fetches the graph, adding all the dependencies into
 // the graph, pulling the resource from Cloud as needed.
 func Do(ctx context.Context, cl cloud.Cloud, gr *rgraph.Builder, opts ...Option) error {
 	subctx, cancel := context.WithCancel(ctx)

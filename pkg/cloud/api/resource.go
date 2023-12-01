@@ -89,7 +89,7 @@ func (obj *resource[GA, Alpha, Beta]) Diff(other Resource[GA, Alpha, Beta]) (*Di
 		if err != nil {
 			return nil, fmt.Errorf("Resource.Diff: %s", err)
 		}
-		bObj, _ := other.ToAlpha()
+		bObj, err := other.ToAlpha()
 		if err != nil {
 			return nil, fmt.Errorf("Resource.Diff: %s", err)
 		}

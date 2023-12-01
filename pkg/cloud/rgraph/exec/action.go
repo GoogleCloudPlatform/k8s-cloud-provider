@@ -91,7 +91,7 @@ func (b *ActionBase) Signal(ev Event) bool {
 	return false
 }
 
-// NewExistsAction returns an Action that  signals the existance of a Resource.
+// NewExistsAction returns an Action that  signals the existence of a Resource.
 // It has no other side effects.
 func NewExistsAction(id *cloud.ResourceID) Action {
 	return &eventAction{

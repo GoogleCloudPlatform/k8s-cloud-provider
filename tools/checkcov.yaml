@@ -20,7 +20,7 @@ entries:
     "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/algo/snapshot":
         expected: 0
     "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode":
-        expected: 10
+        expected: 40
     "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/address":
         expected: 20
     "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/all":

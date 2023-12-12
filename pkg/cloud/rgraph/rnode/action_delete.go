@@ -79,7 +79,7 @@ func (a *genericDeleteAction[GA, Alpha, Beta]) Run(
 		events = append(events, exec.NewDropRefEvent(ref.From, ref.To))
 	}
 
-	a.end = a.start
+	a.end = time.Now()
 
 	return events, err
 }

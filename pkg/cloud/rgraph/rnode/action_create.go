@@ -79,7 +79,7 @@ func (a *genericCreateAction[GA, Alpha, Beta]) Run(
 ) (exec.EventList, error) {
 	a.start = time.Now()
 	err := a.ops.CreateFuncs(c).Do(ctx, a.id, a.resource)
-	a.end = a.start
+	a.end = time.Now()
 
 	return exec.EventList{exec.NewExistsEvent(a.id)}, err
 }

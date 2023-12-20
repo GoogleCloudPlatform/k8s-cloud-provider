@@ -258,6 +258,7 @@ func TestCheckSchema(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "ok", t: reflect.TypeOf(&okSt{})},
+		{name: "PlaceholderType is ok", t: reflect.TypeOf(&PlaceholderType{})},
 		{name: "fails cycle check", t: reflect.TypeOf(&rec2{}), wantErr: true},
 		{name: "fails type check", t: reflect.TypeOf(&badSt{}), wantErr: true},
 		{name: "fails type check bad fields", t: reflect.TypeOf(&badStFieldsBad{}), wantErr: true},

@@ -749,6 +749,18 @@ func TestResourceCheckSchema(t *testing.T) {
 			res:  newTestResource[st, stA, stB](nil),
 		},
 		{
+			name: "valid schema Alpha is PlaceholderType",
+			res:  newTestResource[st, PlaceholderType, stB](nil),
+		},
+		{
+			name: "valid schema Beta is PlaceholderType",
+			res:  newTestResource[st, stA, PlaceholderType](nil),
+		},
+		{
+			name: "valid schema only GA",
+			res:  newTestResource[st, PlaceholderType, PlaceholderType](nil),
+		},
+		{
 			name:    "invalid schema",
 			res:     newTestResource[invalid, stA, stB](nil),
 			wantErr: true,
@@ -761,6 +773,11 @@ func TestResourceCheckSchema(t *testing.T) {
 		{
 			name:    "invalid schema beta",
 			res:     newTestResource[st, stA, invalid](nil),
+			wantErr: true,
+		},
+		{
+			name:    "invalid schema GA is PlaceholderType",
+			res:     newTestResource[PlaceholderType, stA, stB](nil),
 			wantErr: true,
 		},
 	} {
@@ -859,6 +876,86 @@ func TestResourceImpliedVersion(t *testing.T) {
 				t.Errorf("ImpliedVersion() = %v, want %v", ver, tc.wantVer)
 			}
 		})
+	}
+}
+
+func TestImpliedVersionForPlaceHolderType(t *testing.T) {
+
+	type iv interface{ ImpliedVersion() (meta.Version, error) }
+
+	type st struct {
+		I               int
+		NullFields      []string
+		ForceSendFields []string
+	}
+	type stA struct {
+		I               int
+		A               int
+		NullFields      []string
+		ForceSendFields []string
+	}
+	type stB struct {
+		I               int
+		B               int
+		NullFields      []string
+		ForceSendFields []string
+	}
+
+	tcs := []struct {
+		desc         string
+		makeResource func() iv
+		wantErr      bool
+		wantVer      meta.Version
+	}{
+		{
+			desc: "imply ga, PlaceholderType alpha",
+			makeResource: func() iv {
+				return newTestResource[st, PlaceholderType, st](nil)
+			},
+			wantVer: meta.VersionGA,
+		},
+		{
+			desc: "imply ga, PlaceholderType beta",
+			makeResource: func() iv {
+				return newTestResource[st, st, PlaceholderType](nil)
+			},
+			wantVer: meta.VersionGA,
+		},
+		{
+			desc: "imply beta, PlaceholderType alpha",
+			makeResource: func() iv {
+				res := newTestResource[st, PlaceholderType, stB](nil)
+				res.SetBeta(&stB{I: 1, B: 7})
+				return res
+			},
+			wantVer: meta.VersionBeta,
+		},
+		{
+			desc: "imply alpha, PlaceholderType beta",
+			makeResource: func() iv {
+				res := newTestResource[st, stA, PlaceholderType](nil)
+				res.SetAlpha(&stA{I: 1, A: 7})
+				return res
+			},
+			wantVer: meta.VersionAlpha,
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.desc, func(t *testing.T) {
+			res := tc.makeResource()
+			ver, err := res.ImpliedVersion()
+			if gotErr := err != nil; gotErr != tc.wantErr {
+				t.Fatalf("ImpliedVersion() = %v; gotErr = %t, want %t", err, gotErr, tc.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			if ver != tc.wantVer {
+				t.Errorf("ImpliedVersion() = %v, want %v", ver, tc.wantVer)
+			}
+		})
+
 	}
 }
 

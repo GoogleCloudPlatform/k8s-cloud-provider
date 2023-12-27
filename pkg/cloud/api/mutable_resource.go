@@ -191,16 +191,38 @@ func (u *mutableResource[GA, Alpha, Beta]) CheckSchema() error {
 	if err != nil {
 		return err
 	}
-	err = checkSchema(reflect.TypeOf(&u.alpha))
-	if err != nil {
-		return err
+	ga, _ := u.ToGA()
+
+	if !isPlaceholderType(u.alpha) {
+		err = checkSchema(reflect.TypeOf(&u.alpha))
+		if err != nil {
+			return err
+		}
+		alpha, _ := u.ToAlpha()
+		err = checkSubsetOf(ga, alpha)
+		if err != nil {
+			return fmt.Errorf("checkSubsetOf(%T, %T) = %v, want nil", ga, alpha, err)
+		}
 	}
-	err = checkSchema(reflect.TypeOf(&u.beta))
-	if err != nil {
-		return err
+	if !isPlaceholderType(u.beta) {
+		err = checkSchema(reflect.TypeOf(&u.beta))
+		if err != nil {
+			return err
+		}
+		beta, _ := u.ToBeta()
+		err = checkSubsetOf(ga, beta)
+
+		if err != nil {
+			return fmt.Errorf("checkSubsetOf(%T, %T) = %v, want nil", ga, beta, err)
+		}
 	}
-	// TODOD(kl52752) Add validation that GA is a subset of Beta and Alpha.
+
 	return nil
+}
+
+func checkSubsetOf[T1 any, T2 any](t1 *T1, t2 *T2) error {
+
+	return CheckStructuralSubset(Path{}, reflect.TypeOf(t1), reflect.TypeOf(t2))
 }
 
 func (u *mutableResource[GA, Alpha, Beta]) ResourceID() *cloud.ResourceID { return u.resourceID }

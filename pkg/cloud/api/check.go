@@ -171,3 +171,44 @@ func checkSchema(t reflect.Type) error {
 
 	return nil
 }
+
+// CheckStructuralSubset checks if type From is the subset of To type. Type is a
+// subset of another if it contains fields with the same type and name. This
+// function is not symmetric. Path parameter is used for better error reporting.
+func CheckStructuralSubset(p Path, from, to reflect.Type) error {
+	if from.Kind() != to.Kind() {
+		return fmt.Errorf("%s has different type: %v != %v", p, from.Kind(), to.Kind())
+	}
+	if isBasicT(from) {
+		return nil
+	}
+	switch from.Kind() {
+	case reflect.Pointer:
+		return CheckStructuralSubset(p.Pointer(), from.Elem(), to.Elem())
+
+	case reflect.Struct:
+		for i := 0; i < from.NumField(); i++ {
+			af := from.Field(i)
+			bf, exist := to.FieldByName(af.Name)
+			if !exist {
+				return fmt.Errorf("%s: type %T does not have field %v", p.String(), to, af.Name)
+			}
+			if err := CheckStructuralSubset(p.Field(af.Name), af.Type, bf.Type); err != nil {
+				return err
+			}
+		}
+		return nil
+
+	case reflect.Slice, reflect.Array:
+		return CheckStructuralSubset(p.AnySliceIndex(), from.Elem(), to.Elem())
+
+	case reflect.Map:
+		path := p.AnyMapIndex()
+		err := CheckStructuralSubset(path, from.Key(), to.Key())
+		if err != nil {
+			return err
+		}
+		return CheckStructuralSubset(path, from.Elem(), to.Elem())
+	}
+	return fmt.Errorf("%s Unsupported type %v", p.String(), from.Kind())
+}

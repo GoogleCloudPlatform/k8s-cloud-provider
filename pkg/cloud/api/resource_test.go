@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
+	teststruct "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/api/converter_test_types"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/meta"
 	"github.com/google/go-cmp/cmp"
 )
@@ -708,6 +709,14 @@ func TestResourceSetX(t *testing.T) {
 
 func TestResourceCheckSchema(t *testing.T) {
 	t.Parallel()
+	type sti struct {
+		AI string
+		BI string
+	}
+	type sti2 struct {
+		AI string
+		CI int
+	}
 
 	type st struct {
 		Name            string
@@ -732,6 +741,29 @@ func TestResourceCheckSchema(t *testing.T) {
 		NullFields      []string
 		ForceSendFields []string
 	}
+	type stC struct {
+		Name            string
+		SelfLink        string
+		C               int
+		NullFields      []string
+		ForceSendFields []string
+	}
+	type StBI struct {
+		Name            string
+		SelfLink        string
+		SI              *sti2
+		NullFields      []string
+		ForceSendFields []string
+	}
+	type stCI struct {
+		Name            string
+		SelfLink        string
+		SI              *sti
+		C               int
+		NullFields      []string
+		ForceSendFields []string
+	}
+
 	type invalid struct {
 		I               chan int
 		NullFields      []string
@@ -778,6 +810,21 @@ func TestResourceCheckSchema(t *testing.T) {
 		{
 			name:    "invalid schema GA is PlaceholderType",
 			res:     newTestResource[PlaceholderType, stA, stB](nil),
+			wantErr: true,
+		},
+		{
+			name:    "invalid schema alpha is not a subset of GA",
+			res:     newTestResource[st, stC, stB](nil),
+			wantErr: true,
+		},
+		{
+			name:    "invalid schema beta is not a subset of GA",
+			res:     newTestResource[st, stA, stC](nil),
+			wantErr: true,
+		},
+		{
+			name:    "invalid schema - embedded struct mismatch",
+			res:     newTestResource[StBI, StBI, teststruct.StBI](nil),
 			wantErr: true,
 		},
 	} {

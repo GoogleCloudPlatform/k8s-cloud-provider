@@ -19,6 +19,8 @@ package api
 import (
 	"reflect"
 	"testing"
+
+	teststruct "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/api/converter_test_types"
 )
 
 func TestCheckFieldsAreSet(t *testing.T) {
@@ -268,6 +270,268 @@ func TestCheckSchema(t *testing.T) {
 			gotErr := err != nil
 			if gotErr != tc.wantErr {
 				t.Errorf("ChekcSchema() = %v; gotErr = %t, want %T", err, gotErr, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestConvertToT(t *testing.T) {
+	t.Parallel()
+	intVar := int(1)
+	type sti struct {
+		I  int
+		LS []string
+	}
+	type stiB struct {
+		I  int
+		LS string
+	}
+
+	type St struct {
+		I   int
+		St  sti
+		PSt *sti
+		PS  *string
+		LS  []string
+		M   map[string]string
+	}
+	type StA struct {
+		I  int
+		RT *sti
+		PS *string
+		LS []string
+		M  map[string]string
+	}
+	type stB struct {
+		I  int
+		St sti
+		RT *sti
+	}
+
+	for _, tc := range []struct {
+		name    string
+		a       any
+		b       any
+		wantErr bool
+	}{
+		{
+			name: "basic - same",
+			a:    int(1),
+			b:    int(1),
+		},
+		{
+			name:    "basic - different",
+			a:       int(1),
+			b:       "1",
+			wantErr: true,
+		},
+		{
+			name:    "basic - pointer",
+			a:       int(1),
+			b:       &intVar,
+			wantErr: true,
+		},
+		{
+			name: "array - same",
+			a:    [2]int{1, 2},
+			b:    [2]int{1, 2},
+		},
+		{
+			name:    "array - different",
+			a:       [2]int{1, 2},
+			b:       [2]string{"1", "2"},
+			wantErr: true,
+		},
+		{
+			name:    "array - slice",
+			a:       [2]int{1, 2},
+			b:       []int{},
+			wantErr: true,
+		},
+		{
+			name: "slice - same",
+			a:    []int{},
+			b:    []int{},
+		},
+		{
+			name:    "slice - different",
+			a:       []int{},
+			b:       []string{},
+			wantErr: true,
+		},
+		{
+			name:    "slice - literal",
+			a:       []int{},
+			b:       int(1),
+			wantErr: true,
+		},
+		{
+			name:    "slice - struct",
+			a:       []St{},
+			b:       St{},
+			wantErr: true,
+		},
+		{
+			name: "slice with pointer - same",
+			a:    []*St{},
+			b:    []*St{},
+		},
+		{
+			name:    "slice with pointer - different",
+			a:       []*St{},
+			b:       []*StA{},
+			wantErr: true,
+		},
+		{
+			name:    "slice with pointer - slice with struct",
+			a:       []*St{},
+			b:       []St{},
+			wantErr: true,
+		},
+		{
+			name:    "slice with pointer - pointer to struct",
+			a:       []*St{},
+			b:       &St{},
+			wantErr: true,
+		},
+		{
+			name: "struct - same",
+			a:    St{},
+			b:    St{},
+		},
+		{
+			name:    "struct - missing field",
+			a:       St{},
+			b:       StA{},
+			wantErr: true,
+		},
+		{
+			name: "struct - subType",
+			a:    teststruct.St{},
+			b:    St{},
+		},
+		{
+			name:    "struct - inner struct different",
+			a:       teststruct.StA{},
+			b:       StA{},
+			wantErr: true,
+		},
+		{
+			name: "pointer - same",
+			a:    &St{},
+			b:    &St{},
+		},
+		{
+			name:    "pointer - different",
+			a:       &St{},
+			b:       &StA{},
+			wantErr: true,
+		},
+		{
+			name:    "pointer - inner struct different",
+			a:       &teststruct.StA{},
+			b:       &StA{},
+			wantErr: true,
+		},
+		{
+			name:    "pointer - type",
+			a:       &St{},
+			b:       St{},
+			wantErr: true,
+		},
+		{
+			name: "map - same",
+			a:    map[string]St{},
+			b:    map[string]St{},
+		},
+		{
+			name:    "map - different key",
+			a:       map[string]St{},
+			b:       map[int]St{},
+			wantErr: true,
+		},
+		{
+			name:    "map - different value",
+			a:       map[string]int{},
+			b:       map[string]St{},
+			wantErr: true,
+		},
+		{
+			name:    "map - value as a pointer",
+			a:       map[string]*St{},
+			b:       map[string]St{},
+			wantErr: true,
+		},
+		{
+			name: "map - key as a pointer",
+			a:    map[*St]string{},
+			b:    map[*St]string{},
+		},
+		{
+			name:    "map - pointer to map",
+			a:       map[int]string{},
+			b:       &map[int]string{},
+			wantErr: true,
+		},
+		{
+			name:    "map - slice of key type",
+			a:       map[int]string{},
+			b:       []int{},
+			wantErr: true,
+		},
+		{
+			name:    "map - slice of value type",
+			a:       map[int]string{},
+			b:       []string{},
+			wantErr: true,
+		},
+		{
+			name:    "map - basic key type",
+			a:       map[int]string{},
+			b:       int(0),
+			wantErr: true,
+		},
+		{
+			name:    "map - basic value type",
+			a:       map[int]string{},
+			b:       "string",
+			wantErr: true,
+		},
+		{
+			name:    "channel",
+			a:       make(chan int),
+			b:       make(chan int),
+			wantErr: true,
+		},
+		{
+			name:    "func",
+			a:       func() {},
+			b:       func() {},
+			wantErr: true,
+		},
+		{
+			name: "bool",
+			a:    true,
+			b:    false,
+		},
+		{
+			name:    "bool - int",
+			a:       true,
+			b:       intVar,
+			wantErr: true,
+		},
+		{
+			name:    "bool - pointer",
+			a:       true,
+			b:       &intVar,
+			wantErr: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := CheckStructuralSubset(Path{}, reflect.TypeOf(tc.a), reflect.TypeOf(tc.b))
+			gotErr := err != nil
+			if gotErr != tc.wantErr {
+				t.Fatalf("CheckStructuralSubset() = %v; gotErr = %t, want %t", err, gotErr, tc.wantErr)
 			}
 		})
 	}

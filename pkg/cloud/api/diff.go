@@ -41,6 +41,18 @@ func diff[T any](a, b *T, trait *FieldTraits) (*DiffResult, error) {
 	return d.result, nil
 }
 
+func diffStructs[A any, B any](a *A, b *B) (*DiffResult, error) {
+	d := &differ[A]{
+		traits: &FieldTraits{},
+		result: &DiffResult{},
+	}
+	err := d.do(Path{}, reflect.ValueOf(a), reflect.ValueOf(b))
+	if err != nil {
+		return nil, err
+	}
+	return d.result, nil
+}
+
 // DiffResult gives a list of elements that differ.
 type DiffResult struct {
 	Items []DiffItem
@@ -55,10 +67,22 @@ func (r *DiffResult) add(state DiffItemState, p Path, a, b reflect.Value) {
 		Path:  p,
 	}
 	if a.IsValid() {
-		di.A = a.Interface()
+		// Interface() will panic if is called on unexported types in this case
+		// the best we can do is to pass its name to the result.
+		if a.CanInterface() {
+			di.A = a.Interface()
+		} else {
+			di.A = a.String()
+		}
 	}
 	if b.IsValid() {
-		di.B = b.Interface()
+		// Interface() will panic if is called on unexported types in this case
+		// the best we can do is to pass its name to the result.
+		if b.CanInterface() {
+			di.B = b.Interface()
+		} else {
+			di.B = b.String()
+		}
 	}
 	r.Items = append(r.Items, di)
 }
@@ -124,18 +148,22 @@ func (d *differ[T]) do(p Path, av, bv reflect.Value) error {
 		for i := 0; i < av.NumField(); i++ {
 			afv := av.Field(i)
 			aft := av.Type().Field(i)
-			bfv := bv.Field(i)
-			fp := p.Field(aft.Name)
 
 			if aft.Name == "NullFields" || aft.Name == "ForceSendFields" {
 				continue
 			}
 
+			fp := p.Field(aft.Name)
 			switch d.traits.fieldType(fp) {
 			case FieldTypeOutputOnly, FieldTypeSystem:
 				continue
 			}
 
+			bfv := bv.FieldByName(aft.Name)
+			if !bfv.IsValid() {
+				d.result.add(DiffItemOnlyInA, p, av, bv)
+				continue
+			}
 			if err := d.do(fp, afv, bfv); err != nil {
 				return fmt.Errorf("differ struct %p: %w", fp, err)
 			}
@@ -178,7 +206,7 @@ func (d *differ[T]) do(p Path, av, bv reflect.Value) error {
 		for _, amk := range av.MapKeys() {
 			amv := av.MapIndex(amk)
 			bmv := bv.MapIndex(amk)
-			mp := p.MapIndex(amk.Interface())
+			mp := p.MapIndex(amk)
 
 			if !bmv.IsValid() {
 				d.result.add(DiffItemDifferent, mp, amv, bmv)

@@ -308,14 +308,41 @@ func (u *mutableResource[GA, Alpha, Beta]) AccessBeta(f func(x *Beta)) error {
 // This is determined by the convertibility of the resource.
 //
 // Note:
-//   - CheckSchema validates that GA is not a PlaceholderType and that it is
-//     convertible to Alpha and Beta so we don't need to do this check here.
-//   - Nothing converts to PlaceholderType.
+//   - convertible     - resource converts to desired version without and error
+//   - error           - resource converts to desired version with and error
+//   - PlaceholderType - resource version is of type PlaceholderType
+//   - Disallowed      - resource state is validated in CheckSchema and it
+//     is not checked in ImpliedVersion()
 //
-// Imply rules:
-// * It is GA version if it is possible to convert to GA
-// * It is Beta if the resource is not convertible to GA but convertible to Beta.
-// * It is Alpha if the resource is not convertible to GA and Beta.
+// Implied version | GA              | Beta            | Alpha
+// ---------------------------------------------------------------------
+// GA              | convertible     | convertible     | convertible
+// GA              | convertible     | convertible     | PlaceholderType
+// GA              | convertible     | PlaceholderType | convertible
+// GA              | convertible     | PlaceholderType | PlaceholderType
+// ---------------------------------------------------------------------
+// Beta            | error           | convertible     | convertible
+// Beta            | error           | convertible     | error
+// Beta            | error           | convertible     | PlaceholderType
+// ---------------------------------------------------------------------
+// Alpha           | error           | error           | convertible
+// Alpha           | error           | PlaceholderType | convertible
+// ---------------------------------------------------------------------
+// Disallowed      | PlaceholderType | convertible     | convertible
+// Disallowed      | PlaceholderType | convertible     | error
+// Disallowed      | PlaceholderType | error           | convertible
+// Disallowed      | PlaceholderType | error           | error
+// Disallowed      | PlaceholderType | PlaceholderType | error
+// Disallowed      | PlaceholderType | PlaceholderType | convertible
+// Disallowed      | PlaceholderType | error           | PlaceholderType
+// Disallowed      | PlaceholderType | convertible     | PlaceholderType
+// Disallowed      | PlaceholderType | PlaceholderType | PlaceholderType
+// ---------------------------------------------------------------------
+// Disallowed      | error           | convertible     | convertible
+// Disallowed      | error           | convertible     | error
+// Disallowed      | error           | error           | convertible
+// ---------------------------------------------------------------------
+// Error           | error           | error           | error
 func (u *mutableResource[GA, Alpha, Beta]) ImpliedVersion() (meta.Version, error) {
 	_, gaErr := u.ToGA()
 	if gaErr == nil {

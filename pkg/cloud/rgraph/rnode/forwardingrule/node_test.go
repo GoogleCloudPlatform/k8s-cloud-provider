@@ -125,6 +125,7 @@ func TestDiffAndActions(t *testing.T) {
 		x.ForceSendFields = []string{
 			"AllPorts",
 			"AllowGlobalAccess",
+			"AllowPscGlobalAccess",
 			"AllPorts",
 			"BackendService",
 			"Description",

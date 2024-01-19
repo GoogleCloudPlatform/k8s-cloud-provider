@@ -26,9 +26,6 @@ build: gen
 	go build ./...
 	mkdir -p bin
 
-# COVTMP is the temp file used to check coverage.
-COVTMP := $(shell mktemp)
-
 .PHONY: test
 test: gen
 	# Test only the library. e2e must be run in a special environment,
@@ -38,9 +35,7 @@ test: gen
 	# golint ./...
 	go vet ./...
 	# Coverage
-	go test -cover ./pkg/... > $(COVTMP)
-	go run ./tools/checkcov.go -configFile ./tools/checkcov.yaml -covFile $(COVTMP)
-	rm -f $(COVTMP)
+	./tools/checkcov
 
 .PHONY: clean
 clean:

@@ -40,6 +40,7 @@ var (
 	coverageOutputFile  = flag.String("covFile", "", "Output of go test -cover")
 	configFile          = flag.String("configFile", "", "Configuration file")
 	defaultCovThreshold = flag.Int("defaultCovThreshold", 80, "Default coverage percent.")
+	packagePrefix       = flag.String("packagePrefix", "", "Prefix of the go package")
 )
 
 const (
@@ -140,7 +141,8 @@ func checkOrDie(cov coverageResult, cfg *configFileData) {
 	var hasErr bool
 
 	for pkg, value := range cov {
-		entry, ok := cfg.Entries[pkg]
+		shortName := strings.TrimPrefix(pkg, *packagePrefix)
+		entry, ok := cfg.Entries[shortName]
 		if !ok {
 			// If an entry does not exist, assume default threshold.
 			entry = &covEntry{Expected: *defaultCovThreshold}

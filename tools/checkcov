@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -e
+shopt -s nullglob # empty glob expands to empty string
+
+out=$(mktemp)
+cleanup() {
+  rm "${out}"
+}
+trap cleanup EXIT
+
+for package in $(find ./pkg -type d); do
+  files=(${package}/*.go)
+  if [[ -z "${files}" ]]; then
+    echo "Skipping ${package}: no go files"
+    continue
+  fi
+  go test -cover "${package}" >> "${out}"
+done
+
+go run ./tools/checkcov.go \
+  -configFile ./tools/checkcov.yaml \
+  -covFile "${out}" \
+  -packagePrefix "github.com/GoogleCloudPlatform/k8s-cloud-provider/"

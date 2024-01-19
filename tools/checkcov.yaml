@@ -1,59 +1,28 @@
 entries:
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud":
-        expected: 20 # generated code has low coverage
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/gen":
-        expected: 0 # Should be factored so it can be tested.
+    # generated code has low coverage
+    "pkg/cloud": { expected: 20 }
+    # Should be factored so it can be tested.
+    "pkg/cloud/gen": { expected: 0 }
+
     # can be improved
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/workflow/plan":
-        expected: 70
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/forwardingrule":
-        expected: 50
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/meta":
-        expected: 50
+    "pkg/cloud/rgraph/workflow/plan": { expected: 70 }
+    "pkg/cloud/rgraph/rnode/forwardingrule": { expected: 70 }
+    "pkg/cloud/rgraph/algo/trclosure": { expected: 70 }
+
     # low coverage packages
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/algo/localplan":
-        expected: 60
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph":
-        expected: 50
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/algo/traversal":
-        expected: 50
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode":
-        expected: 40
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/workflow/plan":
-        expected: 40
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/workflow/testlib":
-        expected: 40
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/algo/trclosure":
-        expected: 30
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/address":
-        expected: 20
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/algo/actions":
-        expected: 30
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode":
-        expected: 10
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/mock":
-        expected: 0
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/algo/graphviz":
-        expected: 0
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/algo/snapshot":
-        expected: 0
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/all":
-        expected: 0
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/backendservice":
-        expected: 0
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/fake":
-        expected: 0
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/healthcheck":
-        expected: 0
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/networkendpointgroup":
-        expected: 0
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/targethttpproxy":
-        expected: 0
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/urlmap":
-        expected: 0
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/testing/ez":
-        expected: 0
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/workflow/testlib":
-        expected: 0
-    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/workflow/testlib/lb":
-        expected: 0
+    "pkg/cloud/meta": { expected: 50 }
+    "pkg/cloud/mock": { expected: 0 }
+    "pkg/cloud/rgraph/algo/graphviz": { expected: 0 }
+    "pkg/cloud/rgraph/algo/snapshot": { expected: 0 }
+    "pkg/cloud/rgraph/rnode": { expected: 10 }
+    "pkg/cloud/rgraph/rnode/address": { expected: 20 }
+    "pkg/cloud/rgraph/rnode/all": { expected: 0 }
+    "pkg/cloud/rgraph/rnode/backendservice": { expected: 0 }
+    "pkg/cloud/rgraph/rnode/fake": { expected: 0 }
+    "pkg/cloud/rgraph/rnode/healthcheck": { expected: 0 }
+    "pkg/cloud/rgraph/rnode/networkendpointgroup": { expected: 0 }
+    "pkg/cloud/rgraph/rnode/targethttpproxy": { expected: 0 }
+    "pkg/cloud/rgraph/rnode/urlmap": { expected: 0 }
+    "pkg/cloud/rgraph/testing/ez": { expected: 0 }
+    "pkg/cloud/rgraph/workflow/testlib": { expected: 0 }
+    "pkg/cloud/rgraph/workflow/testlib/lb": { expected: 0 }

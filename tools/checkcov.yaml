@@ -7,7 +7,6 @@ entries:
     # can be improved
     "pkg/cloud/rgraph/workflow/plan": { expected: 70 }
     "pkg/cloud/rgraph/rnode/forwardingrule": { expected: 70 }
-    "pkg/cloud/rgraph/algo/trclosure": { expected: 70 }
 
     # low coverage packages
     "pkg/cloud/meta": { expected: 50 }
@@ -26,3 +25,4 @@ entries:
     "pkg/cloud/rgraph/testing/ez": { expected: 0 }
     "pkg/cloud/rgraph/workflow/testlib": { expected: 0 }
     "pkg/cloud/rgraph/workflow/testlib/lb": { expected: 0 }
+    "pkg/cloud/api/converter_test_types": { expected: 0 }

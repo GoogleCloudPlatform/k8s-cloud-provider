@@ -190,3 +190,105 @@ func TestDiff(t *testing.T) {
 		})
 	}
 }
+
+func TestDiffForStructWithUnexportedFields(t *testing.T) {
+	t.Parallel()
+
+	type sti struct {
+		A int
+		b []string
+	}
+
+	type st struct {
+		I int
+		S sti
+
+		ls []string
+		M  map[string]string
+		m  map[string]string
+		si sti
+	}
+
+	for _, tc := range []struct {
+		name     string
+		a        st
+		b        st
+		wantDiff bool
+		wantErr  bool
+	}{
+		{
+			name:     "empty",
+			a:        st{},
+			b:        st{},
+			wantDiff: false,
+		},
+		{
+			name:     "exported eq",
+			a:        st{I: 1},
+			b:        st{I: 1},
+			wantDiff: false,
+		},
+		{
+			name:     "exported not eq",
+			a:        st{I: 1},
+			b:        st{I: 3},
+			wantDiff: true,
+		},
+		{
+			name:     "unexported map eq",
+			a:        st{m: map[string]string{"a": "b"}},
+			b:        st{m: map[string]string{"a": "b"}},
+			wantDiff: false,
+		},
+		{
+			name:     "exported map not eq",
+			a:        st{M: map[string]string{"a": "b"}},
+			b:        st{M: map[string]string{"a": "c"}},
+			wantDiff: true,
+		},
+		{
+			name:     "unexported map not eq",
+			a:        st{m: map[string]string{"a": "b"}},
+			b:        st{m: map[string]string{"c": "b"}},
+			wantDiff: true,
+		},
+		{
+			name:     "unexported struct eq",
+			a:        st{si: sti{A: 5}},
+			b:        st{si: sti{A: 5}},
+			wantDiff: false,
+		},
+		{
+			name:     "unexported struct not eq",
+			a:        st{si: sti{A: 5}},
+			b:        st{si: sti{A: 6}},
+			wantDiff: true,
+		},
+		{
+			name:     "unexported embedded in struct eq",
+			a:        st{S: sti{A: 5, b: []string{"6"}}},
+			b:        st{S: sti{A: 5, b: []string{"6"}}},
+			wantDiff: false,
+		},
+		{
+			name:     "unexported embedded in struct not eq",
+			a:        st{S: sti{A: 5, b: []string{"6"}}},
+			b:        st{S: sti{A: 5, b: []string{"7"}}},
+			wantDiff: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r, err := diff(&tc.a, &tc.b, nil)
+			gotErr := err != nil
+			if gotErr != tc.wantErr {
+				t.Fatalf("Diff() = %v; gotErr = %t, want %t", err, gotErr, tc.wantErr)
+			}
+			if gotErr {
+				return
+			}
+			if r.HasDiff() != tc.wantDiff {
+				t.Errorf("HasDiff = %t, want %t. diff = %s", r.HasDiff(), tc.wantDiff, pretty.Sprint(r))
+			}
+		})
+	}
+}

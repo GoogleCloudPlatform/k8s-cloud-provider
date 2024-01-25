@@ -43,3 +43,5 @@ entries:
         expected: 0
     "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/workflow/testlib/lb":
         expected: 0
+    "github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/api/converter_test_types":
+        expected: 0

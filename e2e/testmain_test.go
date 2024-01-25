@@ -23,6 +23,8 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
@@ -38,11 +40,15 @@ var (
 	theCloud cloud.Cloud
 	// testFlags passed in from the command line.
 	testFlags = struct {
-		project        string
-		resourcePrefix string
+		project            string
+		resourcePrefix     string
+		boskosResourceType string
+		inProw             bool
 	}{
-		project:        "",
-		resourcePrefix: "k8scp-",
+		project:            "",
+		resourcePrefix:     "k8scp-",
+		boskosResourceType: "gke-internal-project",
+		inProw:             false,
 	}
 	runID string
 )
@@ -50,8 +56,10 @@ var (
 func init() {
 	klog.InitFlags(flag.CommandLine)
 
-	flag.StringVar(&testFlags.project, "project", testFlags.project, "GCP project ID")
+	flag.BoolVar(&testFlags.inProw, "run-in-prow", testFlags.inProw, "is the test running in PROW")
+	flag.StringVar(&testFlags.project, "project", testFlags.project, "GCP project ID. Only valid when run-in-prow is false.")
 	flag.StringVar(&testFlags.resourcePrefix, "resourcePrefix", testFlags.resourcePrefix, "Prefix used to name all resources created in the tests. Any resources with this prefix will be removed during cleanup.")
+	flag.StringVar(&testFlags.boskosResourceType, "boskos-resource-typ", testFlags.boskosResourceType, "name of the boskos resource type to reserve. Only valid when run-in-prow is true")
 
 	runID = fmt.Sprintf("%0x", rand.Int63()&0xffff)
 }
@@ -59,8 +67,8 @@ func init() {
 func parseFlagsOrDie() {
 	flag.Parse()
 
-	if testFlags.project == "" {
-		fmt.Println("-project must be set")
+	if testFlags.inProw && testFlags.project == "" {
+		fmt.Println("-project must be set for test not run in prow")
 		os.Exit(1)
 	}
 }
@@ -69,8 +77,56 @@ func resourceName(name string) string {
 	return testFlags.resourcePrefix + runID + "-" + name
 }
 
+func setEnvProject(project string) error {
+	if out, err := exec.Command("gcloud", "config", "set", "project", project).CombinedOutput(); err != nil {
+		return fmt.Errorf("SetEnvProject(%q) failed: %q: %w", project, out, err)
+	}
+
+	return os.Setenv("PROJECT", project)
+}
+
 func TestMain(m *testing.M) {
 	parseFlagsOrDie()
+
+	if testFlags.inProw {
+		ph, err := newProjectHolder()
+		if err != nil {
+			klog.Fatalf("newProjectHolder()=%v, want nil", err)
+		}
+		testFlags.project = ph.AcquireOrDie(testFlags.boskosResourceType)
+		defer func() {
+			out, err := exec.Command("bash", "test/cleanup-all.sh").CombinedOutput()
+			if err != nil {
+				// Fail now because we shouldn't continue testing if any step fails.
+				klog.Errorf("failed to run ./test/cleanup-all.sh: %q, err: %v", out, err)
+			}
+			ph.Release()
+		}()
+
+		if _, ok := os.LookupEnv("USER"); !ok {
+			if err := os.Setenv("USER", "prow"); err != nil {
+				klog.Fatalf("failed to set user in prow to prow: %v, want nil", err)
+			}
+		}
+
+		output, err := exec.Command("gcloud", "config", "get-value", "project").CombinedOutput()
+		if err != nil {
+			klog.Fatalf("failed to get gcloud project: %q: %v, want nil", string(output), err)
+		}
+		oldProject := strings.TrimSpace(string(output))
+		klog.Infof("Using project %s for testing. Restore to existing project %s after testing.", testFlags.project, oldProject)
+
+		if err := setEnvProject(testFlags.project); err != nil {
+			klog.Fatalf("setEnvProject(%q) failed: %v, want nil", testFlags.project, err)
+		}
+
+		// After the test, reset the project
+		defer func() {
+			if err := setEnvProject(oldProject); err != nil {
+				klog.Errorf("setEnvProject(%q) failed: %v, want nil", oldProject, err)
+			}
+		}()
+	}
 
 	ctx := context.Background()
 	client, err := google.DefaultClient(ctx, compute.ComputeScope)

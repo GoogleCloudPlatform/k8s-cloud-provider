@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+BOSKOS_RESOURCE_TYPE ?= gke-internal-project
+RUN_IN_PROW ?= false
+PROJECT ?= ""
+
 all: gen build test
 
 .PHONY: gen
@@ -36,6 +40,15 @@ test: gen
 	go vet ./...
 	# Coverage
 	./tools/checkcov
+
+.PHONY: e2e
+e2e:
+	go test ./e2e/... \
+	-run-in-prow=$(RUN_IN_PROW) \
+	-project=$(PROJECT) \
+	-boskos-resource-type=$(BOSKOS_RESOURCE_TYPE) \
+	-test.timeout=180m \
+	-test.parallel=100 \
 
 .PHONY: clean
 clean:

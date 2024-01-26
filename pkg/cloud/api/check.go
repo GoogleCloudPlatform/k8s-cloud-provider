@@ -174,8 +174,14 @@ func checkSchema(t reflect.Type) error {
 
 // CheckStructuralSubset checks if type From is the subset of To type. Type is a
 // subset of another if it contains fields with the same type and name. This
-// function is not symmetric. Path parameter is used for better error reporting.
-func CheckStructuralSubset(p Path, from, to reflect.Type) error {
+// function is not symmetric.
+func CheckStructuralSubset(from, to reflect.Type) error {
+	return checkStructuralSubsetImpl(Path{}, from, to)
+}
+
+// checkStructuralSubsetImpl this is recursive function to check if type From is
+// a subset of To type. Path parameter is used for better error reporting.
+func checkStructuralSubsetImpl(p Path, from, to reflect.Type) error {
 	if from.Kind() != to.Kind() {
 		return fmt.Errorf("%s has different type: %v != %v", p, from.Kind(), to.Kind())
 	}
@@ -184,7 +190,7 @@ func CheckStructuralSubset(p Path, from, to reflect.Type) error {
 	}
 	switch from.Kind() {
 	case reflect.Pointer:
-		return CheckStructuralSubset(p.Pointer(), from.Elem(), to.Elem())
+		return checkStructuralSubsetImpl(p.Pointer(), from.Elem(), to.Elem())
 
 	case reflect.Struct:
 		for i := 0; i < from.NumField(); i++ {
@@ -193,22 +199,22 @@ func CheckStructuralSubset(p Path, from, to reflect.Type) error {
 			if !exist {
 				return fmt.Errorf("%s: type %T does not have field %v", p.String(), to, af.Name)
 			}
-			if err := CheckStructuralSubset(p.Field(af.Name), af.Type, bf.Type); err != nil {
+			if err := checkStructuralSubsetImpl(p.Field(af.Name), af.Type, bf.Type); err != nil {
 				return err
 			}
 		}
 		return nil
 
 	case reflect.Slice, reflect.Array:
-		return CheckStructuralSubset(p.AnySliceIndex(), from.Elem(), to.Elem())
+		return checkStructuralSubsetImpl(p.AnySliceIndex(), from.Elem(), to.Elem())
 
 	case reflect.Map:
 		path := p.AnyMapIndex()
-		err := CheckStructuralSubset(path, from.Key(), to.Key())
+		err := checkStructuralSubsetImpl(path, from.Key(), to.Key())
 		if err != nil {
 			return err
 		}
-		return CheckStructuralSubset(path, from.Elem(), to.Elem())
+		return checkStructuralSubsetImpl(path, from.Elem(), to.Elem())
 	}
 	return fmt.Errorf("%s Unsupported type %v", p.String(), from.Kind())
 }

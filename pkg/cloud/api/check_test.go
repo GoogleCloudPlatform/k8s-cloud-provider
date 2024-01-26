@@ -528,7 +528,7 @@ func TestConvertToT(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := CheckStructuralSubset(Path{}, reflect.TypeOf(tc.a), reflect.TypeOf(tc.b))
+			err := CheckStructuralSubset(reflect.TypeOf(tc.a), reflect.TypeOf(tc.b))
 			gotErr := err != nil
 			if gotErr != tc.wantErr {
 				t.Fatalf("CheckStructuralSubset() = %v; gotErr = %t, want %t", err, gotErr, tc.wantErr)

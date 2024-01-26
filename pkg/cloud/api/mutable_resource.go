@@ -222,7 +222,7 @@ func (u *mutableResource[GA, Alpha, Beta]) CheckSchema() error {
 
 func checkSubsetOf[T1 any, T2 any](t1 *T1, t2 *T2) error {
 
-	return CheckStructuralSubset(Path{}, reflect.TypeOf(t1), reflect.TypeOf(t2))
+	return CheckStructuralSubset(reflect.TypeOf(t1), reflect.TypeOf(t2))
 }
 
 func (u *mutableResource[GA, Alpha, Beta]) ResourceID() *cloud.ResourceID { return u.resourceID }

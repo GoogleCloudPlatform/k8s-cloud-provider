@@ -59,12 +59,13 @@ func createNotExistingFakeNode() Node {
 	return &fn
 }
 
-func dropRefEventList(toRefs []string) exec.EventList {
+func updateEventList(toRefs []string) exec.EventList {
 	var events exec.EventList
 	from := globalID("fn")
 	for _, to := range toRefs {
 		events = append(events, exec.NewDropRefEvent(from, globalID(to)))
 	}
+	events = append(events, exec.NewExistsEvent(from))
 	return events
 }
 
@@ -150,38 +151,40 @@ func TestUpdatePreconditions(t *testing.T) {
 		wantEvents exec.EventList
 	}{
 		{
-			desc:    "node's without outefs",
-			oldNode: createFakeNode(nil),
-			newNode: createFakeNode(nil),
+			desc:       "node's without outefs",
+			oldNode:    createFakeNode(nil),
+			newNode:    createFakeNode(nil),
+			wantEvents: updateEventList([]string{}),
 		},
 		{
-			desc:    "node's with added outefs",
-			oldNode: createFakeNode(nil),
-			newNode: createFakeNode([]string{"a", "b"}),
+			desc:       "node's with added outefs",
+			oldNode:    createFakeNode(nil),
+			newNode:    createFakeNode([]string{"a", "b"}),
+			wantEvents: updateEventList([]string{}),
 		},
 		{
 			desc:       "node's with deleted outefs",
 			oldNode:    createFakeNode([]string{"a", "b"}),
 			newNode:    createFakeNode(nil),
-			wantEvents: dropRefEventList([]string{"a", "b"}),
+			wantEvents: updateEventList([]string{"a", "b"}),
 		},
 		{
 			desc:       "node's with deleted first outefs",
 			oldNode:    createFakeNode([]string{"a", "b"}),
 			newNode:    createFakeNode([]string{"b"}),
-			wantEvents: dropRefEventList([]string{"a"}),
+			wantEvents: updateEventList([]string{"a"}),
 		},
 		{
 			desc:       "node's with deleted outefs, random order",
 			oldNode:    createFakeNode([]string{"a", "b", "c"}),
 			newNode:    createFakeNode([]string{"b", "a"}),
-			wantEvents: dropRefEventList([]string{"c"}),
+			wantEvents: updateEventList([]string{"c"}),
 		},
 		{
 			desc:       "node's with replaced outefs",
 			oldNode:    createFakeNode([]string{"a", "b", "c"}),
 			newNode:    createFakeNode([]string{"a", "b", "e"}),
-			wantEvents: dropRefEventList([]string{"c"}),
+			wantEvents: updateEventList([]string{"c"}),
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {

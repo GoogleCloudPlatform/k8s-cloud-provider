@@ -132,6 +132,7 @@ func postUpdateActionEvents(got, want Node) exec.EventList {
 			events = append(events, exec.NewDropRefEvent(wantRef.From, wantRef.To))
 		}
 	}
-
+	// emit EventExists
+	events = append(events, exec.NewExistsEvent(want.ID()))
 	return events
 }

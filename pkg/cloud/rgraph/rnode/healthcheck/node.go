@@ -47,10 +47,9 @@ func (n *healthCheckNode) Diff(gotNode rnode.Node) (*rnode.PlanDetails, error) {
 	}
 
 	if diff.HasDiff() {
-		// TODO: handle set labels with an update operation.
 		return &rnode.PlanDetails{
-			Operation: rnode.OpRecreate,
-			Why:       "HealthCheck needs to be recreated (no update method exists)",
+			Operation: rnode.OpUpdate,
+			Why:       "HealthCheck update",
 			Diff:      diff,
 		}, nil
 	}
@@ -78,7 +77,7 @@ func (n *healthCheckNode) Actions(got rnode.Node) ([]exec.Action, error) {
 		return rnode.RecreateActions[compute.HealthCheck, alpha.HealthCheck, beta.HealthCheck](&healthCheckOps{}, got, n, n.resource)
 
 	case rnode.OpUpdate:
-		// TODO
+		return rnode.UpdateActions[compute.HealthCheck, alpha.HealthCheck, beta.HealthCheck](&healthCheckOps{}, got, n, n.resource)
 	}
 
 	return nil, fmt.Errorf("HealthCheckNode: invalid plan op %s", op)

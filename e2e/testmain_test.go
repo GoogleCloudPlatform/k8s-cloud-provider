@@ -59,7 +59,7 @@ func init() {
 	flag.BoolVar(&testFlags.inProw, "run-in-prow", testFlags.inProw, "is the test running in PROW")
 	flag.StringVar(&testFlags.project, "project", testFlags.project, "GCP project ID. Only valid when run-in-prow is false.")
 	flag.StringVar(&testFlags.resourcePrefix, "resourcePrefix", testFlags.resourcePrefix, "Prefix used to name all resources created in the tests. Any resources with this prefix will be removed during cleanup.")
-	flag.StringVar(&testFlags.boskosResourceType, "boskos-resource-typ", testFlags.boskosResourceType, "name of the boskos resource type to reserve. Only valid when run-in-prow is true")
+	flag.StringVar(&testFlags.boskosResourceType, "boskos-resource-type", testFlags.boskosResourceType, "name of the boskos resource type to reserve. Only valid when run-in-prow is true")
 
 	runID = fmt.Sprintf("%0x", rand.Int63()&0xffff)
 }
@@ -67,7 +67,7 @@ func init() {
 func parseFlagsOrDie() {
 	flag.Parse()
 
-	if testFlags.inProw && testFlags.project == "" {
+	if !testFlags.inProw && testFlags.project == "" {
 		fmt.Println("-project must be set for test not run in prow")
 		os.Exit(1)
 	}

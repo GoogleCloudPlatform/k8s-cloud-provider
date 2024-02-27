@@ -43,12 +43,14 @@ test: gen
 
 .PHONY: e2e
 e2e:
-	go test ./e2e/... \
-	-run-in-prow=$(RUN_IN_PROW) \
-	-project=$(PROJECT) \
-	-boskos-resource-type=$(BOSKOS_RESOURCE_TYPE) \
-	-test.timeout=180m \
-	-test.parallel=100 \
+	go test \
+	  -test.timeout=180m \
+	  -test.parallel=100 \
+	  -test.v \
+	  ./e2e/... \
+	  -run-in-prow=$(RUN_IN_PROW) \
+	  -project=$(PROJECT) \
+	  -boskos-resource-type=$(BOSKOS_RESOURCE_TYPE)
 
 .PHONY: clean
 clean:

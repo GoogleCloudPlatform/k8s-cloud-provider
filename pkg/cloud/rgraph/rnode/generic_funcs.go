@@ -243,6 +243,7 @@ func (f *UpdateFuncs[GA, Alpha, Beta]) Do(
 			if fv, err := fingerprintField(reflect.ValueOf(raw)); err != nil {
 				return err
 			} else {
+				klog.Infof("Set fingerprint to %s", fingerprint)
 				fv.Set(reflect.ValueOf(fingerprint))
 			}
 		}

@@ -77,7 +77,7 @@ func (n *healthCheckNode) Actions(got rnode.Node) ([]exec.Action, error) {
 		return rnode.RecreateActions[compute.HealthCheck, alpha.HealthCheck, beta.HealthCheck](&healthCheckOps{}, got, n, n.resource)
 
 	case rnode.OpUpdate:
-		return rnode.UpdateActions[compute.HealthCheck, alpha.HealthCheck, beta.HealthCheck](&healthCheckOps{}, got, n, n.resource)
+		return rnode.UpdateActions[compute.HealthCheck, alpha.HealthCheck, beta.HealthCheck](&healthCheckOps{}, got, n, n.resource, "")
 	}
 
 	return nil, fmt.Errorf("HealthCheckNode: invalid plan op %s", op)

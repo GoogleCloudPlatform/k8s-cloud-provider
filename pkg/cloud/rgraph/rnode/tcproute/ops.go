@@ -56,6 +56,7 @@ func (*tcpRouteOps) UpdateFuncs(gcp cloud.Cloud) *rnode.UpdateFuncs[networkservi
 		Beta: rnode.UpdateFuncsByScope[beta.TcpRoute]{
 			Global: gcp.BetaTcpRoutes().Patch,
 		},
+		Options: rnode.UpdateFuncsNoFingerprint,
 	}
 }
 

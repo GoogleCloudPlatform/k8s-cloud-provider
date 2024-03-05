@@ -62,10 +62,12 @@ type DiffResult struct {
 func (r *DiffResult) HasDiff() bool { return len(r.Items) > 0 }
 
 func (r *DiffResult) add(state DiffItemState, p Path, a, b reflect.Value) {
+
 	di := DiffItem{
 		State: state,
-		Path:  p,
+		Path:  make([]string, len(p)),
 	}
+	copy(di.Path, p)
 	if a.IsValid() {
 		// Interface() will panic if is called on unexported types in this case
 		// the best we can do is to pass its name to the result.

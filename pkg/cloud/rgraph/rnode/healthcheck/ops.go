@@ -63,15 +63,15 @@ func (*healthCheckOps) CreateFuncs(gcp cloud.Cloud) *rnode.CreateFuncs[compute.H
 func (*healthCheckOps) UpdateFuncs(gcp cloud.Cloud) *rnode.UpdateFuncs[compute.HealthCheck, alpha.HealthCheck, beta.HealthCheck] {
 	return &rnode.UpdateFuncs[compute.HealthCheck, alpha.HealthCheck, beta.HealthCheck]{
 		GA: rnode.UpdateFuncsByScope[compute.HealthCheck]{
-			Global:   gcp.HealthChecks().Insert,
+			Global:   gcp.HealthChecks().Update,
 			Regional: gcp.RegionHealthChecks().Update,
 		},
 		Alpha: rnode.UpdateFuncsByScope[alpha.HealthCheck]{
-			Global:   gcp.AlphaHealthChecks().Insert,
+			Global:   gcp.AlphaHealthChecks().Update,
 			Regional: gcp.AlphaRegionHealthChecks().Update,
 		},
 		Beta: rnode.UpdateFuncsByScope[beta.HealthCheck]{
-			Global:   gcp.BetaHealthChecks().Insert,
+			Global:   gcp.BetaHealthChecks().Update,
 			Regional: gcp.BetaRegionHealthChecks().Update,
 		},
 		Options: rnode.UpdateFuncsNoFingerprint,

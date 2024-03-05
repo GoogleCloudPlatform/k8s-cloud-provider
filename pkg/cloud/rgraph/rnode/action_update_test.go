@@ -59,16 +59,17 @@ func createNotExistingFakeNode() Node {
 	return &fn
 }
 
-func dropRefEventList(toRefs []string) exec.EventList {
+func updateEventList(toRefs ...string) exec.EventList {
 	var events exec.EventList
 	from := globalID("fn")
 	for _, to := range toRefs {
 		events = append(events, exec.NewDropRefEvent(from, globalID(to)))
 	}
+	events = append(events, exec.NewExistsEvent(from))
 	return events
 }
 
-func newExistsEventList(toRefs []string) exec.EventList {
+func newExistsEventList(toRefs ...string) exec.EventList {
 	var events exec.EventList
 	for _, to := range toRefs {
 		events = append(events, exec.NewExistsEvent(globalID(to)))
@@ -93,7 +94,7 @@ func TestPostUpdateActions(t *testing.T) {
 			desc:       "node's with added outefs",
 			oldNode:    createFakeNode(nil),
 			newNode:    createFakeNode([]string{"a", "b"}),
-			wantEvents: newExistsEventList([]string{"a", "b"}),
+			wantEvents: newExistsEventList("a", "b"),
 		},
 		{
 			desc:    "node's with deleted outefs",
@@ -104,7 +105,7 @@ func TestPostUpdateActions(t *testing.T) {
 			desc:       "node's with replaced outef",
 			oldNode:    createFakeNode([]string{"a", "b"}),
 			newNode:    createFakeNode([]string{"a", "c"}),
-			wantEvents: newExistsEventList([]string{"a", "c"}),
+			wantEvents: newExistsEventList("a", "c"),
 		},
 		{
 			desc:    "nodes don't exist",
@@ -150,38 +151,40 @@ func TestUpdatePreconditions(t *testing.T) {
 		wantEvents exec.EventList
 	}{
 		{
-			desc:    "node's without outefs",
-			oldNode: createFakeNode(nil),
-			newNode: createFakeNode(nil),
+			desc:       "node's without outefs",
+			oldNode:    createFakeNode(nil),
+			newNode:    createFakeNode(nil),
+			wantEvents: updateEventList(),
 		},
 		{
-			desc:    "node's with added outefs",
-			oldNode: createFakeNode(nil),
-			newNode: createFakeNode([]string{"a", "b"}),
+			desc:       "node's with added outefs",
+			oldNode:    createFakeNode(nil),
+			newNode:    createFakeNode([]string{"a", "b"}),
+			wantEvents: updateEventList(),
 		},
 		{
 			desc:       "node's with deleted outefs",
 			oldNode:    createFakeNode([]string{"a", "b"}),
 			newNode:    createFakeNode(nil),
-			wantEvents: dropRefEventList([]string{"a", "b"}),
+			wantEvents: updateEventList("a", "b"),
 		},
 		{
 			desc:       "node's with deleted first outefs",
 			oldNode:    createFakeNode([]string{"a", "b"}),
 			newNode:    createFakeNode([]string{"b"}),
-			wantEvents: dropRefEventList([]string{"a"}),
+			wantEvents: updateEventList("a"),
 		},
 		{
 			desc:       "node's with deleted outefs, random order",
 			oldNode:    createFakeNode([]string{"a", "b", "c"}),
 			newNode:    createFakeNode([]string{"b", "a"}),
-			wantEvents: dropRefEventList([]string{"c"}),
+			wantEvents: updateEventList("c"),
 		},
 		{
 			desc:       "node's with replaced outefs",
 			oldNode:    createFakeNode([]string{"a", "b", "c"}),
 			newNode:    createFakeNode([]string{"a", "b", "e"}),
-			wantEvents: dropRefEventList([]string{"c"}),
+			wantEvents: updateEventList("c"),
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {

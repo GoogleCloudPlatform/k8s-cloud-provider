@@ -31,6 +31,7 @@ func UpdateActions[GA any, Alpha any, Beta any](
 	ops GenericOps[GA, Alpha, Beta],
 	got, want Node,
 	resource api.Resource[GA, Alpha, Beta],
+	fingerprint string,
 ) ([]exec.Action, error) {
 	preEvents, err := updatePreconditions(got, want)
 	if err != nil {
@@ -38,7 +39,7 @@ func UpdateActions[GA any, Alpha any, Beta any](
 	}
 	postEvents := postUpdateActionEvents(got, want)
 	return []exec.Action{
-		newGenericUpdateAction(preEvents, ops, want.ID(), resource, postEvents),
+		newGenericUpdateAction(preEvents, ops, want.ID(), resource, postEvents, fingerprint),
 	}, nil
 }
 
@@ -48,22 +49,25 @@ func newGenericUpdateAction[GA any, Alpha any, Beta any](
 	id *cloud.ResourceID,
 	resource api.Resource[GA, Alpha, Beta],
 	postEvents exec.EventList,
+	fingerprint string,
 ) *genericUpdateAction[GA, Alpha, Beta] {
 	return &genericUpdateAction[GA, Alpha, Beta]{
-		ActionBase: exec.ActionBase{Want: want},
-		ops:        ops,
-		id:         id,
-		resource:   resource,
-		postEvents: postEvents,
+		ActionBase:  exec.ActionBase{Want: want},
+		ops:         ops,
+		id:          id,
+		resource:    resource,
+		postEvents:  postEvents,
+		fingerprint: fingerprint,
 	}
 }
 
 type genericUpdateAction[GA any, Alpha any, Beta any] struct {
 	exec.ActionBase
-	ops        GenericOps[GA, Alpha, Beta]
-	id         *cloud.ResourceID
-	resource   api.Resource[GA, Alpha, Beta]
-	postEvents exec.EventList
+	ops         GenericOps[GA, Alpha, Beta]
+	id          *cloud.ResourceID
+	resource    api.Resource[GA, Alpha, Beta]
+	postEvents  exec.EventList
+	fingerprint string
 
 	start, end time.Time
 }
@@ -73,7 +77,7 @@ func (a *genericUpdateAction[GA, Alpha, Beta]) Run(
 	c cloud.Cloud,
 ) (exec.EventList, error) {
 	a.start = time.Now()
-	err := a.ops.UpdateFuncs(c).Do(ctx, "", a.id, a.resource)
+	err := a.ops.UpdateFuncs(c).Do(ctx, a.fingerprint, a.id, a.resource)
 	a.end = time.Now()
 
 	// Emit DropReference events for removed references.
@@ -132,6 +136,7 @@ func postUpdateActionEvents(got, want Node) exec.EventList {
 			events = append(events, exec.NewDropRefEvent(wantRef.From, wantRef.To))
 		}
 	}
-
+	// emit EventExists
+	events = append(events, exec.NewExistsEvent(want.ID()))
 	return events
 }

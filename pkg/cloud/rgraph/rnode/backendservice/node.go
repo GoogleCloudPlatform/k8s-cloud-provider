@@ -69,9 +69,11 @@ func (n *backendServiceNode) Diff(gotNode rnode.Node) (*rnode.PlanDetails, error
 	}
 
 	for _, delta := range diff.Items {
-		//TODO(kl52752) explore which fields can't be updated
+		// These fields cannot be changed in place and require the
+		// resource to be recreated.
 		switch {
-		case delta.Path.Equal(api.Path{}.Pointer().Field("LoadBalancingScheme")):
+		case delta.Path.Equal(api.Path{}.Pointer().Field("LoadBalancingScheme")),
+			delta.Path.Equal(api.Path{}.Pointer().Field("Network")):
 			planRecreate("LoadBalancingScheme change: '%v' -> '%v'", delta.A, delta.B)
 		default:
 			planUpdate("%s change: '%v' -> '%v'", delta.Path, delta.A, delta.B)

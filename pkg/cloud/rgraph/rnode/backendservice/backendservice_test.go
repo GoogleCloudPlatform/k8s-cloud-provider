@@ -18,6 +18,7 @@ package backendservice
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
@@ -28,7 +29,10 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
-const proj = "proj-1"
+const (
+	proj       = "proj-1"
+	hcSelfLink = "https://www.googleapis.com/compute/v1/projects/proj-1/global/healthChecks/hcName"
+)
 
 func TestBackendServiceSchema(t *testing.T) {
 	key := meta.GlobalKey("key-1")
@@ -38,19 +42,13 @@ func TestBackendServiceSchema(t *testing.T) {
 	}
 }
 
-func TestActionUpdate(t *testing.T) {
-	bsID := ID(proj, meta.GlobalKey("bs-name"))
-	// hcID := healthcheck.ID(testFlags.project, meta.GlobalKey("hc-name"))
+func createBackendServiceNode(name string, mut func(x *compute.BackendService)) (*backendServiceNode, error) {
+	bsID := ID(proj, meta.GlobalKey(name))
 	bsMutResource := NewMutableBackendService(proj, bsID.Key)
-	bsMutResource.Access(func(x *compute.BackendService) {
-		x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
-		x.Protocol = "TCP"
-		x.Port = 80
-		x.HealthChecks = []string{"https://www.googleapis.com/compute/v1/projects/proj-1/global/healthChecks/hcName"}
-	})
+	bsMutResource.Access(mut)
 	bsResource, err := bsMutResource.Freeze()
 	if err != nil {
-		t.Fatalf("bsMutResource.Freeze() = %v, want nil", err)
+		return nil, fmt.Errorf("bsMutResource.Freeze() = %v, want nil", err)
 	}
 
 	bsBuilder := NewBuilder(bsID)
@@ -59,11 +57,32 @@ func TestActionUpdate(t *testing.T) {
 	bsBuilder.SetResource(bsResource)
 	bsNode, err := bsBuilder.Build()
 	if err != nil {
-		t.Fatalf("bsBuilder.Build() = %v, want nil", err)
+		return nil, fmt.Errorf("bsBuilder.Build() = %v, want nil", err)
 	}
 	gotNode := bsNode.(*backendServiceNode)
+	return gotNode, nil
+}
+func TestActionUpdate(t *testing.T) {
+	modify := func(x *compute.BackendService) {
+		x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
+		x.Protocol = "TCP"
+		x.Port = 80
+		x.HealthChecks = []string{hcSelfLink}
+	}
+
+	gotNode, err := createBackendServiceNode("bs-name", modify)
+	if err != nil {
+		t.Fatalf("createBackendServiceNode(bs-name, _) = %v, want nil", err)
+	}
+	gotBs := gotNode.resource
+
+	_, err = gotBs.ToGA()
+	if err != nil {
+		t.Errorf("gotBs.ToGA() = %v, want nil", err)
+	}
+
 	fingerprint := "AAAAA"
-	actions, err := rnode.UpdateActions[compute.BackendService, alpha.BackendService, beta.BackendService](&ops{}, bsNode, gotNode, gotNode.resource, fingerprint)
+	actions, err := rnode.UpdateActions[compute.BackendService, alpha.BackendService, beta.BackendService](&ops{}, gotNode, gotNode, gotNode.resource, fingerprint)
 	if err != nil {
 		t.Fatalf("rnode.UpdateActions[]() = %v, want nil", err)
 	}
@@ -85,4 +104,91 @@ func TestActionUpdate(t *testing.T) {
 		t.Fatalf("a.Run(context.Background(), mockCloud) = %v, want nil", err)
 	}
 
+}
+
+func TestBackendServiceDiff(t *testing.T) {
+	bsName := "bs-name"
+	for _, tc := range []struct {
+		desc         string
+		updateFn     func(x *compute.BackendService)
+		expectedOp   rnode.Operation
+		expectedDiff bool
+	}{
+		{
+			desc: "No changes",
+			updateFn: func(x *compute.BackendService) {
+				x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
+				x.Protocol = "TCP"
+				x.Port = 80
+				x.HealthChecks = []string{hcSelfLink}
+			},
+			expectedOp:   rnode.OpNothing,
+			expectedDiff: false,
+		},
+		{
+			desc: "expected recreation on internal schema change",
+			updateFn: func(x *compute.BackendService) {
+				x.LoadBalancingScheme = "EXTERNAL"
+				x.Protocol = "TCP"
+				x.Port = 90
+				x.HealthChecks = []string{hcSelfLink}
+			},
+			expectedOp:   rnode.OpRecreate,
+			expectedDiff: true,
+		},
+		{
+			desc: "expected recreation on network change",
+			updateFn: func(x *compute.BackendService) {
+				x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
+				x.Protocol = "TCP"
+				x.Port = 90
+				x.HealthChecks = []string{hcSelfLink}
+				x.Network = "new-network"
+			},
+			expectedOp:   rnode.OpRecreate,
+			expectedDiff: true,
+		},
+		{
+			desc: "expected update on port change",
+			updateFn: func(x *compute.BackendService) {
+				x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
+				x.Protocol = "TCP"
+				x.Port = 123
+				x.HealthChecks = []string{hcSelfLink}
+			},
+			expectedOp:   rnode.OpUpdate,
+			expectedDiff: true,
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+
+			create := func(x *compute.BackendService) {
+				x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
+				x.Protocol = "TCP"
+				x.Port = 80
+				x.HealthChecks = []string{hcSelfLink}
+			}
+
+			gotNode, err := createBackendServiceNode(bsName, create)
+			if err != nil {
+				t.Fatalf("createBackendServiceNode(%s, _) = %v, want nil", bsName, err)
+			}
+			wantBS, err := createBackendServiceNode(bsName, tc.updateFn)
+			if err != nil {
+				t.Fatalf("createBackendServiceNode(%s, _) = %v, want nil", bsName, err)
+			}
+			plan, err := gotNode.Diff(wantBS)
+			if err != nil || plan == nil {
+				t.Fatalf("gotNode.Diff(_) = (%v, %v), want plan,  nil", plan, err)
+			}
+			if plan.Operation != tc.expectedOp {
+				t.Errorf("%v != %v", plan.Operation, tc.expectedOp)
+			}
+
+			if tc.expectedDiff && (plan.Diff == nil || len(plan.Diff.Items) == 0) {
+				t.Errorf("Result did not returned diff")
+			}
+			t.Logf("Diff results %+v", plan)
+		})
+	}
 }

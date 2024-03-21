@@ -28,7 +28,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"strings"
 	"text/template"
 	"time"
 
@@ -309,8 +308,20 @@ func (m *Mock{{.Service}}Obj) ToGA() *{{.GA.FQObjectType}} {
 	}
 }
 
+// callOperationRequiresID returns true if the ServiceInfo.Object is
+// of a particular type.
+func callOperationRequiresID(obj string) bool {
+	switch obj {
+	case "TcpRoute", "GrpcRoute", "HttpRoute", "TlsRoute", "EndpointPolicy",
+		"Gateway", "Mesh", "ServiceBinding":
+		return true
+	}
+	return false
+}
+
 // genTypes generates the type wrappers.
 func genTypes(wr io.Writer) {
+
 	const text = `// {{.WrapType}} is an interface that allows for mocking of {{.Service}}.
 type {{.WrapType}} interface {
 {{- if .GenerateCustomOps}}
@@ -906,7 +917,7 @@ func (g *{{.GCPWrapType}}) Insert(ctx context.Context, key *meta.Key, obj *{{.FQ
 {{- if .IsNetworkServices}}
 	parent := fmt.Sprintf("projects/%s/locations/global", projectID)
 	call := g.s.{{.GroupVersionTitle}}.{{.Service}}.Create(parent, obj)
-	{{- if hasSuffix .Object "Route"}}
+	{{- if callOperationRequiresID .Object }}
 	  call.{{.Object}}Id(obj.Name)
 	{{- end}}
 {{- else}}
@@ -1214,7 +1225,7 @@ func (g *{{.GCPWrapType}}) {{.FcnArgs}} {
 {{- end}}
 `
 	tmpl := template.Must(template.New("interface").Funcs(template.FuncMap{
-		"hasSuffix": strings.HasSuffix,
+		"callOperationRequiresID": callOperationRequiresID,
 	}).Parse(text))
 	for _, s := range meta.AllServices {
 		if err := tmpl.Execute(wr, s); err != nil {

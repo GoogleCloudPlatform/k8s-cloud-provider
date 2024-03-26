@@ -151,6 +151,7 @@ func checkOrDie(cov coverageResult, cfg *configFileData) {
 			// Package with no configuration is ignored.
 			continue
 		}
+
 		if value < float64(entry.Expected) {
 			fmt.Printf("Error: %s does not have enough coverage (%0.1f < %d)\n", pkg, value, entry.Expected)
 			hasErr = true

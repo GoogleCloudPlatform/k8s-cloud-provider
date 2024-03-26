@@ -279,6 +279,7 @@ func defaultTCPRouteResource(t *testing.T, id *cloud.ResourceID) MutableTcpRoute
 	trrr := &networkservices.TcpRouteRouteRule{
 		Action: &networkservices.TcpRouteRouteAction{
 			Destinations: []*networkservices.TcpRouteRouteDestination{d},
+			IdleTimeout:  "5",
 		},
 		Matches: []*networkservices.TcpRouteRouteMatch{},
 	}

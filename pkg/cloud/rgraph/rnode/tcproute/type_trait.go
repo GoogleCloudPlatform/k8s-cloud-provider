@@ -42,7 +42,6 @@ func (*tcpRouteTypeTrait) FieldTraits(meta.Version) *api.FieldTraits {
 	dt.AllowZeroValue(api.Path{}.Pointer().Field("Rules").AnySliceIndex().Pointer().Field("Action").Pointer().Field("Destinations").AnySliceIndex().Pointer().Field("Weight"))
 	dt.AllowZeroValue(api.Path{}.Pointer().Field("Rules").AnySliceIndex().Pointer().Field("Action").Pointer().Field("Destinations"))
 	dt.AllowZeroValue(api.Path{}.Pointer().Field("Rules").AnySliceIndex().Pointer().Field("Action").Pointer().Field("OriginalDestination"))
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("Rules").AnySliceIndex().Pointer().Field("Action").Pointer().Field("IdleTimeout"))
 
 	return dt
 }

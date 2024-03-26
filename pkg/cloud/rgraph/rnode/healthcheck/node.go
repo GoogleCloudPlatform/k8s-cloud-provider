@@ -43,7 +43,7 @@ func (n *healthCheckNode) Diff(gotNode rnode.Node) (*rnode.PlanDetails, error) {
 
 	diff, err := got.resource.Diff(n.resource)
 	if err != nil {
-		return nil, fmt.Errorf("HealsthCheckNode: Diff %w", err)
+		return nil, fmt.Errorf("HealthCheckNode: Diff %w", err)
 	}
 
 	if diff.HasDiff() {

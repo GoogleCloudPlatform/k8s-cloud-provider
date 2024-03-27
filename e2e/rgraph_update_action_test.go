@@ -17,7 +17,6 @@ package e2e
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"testing"
 
@@ -39,8 +38,12 @@ func buildBackendService(graphBuilder *rgraph.Builder, name string, hcID *cloud.
 	bsMutResource.Access(func(x *compute.BackendService) {
 		x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 		x.Protocol = "TCP"
+		x.PortName = "http"
+		x.SessionAffinity = "NONE"
 		x.Port = port
+		x.TimeoutSec = 30
 		x.HealthChecks = []string{hcID.SelfLink(meta.VersionGA)}
+		x.ConnectionDraining = &compute.ConnectionDraining{}
 	})
 	bsResource, err := bsMutResource.Freeze()
 	if err != nil {
@@ -64,9 +67,11 @@ func buildHealthCheck(graphBuilder *rgraph.Builder, name string, checkIntervalSe
 		x.HealthyThreshold = 5
 		x.TimeoutSec = 6
 		x.Type = "HTTP"
+		x.UnhealthyThreshold = 2
 		x.HttpHealthCheck = &compute.HTTPHealthCheck{
 			RequestPath: "/",
 			Port:        int64(9376),
+			ProxyHeader: "NONE",
 		}
 	})
 	hcRes, err := hcMutRes.Freeze()
@@ -147,8 +152,8 @@ func TestHcUpdateWithBackendService(t *testing.T) {
 			t.Logf("delete health check: %v", err)
 		}
 	})
-	checkGCEHealthCheck(t, ctx, hcID, 15)
-	checkGCEBackendService(t, ctx, hcID, bsID, 80)
+	checkGCEHealthCheck(t, ctx, theCloud, hcID, 15)
+	checkGCEBackendService(t, ctx, theCloud, hcID, bsID, 80)
 
 	// update health check
 	hcID, err = buildHealthCheck(graphBuilder, hcName, 60)
@@ -163,10 +168,11 @@ func TestHcUpdateWithBackendService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("plan.Do(_, _, _) = %v, want nil", err)
 	}
-	expectedActions := []exec.ActionType{
-		exec.ActionTypeUpdate,
-	}
 
+	expectedActions := []exec.ActionMetadata{
+		{Type: exec.ActionTypeUpdate, Name: actionName(exec.ActionTypeUpdate, hcID)},
+		{Type: exec.ActionTypeMeta, Name: eventName(bsID)},
+	}
 	t.Logf("\nPlan.Actions: %v", result.Actions)
 	t.Logf("\nPlan.Got: %v", result.Got)
 	t.Logf("\nPlan.Want: %v", result.Want)
@@ -190,8 +196,8 @@ func TestHcUpdateWithBackendService(t *testing.T) {
 		t.Errorf("Executor has pending actions: %v", res.Pending)
 	}
 
-	checkGCEHealthCheck(t, ctx, hcID, 60)
-	checkGCEBackendService(t, ctx, hcID, bsID, 80)
+	checkGCEHealthCheck(t, ctx, theCloud, hcID, 60)
+	checkGCEBackendService(t, ctx, theCloud, hcID, bsID, 80)
 	// update health check and check that Exist event was propagated to parents
 	hcID, err = buildHealthCheck(graphBuilder, hcName, 120)
 	if err != nil {
@@ -211,10 +217,9 @@ func TestHcUpdateWithBackendService(t *testing.T) {
 		t.Fatalf("plan.Do(_, _, _) = %v, want nil", err)
 	}
 	// HealthCheck updated expect ActionUpdate
-	// BackendService update expect Action Delete and Action Add
-	expectedActions = []exec.ActionType{
-		exec.ActionTypeUpdate,
-		// exec.ActionTypeUpdate,
+	expectedActions = []exec.ActionMetadata{
+		{Type: exec.ActionTypeUpdate, Name: actionName(exec.ActionTypeUpdate, bsID)},
+		{Type: exec.ActionTypeUpdate, Name: actionName(exec.ActionTypeUpdate, hcID)},
 	}
 
 	t.Logf("\nPlan.Actions: %v", result.Actions)
@@ -239,8 +244,8 @@ func TestHcUpdateWithBackendService(t *testing.T) {
 	if len(res.Pending) > 0 {
 		t.Errorf("Executor has pending actions: %v", res.Pending)
 	}
-	checkGCEHealthCheck(t, ctx, hcID, 120)
-	checkGCEBackendService(t, ctx, hcID, bsID, 100)
+	checkGCEHealthCheck(t, ctx, theCloud, hcID, 120)
+	checkGCEBackendService(t, ctx, theCloud, hcID, bsID, 100)
 }
 func TestHcUpdateType(t *testing.T) {
 	ctx := context.Background()
@@ -276,7 +281,7 @@ func TestHcUpdateType(t *testing.T) {
 			t.Logf("delete health check: %v", err)
 		}
 	})
-	checkGCEHealthCheck(t, ctx, hcID, 15)
+	checkGCEHealthCheck(t, ctx, theCloud, hcID, 15)
 
 	// update health check
 	hcID, err = buildTCPHealthCheck(graphBuilder, hcName, 60)
@@ -291,8 +296,8 @@ func TestHcUpdateType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("plan.Do(_, _, _) = %v, want nil", err)
 	}
-	expectedActions := []exec.ActionType{
-		exec.ActionTypeUpdate,
+	expectedActions := []exec.ActionMetadata{
+		{Type: exec.ActionTypeUpdate, Name: actionName(exec.ActionTypeUpdate, hcID)},
 	}
 
 	t.Logf("\nPlan.Actions: %v", result.Actions)
@@ -318,7 +323,7 @@ func TestHcUpdateType(t *testing.T) {
 		t.Errorf("Executor has pending actions: %v", res.Pending)
 	}
 
-	checkTCPGCEHealthCheck(t, ctx, hcID, 60)
+	checkTCPGCEHealthCheck(t, ctx, theCloud, hcID, 60)
 }
 func TestUpdateBackendService(t *testing.T) {
 	ctx := context.Background()
@@ -363,7 +368,7 @@ func TestUpdateBackendService(t *testing.T) {
 			t.Logf("delete health check: %v", err)
 		}
 	})
-	checkGCEBackendService(t, ctx, hcID, bsID, 80)
+	checkGCEBackendService(t, ctx, theCloud, hcID, bsID, 80)
 
 	// update BackendService
 	bsID, err = buildBackendService(graphBuilder, bsName, hcID, 100)
@@ -379,8 +384,9 @@ func TestUpdateBackendService(t *testing.T) {
 		t.Fatalf("plan.Do(_, _, _) = %v, want nil", err)
 	}
 
-	expectedActions := []exec.ActionType{
-		exec.ActionTypeUpdate,
+	expectedActions := []exec.ActionMetadata{
+		{Type: exec.ActionTypeUpdate, Name: actionName(exec.ActionTypeUpdate, bsID)},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcID)},
 	}
 
 	t.Logf("\nPlan.Actions: %v", result.Actions)
@@ -409,60 +415,9 @@ func TestUpdateBackendService(t *testing.T) {
 			t.Errorf("ex.Run(_,_) = ( %v, %v), want (*result, nil)", res, err)
 		}
 	}
-	checkGCEBackendService(t, ctx, hcID, bsID, 100)
+	checkGCEBackendService(t, ctx, theCloud, hcID, bsID, 100)
 }
 
-func checkGCEHealthCheck(t *testing.T, ctx context.Context, hcID *cloud.ResourceID, hcInterval int) {
-	t.Helper()
-	t.Log("---- Check Health Check ---- ")
-	gotHC, err := theCloud.HealthChecks().Get(ctx, hcID.Key)
-	if err != nil {
-		t.Fatalf("theCloud.HealthChecks().Get(_, %s) = %v, want nil", hcID.Key, err)
-	}
-	if gotHC.CheckIntervalSec != int64(hcInterval) {
-		t.Fatalf("gotHC.CheckIntervalSec mismatch got: %v want: %d", gotHC.CheckIntervalSec, hcInterval)
-	}
-}
-func checkTCPGCEHealthCheck(t *testing.T, ctx context.Context, hcID *cloud.ResourceID, hcInterval int) {
-	t.Helper()
-	t.Log("---- Check Health Check ---- ")
-	gotHC, err := theCloud.HealthChecks().Get(ctx, hcID.Key)
-	if err != nil {
-		t.Fatalf("theCloud.HealthChecks().Get(_, %s) = %v, want nil", hcID.Key, err)
-	}
-	if gotHC.Type != "TCP" {
-		t.Fatalf("gotHC.Type mismatch got: %v want: TCP", gotHC.Type)
-	}
-	if gotHC.CheckIntervalSec != int64(hcInterval) {
-		t.Fatalf("gotHC.CheckIntervalSec mismatch got: %v want: %d", gotHC.CheckIntervalSec, hcInterval)
-	}
-}
-func checkGCEBackendService(t *testing.T, ctx context.Context, hcID, bsID *cloud.ResourceID, bsPort int) {
-	t.Helper()
-	t.Log("---- Check BackendService ----")
-	gotBS, err := theCloud.BackendServices().Get(ctx, bsID.Key)
-	if err != nil {
-		t.Fatalf("theCloud.HealthChecks().Get(_, %s) = %v, want nil", bsID.Key, err)
-	}
-
-	if gotBS.Port != int64(bsPort) {
-		t.Errorf("BackendService port mismatch, got: %d want %d", gotBS.Port, bsPort)
-	}
-	if len(gotBS.HealthChecks) == 0 || gotBS.HealthChecks[0] != hcID.SelfLink(meta.VersionGA) {
-		t.Fatalf("BackendService %s does not have health check %s set", bsID.Key, hcID.SelfLink(meta.VersionGA))
-	}
-}
-
-func expectActions(got []exec.Action, want []exec.ActionType) error {
-	var errs []error
-WantLoop:
-	for _, wantT := range want {
-		for _, gotA := range got {
-			if gotA.Metadata().Type == wantT {
-				continue WantLoop
-			}
-		}
-		errs = append(errs, fmt.Errorf("Not Found expected action %v", wantT))
-	}
-	return errors.Join(errs...)
+func eventName(id *cloud.ResourceID) string {
+	return fmt.Sprintf("EventAction([Exists(%s)])", id)
 }

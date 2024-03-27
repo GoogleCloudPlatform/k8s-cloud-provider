@@ -112,7 +112,7 @@ func TestNodeDiffResource(t *testing.T) {
 	if p.Diff == nil {
 		t.Fatalf("Diff should not be empty")
 	}
-	if p.Operation != rnode.OpRecreate {
+	if p.Operation != rnode.OpUpdate {
 		t.Fatalf("plan Operation mismatch got: %q, want: %q", p.Operation, rnode.OpRecreate)
 	}
 }

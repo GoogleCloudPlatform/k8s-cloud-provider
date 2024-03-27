@@ -47,9 +47,8 @@ func (n *tcpRouteNode) Diff(gotNode rnode.Node) (*rnode.PlanDetails, error) {
 	}
 
 	if diff.HasDiff() {
-		// TODO(kl52752): switch to Update when UpdateAction is implemented.
 		return &rnode.PlanDetails{
-			Operation: rnode.OpRecreate,
+			Operation: rnode.OpUpdate,
 			Why:       "TcpRoute needs to be recreated",
 			Diff:      diff,
 		}, nil
@@ -76,7 +75,8 @@ func (n *tcpRouteNode) runOp(got rnode.Node, op rnode.Operation) ([]exec.Action,
 		return rnode.RecreateActions[networkservices.TcpRoute, api.PlaceholderType, beta.TcpRoute](&tcpRouteOps{}, got, n, n.resource)
 
 	case rnode.OpUpdate:
-		// TODO (kl52752) Add action update
+		// TCP route does not support fingerprint
+		return rnode.UpdateActions[networkservices.TcpRoute, api.PlaceholderType, beta.TcpRoute](&tcpRouteOps{}, got, n, n.resource, "")
 	}
 
 	return nil, fmt.Errorf("TcpRouteNode: invalid plan op %s", op)

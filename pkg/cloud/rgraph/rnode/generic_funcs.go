@@ -18,14 +18,13 @@ package rnode
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/api"
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/cerrors"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/meta"
-	"google.golang.org/api/googleapi"
 	"k8s.io/klog/v2"
 )
 
@@ -323,16 +322,6 @@ func (f *DeleteFuncs[GA, Alpha, Beta]) Do(ctx context.Context, id *cloud.Resourc
 	return f.GA.Do(ctx, id, cloud.ForceProjectID(id.ProjectID))
 }
 
-func isErrorCode(err error, code int) bool {
-	var gerr *googleapi.Error
-	if !errors.As(err, &gerr) {
-		return false
-	}
-	return gerr.Code == code
-}
-
-func isErrorNotFound(err error) bool { return isErrorCode(err, 404) }
-
 func GenericGet[GA any, Alpha any, Beta any](
 	ctx context.Context,
 	gcp cloud.Cloud,
@@ -350,7 +339,7 @@ func GenericGet[GA any, Alpha any, Beta any](
 	r, err := ops.GetFuncs(gcp).Do(ctx, b.Version(), b.ID(), typeTrait)
 
 	switch {
-	case isErrorNotFound(err):
+	case cerrors.IsGoogleAPINotFound(err):
 		b.SetState(NodeDoesNotExist)
 		return nil // Not found is not an error condition.
 

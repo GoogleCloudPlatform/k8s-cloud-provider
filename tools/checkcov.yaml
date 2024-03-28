@@ -16,7 +16,7 @@ entries:
     "pkg/cloud/rgraph/rnode": { expected: 10 }
     "pkg/cloud/rgraph/rnode/address": { expected: 20 }
     "pkg/cloud/rgraph/rnode/all": { expected: 0 }
-    "pkg/cloud/rgraph/rnode/backendservice": { expected: 0 }
+    "pkg/cloud/rgraph/rnode/backendservice": { expected: 80 }
     "pkg/cloud/rgraph/rnode/fake": { expected: 0 }
     "pkg/cloud/rgraph/rnode/healthcheck": { expected: 80 }
     "pkg/cloud/rgraph/rnode/networkendpointgroup": { expected: 0 }

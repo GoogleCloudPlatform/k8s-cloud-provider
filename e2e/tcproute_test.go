@@ -37,9 +37,8 @@ import (
 
 const (
 	meshName   = "test-mesh"
-	negName    = "k8s1-3894226e-default-foo-backend-80-28ec9cf3"
-	negName2   = "k8s1-54982af5-default-bar-svc-8080-5aabd6b1"
-	zone       = "us-central1-c"
+	region     = "us-central1"
+	zone       = region + "-c"
 	routeCIDR  = "10.240.3.83/32"
 	routeCIRD2 = "10.240.4.83/32"
 )
@@ -114,10 +113,15 @@ func TestTcpRoute(t *testing.T) {
 }
 
 func buildNEG(graphBuilder *rgraph.Builder, name, zone string) (*cloud.ResourceID, error) {
-	negID := networkendpointgroup.ID(testFlags.project, meta.ZonalKey(name, zone))
+	negID := networkendpointgroup.ID(testFlags.project, meta.ZonalKey(resourceName(name), zone))
 	negMut := networkendpointgroup.NewMutableNetworkEndpointGroup(testFlags.project, negID.Key)
 	negMut.Access(func(x *compute.NetworkEndpointGroup) {
 		x.Zone = zone
+		x.NetworkEndpointType = "GCE_VM_IP_PORT"
+		x.Name = negID.Key.Name
+		x.Network = defaultNetworkURL()
+		x.Subnetwork = defaultSubnetworkURL()
+		x.Description = "neg for rGraph test"
 	})
 
 	negRes, err := negMut.Freeze()
@@ -125,7 +129,7 @@ func buildNEG(graphBuilder *rgraph.Builder, name, zone string) (*cloud.ResourceI
 		return nil, err
 	}
 	negBuilder := networkendpointgroup.NewBuilder(negID)
-	negBuilder.SetOwnership(rnode.OwnershipExternal)
+	negBuilder.SetOwnership(rnode.OwnershipManaged)
 	negBuilder.SetState(rnode.NodeExists)
 	negBuilder.SetResource(negRes)
 	graphBuilder.Add(negBuilder)
@@ -294,10 +298,14 @@ func TestRgraphTCPRouteAddBackends(t *testing.T) {
 		t.Logf("theCloud.Meshes().Delete(ctx, %s): %v", meshKey, err)
 	})
 	graphBuilder := rgraph.NewBuilder()
-	negID, err := buildNEG(graphBuilder, negName, zone)
+	negID, err := buildNEG(graphBuilder, "neg-test", zone)
 	if err != nil {
-		t.Fatalf("buildNEG(_, %s, %s) = (_, %v), want (_, nil)", negName, zone, err)
+		t.Fatalf("buildNEG(_, neg-test, %s) = (_, %v), want (_, nil)", zone, err)
 	}
+	t.Cleanup(func() {
+		err := theCloud.NetworkEndpointGroups().Delete(ctx, negID.Key)
+		t.Logf("theCloud.NetworkEndpointGroups().Delete(ctx, %s): %v", negID.Key, err)
+	})
 
 	hcID, err := buildHealthCheck(graphBuilder, "hc-test", 15)
 	if err != nil {
@@ -330,16 +338,20 @@ func TestRgraphTCPRouteAddBackends(t *testing.T) {
 		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, tcprID)},
 		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, bsID)},
 		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, hcID)},
-		{Type: exec.ActionTypeMeta, Name: eventName(negID)},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, negID)},
 	}
 	processGraphAndExpectActions(t, graphBuilder, expectedActions)
 
 	checkGCEBackendService(t, ctx, theCloud, hcID, bsID, 80)
 	checkAppNetTCPRoute(t, ctx, theCloud, tcprID.Key.Name, meshURL, bsID)
-	negID2, err := buildNEG(graphBuilder, negName2, zone)
+	negID2, err := buildNEG(graphBuilder, "neg-test-2", zone)
 	if err != nil {
-		t.Fatalf("buildNEG(_, %s, %s) = (_, %v), want (_, nil)", negName2, zone, err)
+		t.Fatalf("buildNEG(_, neg-test-2, %s) = (_, %v), want (_, nil)", zone, err)
 	}
+	t.Cleanup(func() {
+		err := theCloud.NetworkEndpointGroups().Delete(ctx, negID2.Key)
+		t.Logf("theCloud.NetworkEndpointGroups().Delete(ctx, %s): %v", negID2.Key, err)
+	})
 
 	hcID2, err := buildHealthCheck(graphBuilder, "hc-test-2", 15)
 	if err != nil {
@@ -370,8 +382,8 @@ func TestRgraphTCPRouteAddBackends(t *testing.T) {
 		{Type: exec.ActionTypeUpdate, Name: actionName(exec.ActionTypeUpdate, tcprID)},
 		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, bsID2)},
 		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, hcID2)},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, negID2)},
 		{Type: exec.ActionTypeMeta, Name: eventName(negID)},
-		{Type: exec.ActionTypeMeta, Name: eventName(negID2)},
 		{Type: exec.ActionTypeMeta, Name: eventName(bsID)},
 		{Type: exec.ActionTypeMeta, Name: eventName(hcID)},
 	}

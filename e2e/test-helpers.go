@@ -127,3 +127,11 @@ Outer:
 		t.Fatalf("Rule ServiceName %s, not found in expected: %v", rule.Action.Destinations[0].ServiceName, svcIds)
 	}
 }
+
+func defaultNetworkURL() string {
+	return cloud.NewNetworksResourceID(testFlags.project, "default").SelfLink(meta.VersionGA)
+}
+
+func defaultSubnetworkURL() string {
+	return cloud.NewSubnetworksResourceID(testFlags.project, region, "default").SelfLink(meta.VersionGA)
+}

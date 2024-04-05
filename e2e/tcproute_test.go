@@ -168,7 +168,7 @@ func buildBackendServiceWithNEG(graphBuilder *rgraph.Builder, name string, hcID,
 	return bsID, nil
 }
 
-func buildTCPRoute(graphBuilder *rgraph.Builder, name, address, meshURL string, bsID *cloud.ResourceID) (*cloud.ResourceID, error) {
+func buildTCPRoute(graphBuilder *rgraph.Builder, name, meshURL string, rules []*networkservices.TcpRouteRouteRule, bsID *cloud.ResourceID) (*cloud.ResourceID, error) {
 	tcpID := tcproute.ID(testFlags.project, meta.GlobalKey(resourceName(name)))
 	tcpMutRes := tcproute.NewMutableTcpRoute(testFlags.project, tcpID.Key)
 
@@ -176,24 +176,7 @@ func buildTCPRoute(graphBuilder *rgraph.Builder, name, address, meshURL string, 
 		x.Description = "tcp route for rGraph test"
 		x.Name = tcpID.Key.Name
 		x.Meshes = []string{meshURL}
-		x.Rules = []*networkservices.TcpRouteRouteRule{
-			{
-				Action: &networkservices.TcpRouteRouteAction{
-					Destinations: []*networkservices.TcpRouteRouteDestination{
-						{
-							ServiceName: resourceSelfLink(bsID),
-							Weight:      10,
-						},
-					},
-				},
-				Matches: []*networkservices.TcpRouteRouteMatch{
-					{
-						Address: address,
-						Port:    "80",
-					},
-				},
-			},
-		}
+		x.Rules = rules
 	})
 
 	tcpRes, err := tcpMutRes.Freeze()
@@ -316,7 +299,26 @@ func TestRgraphTCPRouteAddBackends(t *testing.T) {
 		err = theCloud.BackendServices().Delete(ctx, bsID.Key)
 		t.Logf("theCloud.BackendServices().Delete(_, %s): %v", bsID.Key, err)
 	})
-	tcprID, err := buildTCPRoute(graphBuilder, "tcproute-test", routeCIDR, meshURL, bsID)
+	rules := []*networkservices.TcpRouteRouteRule{
+		{
+			Action: &networkservices.TcpRouteRouteAction{
+				Destinations: []*networkservices.TcpRouteRouteDestination{
+					{
+						ServiceName: resourceSelfLink(bsID),
+						Weight:      10,
+					},
+				},
+			},
+			Matches: []*networkservices.TcpRouteRouteMatch{
+				{
+					Address: routeCIDR,
+					Port:    "80",
+				},
+			},
+		},
+	}
+
+	tcprID, err := buildTCPRoute(graphBuilder, "tcproute-test", meshURL, rules, bsID)
 	if err != nil {
 		t.Fatalf("buildTCPRoute(_, tcproute-test, _, _, _) = (_, %v), want (_, nil)", err)
 	}
@@ -408,8 +410,7 @@ func processGraphAndExpectActions(t *testing.T, graphBuilder *rgraph.Builder, ex
 
 	ex, err := exec.NewSerialExecutor(result.Actions)
 	if err != nil {
-		t.Logf("exec.NewSerialExecutor err: %v", err)
-		return
+		t.Fatalf("exec.NewSerialExecutor err: %v", err)
 	}
 	res, err := ex.Run(context.Background(), theCloud)
 	if err != nil || res == nil {

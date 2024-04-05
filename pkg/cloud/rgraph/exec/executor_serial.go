@@ -26,10 +26,10 @@ import (
 )
 
 // NewSerialExecutor returns a new Executor that runs tasks single-threaded.
-func NewSerialExecutor(pending []Action, opts ...Option) (*serialExecutor, error) {
+func NewSerialExecutor(c cloud.Cloud, opts ...Option) (*serialExecutor, error) {
 	ret := &serialExecutor{
 		config: defaultExecutorConfig(),
-		result: &Result{Pending: pending},
+		cloud:  c,
 	}
 	for _, opt := range opts {
 		opt(ret.config)
@@ -57,73 +57,82 @@ type serialExecutor struct {
 
 	runFunc func(context.Context, cloud.Cloud, Action) (EventList, error)
 	result  *Result
+	cloud   cloud.Cloud
 }
 
 var _ Executor = (*serialExecutor)(nil)
 
-func (ex *serialExecutor) Run(ctx context.Context, c cloud.Cloud) (*Result, error) {
-	for a := ex.next(); a != nil; a = ex.next() {
-		err := ex.runAction(ctx, c, a)
-		if err != nil {
-			return ex.result, err
-		}
-	}
-	if ex.config.Tracer != nil {
-		ex.config.Tracer.Finish(ex.result.Pending)
-	}
-	if len(ex.result.Errors) > 0 {
-		return ex.result, fmt.Errorf("serialExecutor: errors in execution %v", ex.result.Errors)
+func (ex *serialExecutor) Run(ctx context.Context, pending []Action) (*Result, error) {
+
+	result := ex.runAction(ctx, ex.cloud, pending)
+	if result == nil {
+		return result, fmt.Errorf("Executor returned empty result")
 	}
 
-	return ex.result, nil
+	if ex.config.Tracer != nil {
+		ex.config.Tracer.Finish(result.Pending)
+	}
+	if len(result.Errors) > 0 {
+		return result, fmt.Errorf("serialExecutor: errors in execution %v", result.Errors)
+	}
+
+	return result, nil
 }
 
-func (ex *serialExecutor) runAction(ctx context.Context, c cloud.Cloud, a Action) error {
-	klog.Infof("runAction %s", a)
+func (ex *serialExecutor) runAction(ctx context.Context, c cloud.Cloud, actions []Action) *Result {
 
-	te := &TraceEntry{
-		Action: a,
-		Start:  time.Now(),
-	}
-	events, runErr := ex.runFunc(ctx, c, a)
-	te.End = time.Now()
+	result := &Result{Pending: actions}
+	for {
+		a, i := ex.next(result.Pending)
+		if a == nil {
+			return result
+		}
+		result.Pending = append(result.Pending[0:i], result.Pending[i+1:]...)
+		klog.Infof("runAction %s", a)
 
-	if runErr == nil {
-		ex.result.Completed = append(ex.result.Completed, a)
-	} else {
-		ex.result.Errors = append(ex.result.Errors, ActionWithErr{Action: a, Err: runErr})
-		switch ex.config.ErrorStrategy {
-		case ContinueOnError:
-		case StopOnError:
-			return fmt.Errorf("serialExecutor: stopping execution for Action %s (got %v)", a, runErr)
-		default:
-			return fmt.Errorf("serialExecutor: invalid ErrorStrategy %q", ex.config.ErrorStrategy)
+		te := &TraceEntry{
+			Action: a,
+			Start:  time.Now(),
+		}
+		events, runErr := ex.runFunc(ctx, c, a)
+		te.End = time.Now()
+
+		if runErr == nil {
+			result.Completed = append(result.Completed, a)
+		} else {
+			result.Errors = append(result.Errors, ActionWithErr{Action: a, Err: runErr})
+			switch ex.config.ErrorStrategy {
+			case ContinueOnError:
+			case StopOnError:
+				return result
+			default:
+				// this should never happened config is validated
+				klog.Errorf("serialExecutor: invalid ErrorStrategy %q", ex.config.ErrorStrategy)
+				return result
+			}
+		}
+		for _, ev := range events {
+			signaled := ex.signal(ev, result.Pending)
+			te.Signaled = append(te.Signaled, signaled...)
+		}
+		if ex.config.Tracer != nil {
+			ex.config.Tracer.Record(te, runErr)
 		}
 	}
-	for _, ev := range events {
-		signaled := ex.signal(ev)
-		te.Signaled = append(te.Signaled, signaled...)
-	}
-	if ex.config.Tracer != nil {
-		ex.config.Tracer.Record(te, runErr)
-	}
-
-	return nil
 }
 
-func (ex *serialExecutor) next() Action {
-	for i, a := range ex.result.Pending {
+func (ex *serialExecutor) next(pending []Action) (Action, int) {
+	for i, a := range pending {
 		if a.CanRun() {
-			ex.result.Pending = append(ex.result.Pending[0:i], ex.result.Pending[i+1:]...)
-			return a
+			return a, i
 		}
 	}
-	return nil
+	return nil, 0
 }
 
-func (ex *serialExecutor) signal(ev Event) []TraceSignal {
+func (ex *serialExecutor) signal(ev Event, pending []Action) []TraceSignal {
 	var ret []TraceSignal
-	for _, a := range ex.result.Pending {
+	for _, a := range pending {
 		if a.Signal(ev) {
 			ret = append(ret, TraceSignal{Event: ev, SignaledAction: a})
 		}

@@ -19,8 +19,6 @@ package exec
 import (
 	"context"
 	"fmt"
-
-	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
 )
 
 type Result struct {
@@ -42,7 +40,7 @@ type ActionWithErr struct {
 type Executor interface {
 	// Run the actions. Returns non-nil if there was an error in execution of
 	// one or more Actions.
-	Run(context.Context, cloud.Cloud) (*Result, error)
+	Run(context.Context, []Action) (*Result, error)
 }
 
 type Option func(*ExecutorConfig)

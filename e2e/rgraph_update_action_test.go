@@ -132,12 +132,12 @@ func TestHcUpdateWithBackendService(t *testing.T) {
 		t.Fatalf("plan.Do(_, _, _) = %v, want nil", err)
 	}
 
-	ex, err := exec.NewSerialExecutor(result.Actions)
+	ex, err := exec.NewSerialExecutor(theCloud)
 	if err != nil {
 		t.Logf("exec.NewSerialExecutor(_, _) err: %v", err)
 		return
 	}
-	res, err := ex.Run(ctx, theCloud)
+	res, err := ex.Run(ctx, result.Actions)
 	if err != nil || res == nil {
 		t.Errorf("ex.Run(_,_) = %v, want nil", err)
 	}
@@ -182,12 +182,7 @@ func TestHcUpdateWithBackendService(t *testing.T) {
 		t.Fatalf("expectActions(_, _) = %v, want nil", err)
 	}
 	t.Log("\nstart NewSerialExecutor for update")
-	ex, err = exec.NewSerialExecutor(result.Actions)
-	if err != nil {
-		t.Logf("exec.NewSerialExecutor err: %v", err)
-		return
-	}
-	res, err = ex.Run(ctx, theCloud)
+	res, err = ex.Run(ctx, result.Actions)
 	if err != nil || res == nil {
 		t.Errorf("ex.Run(_,_) = ( %v, %v), want (*result, nil)", res, err)
 	}
@@ -231,12 +226,7 @@ func TestHcUpdateWithBackendService(t *testing.T) {
 		t.Fatalf("expectActions(_, _) = %v, want nil", err)
 	}
 	t.Log("\nstart NewSerialExecutor for update")
-	ex, err = exec.NewSerialExecutor(result.Actions)
-	if err != nil {
-		t.Logf("exec.NewSerialExecutor err: %v", err)
-		return
-	}
-	res, err = ex.Run(ctx, theCloud)
+	res, err = ex.Run(ctx, result.Actions)
 	if err != nil || res == nil {
 		t.Errorf("ex.Run(_,_) = ( %v, %v), want (*result, nil)", res, err)
 	}
@@ -265,12 +255,12 @@ func TestHcUpdateType(t *testing.T) {
 		t.Fatalf("plan.Do(_, _, _) = %v, want nil", err)
 	}
 
-	ex, err := exec.NewSerialExecutor(result.Actions)
+	ex, err := exec.NewSerialExecutor(theCloud)
 	if err != nil {
 		t.Logf("exec.NewSerialExecutor(_, _) err: %v", err)
 		return
 	}
-	res, err := ex.Run(ctx, theCloud)
+	res, err := ex.Run(ctx, result.Actions)
 	if err != nil || res == nil {
 		t.Errorf("ex.Run(_,_) = %v, want nil", err)
 	}
@@ -309,12 +299,12 @@ func TestHcUpdateType(t *testing.T) {
 		t.Fatalf("expectActions(_, _) = %v, want nil", err)
 	}
 	t.Log("\nstart NewSerialExecutor for update")
-	ex, err = exec.NewSerialExecutor(result.Actions)
+	ex, err = exec.NewSerialExecutor(theCloud)
 	if err != nil {
 		t.Logf("exec.NewSerialExecutor err: %v", err)
 		return
 	}
-	res, err = ex.Run(ctx, theCloud)
+	res, err = ex.Run(ctx, result.Actions)
 	if err != nil || res == nil {
 		t.Errorf("ex.Run(_,_) = ( %v, %v), want (*result, nil)", res, err)
 	}
@@ -348,12 +338,12 @@ func TestUpdateBackendService(t *testing.T) {
 		t.Fatalf("plan.Do(_, _, _) = %v, want nil", err)
 	}
 
-	ex, err := exec.NewSerialExecutor(result.Actions)
+	ex, err := exec.NewSerialExecutor(theCloud)
 	if err != nil {
 		t.Logf("exec.NewSerialExecutor(_, _) err: %v", err)
 		return
 	}
-	res, err := ex.Run(ctx, theCloud)
+	res, err := ex.Run(ctx, result.Actions)
 	if err != nil || res == nil {
 		t.Errorf("ex.Run(_,_) = %v, want nil", err)
 	}
@@ -398,19 +388,14 @@ func TestUpdateBackendService(t *testing.T) {
 		t.Fatalf("expectActions(_, _) = %v, want nil", err)
 	}
 	t.Log("\nstart NewSerialExecutor for update")
-	ex, err = exec.NewSerialExecutor(result.Actions)
-	if err != nil {
-		t.Logf("exec.NewSerialExecutor err: %v", err)
-		return
-	}
-	res, err = ex.Run(ctx, theCloud)
+	res, err = ex.Run(ctx, result.Actions)
 	if err != nil || res == nil {
 		t.Errorf("ex.Run(_,_) = ( %v, %v), want (*result, nil)", res, err)
 	}
 	t.Logf("exec.NewSerialExecutor finished, res: %v", res)
 	if len(res.Pending) > 0 {
 		t.Logf("Executor has %v, pending actions %v", len(res.Pending), res.Pending)
-		res, err = ex.Run(ctx, theCloud)
+		res, err = ex.Run(ctx, res.Pending)
 		if err != nil || res == nil {
 			t.Errorf("ex.Run(_,_) = ( %v, %v), want (*result, nil)", res, err)
 		}

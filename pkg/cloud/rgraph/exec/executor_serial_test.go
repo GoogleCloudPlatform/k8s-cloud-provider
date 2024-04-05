@@ -96,14 +96,14 @@ func TestSerialExecutor(t *testing.T) {
 					actions := actionsFromGraphStr(tc.graph)
 
 					tr := NewGraphvizTracer()
-					ex, err := NewSerialExecutor(actions,
+					ex, err := NewSerialExecutor(nil,
 						ErrorStrategyOption(StopOnError),
 						TracerOption(tr),
 						DryRunOption(dryRun == "dry run"))
 					if err != nil {
 						t.Fatalf("NewSerialExecutor() = %v, want nil", err)
 					}
-					result, err := ex.Run(context.Background(), nil)
+					result, err := ex.Run(context.Background(), actions)
 					if gotErr := err != nil; gotErr != tc.wantErr {
 						t.Fatalf("Run() = %v; gotErr = %t, want %t", err, gotErr, tc.wantErr)
 					}
@@ -160,14 +160,14 @@ func TestSerialExecutorErrorStrategy(t *testing.T) {
 			actions := actionsFromGraphStr(tc.graph)
 
 			var tr GraphvizTracer
-			ex, err := NewSerialExecutor(actions,
+			ex, err := NewSerialExecutor(nil,
 				ErrorStrategyOption(tc.strategy),
 				TracerOption(&tr),
 				DryRunOption(false))
 			if err != nil {
 				t.Fatalf("NewSerialExecutor() = %v, want nil", err)
 			}
-			result, err := ex.Run(context.Background(), nil)
+			result, err := ex.Run(context.Background(), actions)
 			if gotErr := err != nil; gotErr != tc.wantErr {
 				t.Fatalf("Run() = %v; gotErr = %t, want %t", err, gotErr, tc.wantErr)
 			}

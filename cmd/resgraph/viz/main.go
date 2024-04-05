@@ -154,13 +154,13 @@ func showStep(w http.ResponseWriter, cl cloud.Cloud, idx int, step *testlib.Step
 	outln("")
 
 	var viz exec.GraphvizTracer
-	ex, err := exec.NewSerialExecutor(result.Actions, exec.DryRunOption(false), exec.TracerOption(&viz))
+	ex, err := exec.NewSerialExecutor(cl, exec.DryRunOption(false), exec.TracerOption(&viz))
 	if err != nil {
 		outf("NewSerialExecutor() = %v, want nil", err)
 		return
 	}
 
-	execResult, err := ex.Run(context.Background(), cl)
+	execResult, err := ex.Run(context.Background(), result.Actions)
 
 	outln("<h3>Plan</h3>")
 	outln("")

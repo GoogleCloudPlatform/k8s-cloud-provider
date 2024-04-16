@@ -29,9 +29,10 @@ import (
 // testAction is used for unit testing.
 type testAction struct {
 	ActionBase
-	name   string
-	events EventList
-	err    error
+	name    string
+	events  EventList
+	err     error
+	runHook func() error
 }
 
 func (a *testAction) String() string {
@@ -43,6 +44,11 @@ func (a *testAction) DryRun() EventList {
 }
 
 func (a *testAction) Run(context.Context, cloud.Cloud) (EventList, error) {
+	if a.runHook != nil {
+		if runErr := a.runHook(); runErr != nil {
+			a.err = runErr
+		}
+	}
 	return a.events, a.err
 }
 

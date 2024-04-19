@@ -432,3 +432,11 @@ func processGraphAndExpectActions(t *testing.T, graphBuilder *rgraph.Builder, ex
 	t.Logf("exec got Result.Errors len(%d) =\n%v", len(res.Errors), res.Errors)
 	t.Logf("exec got Result.Pending len(%d) =\n%v", len(res.Pending), res.Pending)
 }
+
+func defaultNetworkURL() string {
+	return cloud.NewNetworksResourceID(testFlags.project, "default").SelfLink(meta.VersionGA)
+}
+
+func defaultSubnetworkURL() string {
+	return cloud.NewSubnetworksResourceID(testFlags.project, region, "default").SelfLink(meta.VersionGA)
+}

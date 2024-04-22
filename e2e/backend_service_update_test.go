@@ -83,8 +83,7 @@ func TestBackendServiceUpdate(t *testing.T) {
 
 	ctx := context.Background()
 	graphBuilder := rgraph.NewBuilder()
-
-	meshURL, meshKey := ensureMesh(ctx, t)
+	meshURL, meshKey := ensureMesh(ctx, t, "test-bs-mesh")
 	t.Cleanup(func() {
 		err := theCloud.Meshes().Delete(ctx, meshKey)
 		t.Logf("theCloud.Meshes().Delete(ctx, %s): %v", meshKey, err)

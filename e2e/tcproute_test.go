@@ -36,7 +36,6 @@ import (
 )
 
 const (
-	meshName   = "test-mesh"
 	region     = "us-central1"
 	zone       = region + "-c"
 	routeCIDR  = "10.240.3.83/32"
@@ -246,7 +245,9 @@ func buildTCPRouteWithBackends(graphBuilder *rgraph.Builder, name, meshURL strin
 	return tcpID, nil
 }
 
-func ensureMesh(ctx context.Context, t *testing.T) (string, *meta.Key) {
+// meshName must be unique per test for tests isolation.
+// TODO: fix ensureMesh so it returns a mesh with hash suffix added to the mesh
+func ensureMesh(ctx context.Context, t *testing.T, meshName string) (string, *meta.Key) {
 	meshKey := meta.GlobalKey(resourceName(meshName))
 	mesh, err := theCloud.Meshes().Get(ctx, meshKey)
 	if err != nil {
@@ -275,7 +276,7 @@ func TestRgraphTCPRouteAddBackends(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	meshURL, meshKey := ensureMesh(ctx, t)
+	meshURL, meshKey := ensureMesh(ctx, t, "test-mesh")
 	t.Cleanup(func() {
 		err := theCloud.Meshes().Delete(ctx, meshKey)
 		t.Logf("theCloud.Meshes().Delete(ctx, %s): %v", meshKey, err)

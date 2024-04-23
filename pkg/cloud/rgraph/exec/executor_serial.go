@@ -26,8 +26,9 @@ import (
 )
 
 // NewSerialExecutor returns a new Executor that runs tasks single-threaded.
-func NewSerialExecutor(pending []Action, opts ...Option) (*serialExecutor, error) {
+func NewSerialExecutor(c cloud.Cloud, pending []Action, opts ...Option) (*serialExecutor, error) {
 	ret := &serialExecutor{
+		cloud:  c,
 		config: defaultExecutorConfig(),
 		result: &Result{Pending: pending},
 	}
@@ -55,15 +56,16 @@ func NewSerialExecutor(pending []Action, opts ...Option) (*serialExecutor, error
 type serialExecutor struct {
 	config *ExecutorConfig
 
+	cloud   cloud.Cloud
 	runFunc func(context.Context, cloud.Cloud, Action) (EventList, error)
 	result  *Result
 }
 
 var _ Executor = (*serialExecutor)(nil)
 
-func (ex *serialExecutor) Run(ctx context.Context, c cloud.Cloud) (*Result, error) {
+func (ex *serialExecutor) Run(ctx context.Context) (*Result, error) {
 	for a := ex.next(); a != nil; a = ex.next() {
-		err := ex.runAction(ctx, c, a)
+		err := ex.runAction(ctx, a)
 		if err != nil {
 			return ex.result, err
 		}
@@ -78,14 +80,14 @@ func (ex *serialExecutor) Run(ctx context.Context, c cloud.Cloud) (*Result, erro
 	return ex.result, nil
 }
 
-func (ex *serialExecutor) runAction(ctx context.Context, c cloud.Cloud, a Action) error {
+func (ex *serialExecutor) runAction(ctx context.Context, a Action) error {
 	klog.Infof("runAction %s", a)
 
 	te := &TraceEntry{
 		Action: a,
 		Start:  time.Now(),
 	}
-	events, runErr := ex.runFunc(ctx, c, a)
+	events, runErr := ex.runFunc(ctx, ex.cloud, a)
 	te.End = time.Now()
 
 	if runErr == nil {

@@ -162,12 +162,12 @@ func TestBackendServiceUpdate(t *testing.T) {
 		t.Fatalf("plan.Do(_, _, _) = %v, want nil", err)
 	}
 
-	ex, err := exec.NewSerialExecutor(result.Actions)
+	ex, err := exec.NewSerialExecutor(theCloud, result.Actions)
 	if err != nil {
 		t.Fatalf("exec.NewSerialExecutor(_, _) err: %v", err)
 		return
 	}
-	res, err := ex.Run(ctx, theCloud)
+	res, err := ex.Run(ctx)
 	if err != nil || res == nil {
 		t.Errorf("ex.Run(_,_) = %v, want nil", err)
 	}

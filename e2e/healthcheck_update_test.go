@@ -58,7 +58,7 @@ func TestHealthcheckUpdate(t *testing.T) {
 		},
 	}
 
-	tcprID, err := buildTCPRoute(graphBuilder, "hc-update-test", meshURL, rules, bsID)
+	tcprID, err := buildTCPRoute(graphBuilder, "hc-update-test", meshURL, rules)
 	if err != nil {
 		t.Fatalf("buildTCPRoute(_, hc-update-test, _, _, _) = (_, %v), want (_, nil)", err)
 	}
@@ -86,10 +86,9 @@ func TestHealthcheckUpdate(t *testing.T) {
 	// Update health check
 	hcID, err = buildHealthCheck(graphBuilder, "hc-update-test", 25)
 
-	// TODO(b/337206891) Investigate TcpRoute updates
 	expectedActions = []exec.ActionMetadata{
 		{Type: exec.ActionTypeUpdate, Name: actionName(exec.ActionTypeUpdate, hcID)},
-		{Type: exec.ActionTypeUpdate, Name: actionName(exec.ActionTypeUpdate, tcprID)},
+		{Type: exec.ActionTypeMeta, Name: eventName(tcprID)},
 		{Type: exec.ActionTypeMeta, Name: eventName(negID)},
 		{Type: exec.ActionTypeMeta, Name: eventName(bsID)},
 	}

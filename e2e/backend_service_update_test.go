@@ -145,7 +145,7 @@ func TestBackendServiceUpdate(t *testing.T) {
 			},
 		},
 	}
-	tcpr, err := buildTCPRoute(graphBuilder, "test-route", meshURL, rules, bs1ID)
+	tcpr, err := buildTCPRoute(graphBuilder, "test-route", meshURL, rules)
 	if err != nil {
 		t.Fatalf("buildTcpRoute(_, test-route, %s, %v, %s) = %v, want nil", meshURL, rules, bs1ID, err)
 	}

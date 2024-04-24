@@ -421,11 +421,11 @@ func processGraphAndExpectActions(t *testing.T, graphBuilder *rgraph.Builder, ex
 		t.Fatalf("expectActions(_, _) = %v, want nil", err)
 	}
 
-	ex, err := exec.NewSerialExecutor(result.Actions)
+	ex, err := exec.NewSerialExecutor(theCloud, result.Actions)
 	if err != nil {
 		t.Fatalf("exec.NewSerialExecutor err: %v", err)
 	}
-	res, err := ex.Run(context.Background(), theCloud)
+	res, err := ex.Run(context.Background())
 	if err != nil || res == nil {
 		t.Errorf("ex.Run(_,_) = ( %v, %v), want (*result, nil)", res, err)
 	}

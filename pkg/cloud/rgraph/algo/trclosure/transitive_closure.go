@@ -96,8 +96,8 @@ func doInternal(
 	config := makeConfig(opts...)
 
 	for _, nb := range gr.All() {
-		if err := pq.Add(work{b: nb}); err != nil {
-			return fmt.Errorf("transitive closure Do() = %w", err)
+		if ok := pq.Add(work{b: nb}); !ok {
+			return fmt.Errorf("parallel queue is done")
 		}
 	}
 
@@ -135,8 +135,8 @@ func doInternal(
 			gr.Add(toNode)
 			graphLock.Unlock()
 
-			if err := pq.Add(work{b: toNode}); err != nil {
-				return fmt.Errorf("transitive closure Do() = %w", err)
+			if ok := pq.Add(work{b: toNode}); !ok {
+				return fmt.Errorf("parallel queue is done")
 			}
 		}
 

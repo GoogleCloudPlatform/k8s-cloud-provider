@@ -34,10 +34,8 @@ var (
 
 func defaultParallelExecutorConfig() *ExecutorConfig {
 	return &ExecutorConfig{
-		DryRun:                false,
-		ErrorStrategy:         ContinueOnError,
-		Timeout:               5 * time.Minute,
-		WaitForOrphansTimeout: 1 * time.Minute,
+		DryRun:        false,
+		ErrorStrategy: ContinueOnError,
 	}
 }
 
@@ -80,21 +78,21 @@ var _ Executor = (*parallelExecutor)(nil)
 // passed to Run() is cancelled. This will also cancel any waiting for orphan go
 // routines that are currently executing.
 //
-// To handle timeout properly use Executor Config. Set TimeoutOption for
-// canceling running actions operation and WaitForOrphansTimeoutOption for
-// canceling post error cleanup.
+// To handle timeout properly use TimeoutOption for canceling running actions
+// and WaitForOrphansTimeoutOption for canceling post error cleanup.
 func (ex *parallelExecutor) Run(ctx context.Context) (*Result, error) {
 	ex.queueRunnableActions()
-	subctx, cancel := context.WithTimeout(ctx, ex.config.Timeout)
 
-	queueErr := ex.pq.Run(subctx, ex.runAction)
-	cancel()
+	queueErr := ex.runActionQueue(ctx)
 	if queueErr != nil {
-		cleanUpCtx, cleanUpCancel := context.WithTimeout(ctx, ex.config.WaitForOrphansTimeout)
-		waitErr := ex.pq.WaitForOrphans(cleanUpCtx)
-		cleanUpCancel()
+		waitErr := ex.waitForQueueOrphans(ctx)
 		if waitErr != nil {
-			return ex.result, fmt.Errorf("ParallelExecutor: WaitForOrphans: %w", waitErr)
+			// Actions might still run and modify the results. Because result is
+			// returned as a pointer we need to deep copy it.
+			ex.lock.Lock()
+			defer ex.lock.Unlock()
+			result := ex.result.DeepCopy()
+			return result, fmt.Errorf("ParallelExecutor: WaitForOrphans: %w", waitErr)
 		}
 	}
 	if len(ex.result.Errors) > 0 || len(ex.result.Pending) != 0 {
@@ -102,6 +100,30 @@ func (ex *parallelExecutor) Run(ctx context.Context) (*Result, error) {
 	}
 	return ex.result, nil
 
+}
+
+func (ex *parallelExecutor) runActionQueue(ctx context.Context) error {
+	msg := "Run runAction"
+	if ex.config.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, ex.config.Timeout)
+		defer cancel()
+		msg = fmt.Sprintf("%s with timeout %v.", msg, ex.config.Timeout)
+	}
+	klog.Infof(msg)
+	return ex.pq.Run(ctx, ex.runAction)
+}
+
+func (ex *parallelExecutor) waitForQueueOrphans(ctx context.Context) error {
+	msg := "Run WaitForOrphans"
+	if ex.config.WaitForOrphansTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, ex.config.WaitForOrphansTimeout)
+		defer cancel()
+		msg = fmt.Sprintf("%s with timeout %v.", msg, ex.config.WaitForOrphansTimeout)
+	}
+	klog.V(4).Infof(msg)
+	return ex.pq.WaitForOrphans(ctx)
 }
 
 func (ex *parallelExecutor) runAction(ctx context.Context, a Action) error {
@@ -117,7 +139,7 @@ func (ex *parallelExecutor) runAction(ctx context.Context, a Action) error {
 	ex.addActionResult(a, runErr)
 
 	if runErr != nil {
-		klog.Infof("Got error  %v, from action %s error_strategy: %s", runErr, a, ex.config.ErrorStrategy)
+		klog.V(2).Infof("Got error  %v, from action %s error_strategy: %s", runErr, a, ex.config.ErrorStrategy)
 		// check error strategy and decide if new actions should be executed.
 		if ex.config.ErrorStrategy == StopOnError {
 			if ex.config.Tracer != nil {
@@ -150,8 +172,8 @@ func (ex *parallelExecutor) queueRunnableActions() {
 	for _, a := range ex.result.Pending {
 		if a.CanRun() {
 			klog.V(4).Infof("Run task: %s", a)
-			if err := ex.pq.Add(a); err != nil {
-				klog.Errorf("error adding task %s to parallel queue: %v", a, err)
+			if ok := ex.pq.Add(a); !ok {
+				klog.Errorf("error scheduling task %s: parallel queue is done", a)
 				break
 			}
 			taskWasRun = true

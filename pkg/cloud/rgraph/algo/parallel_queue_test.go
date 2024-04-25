@@ -352,25 +352,25 @@ func TestParallelQueueWaitForOrphans(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	taskc := newTaskControl(q)
-	err := q.Add(taskc.newTask("a", []step{
+	ok := q.Add(taskc.newTask("a", []step{
 		{f: func() { cancel() }},
 		{wait: "done"},
 		{sleep: 10 * time.Millisecond},
 	}))
-	if err != nil {
-		t.Fatalf("q.Add(_) = %v, want nil", err)
+	if !ok {
+		t.Fatalf("q.Add(_) = %v, want true", ok)
 	}
 	q.Run(ctx, taskc.queueOp) // ignore err
 	// Unblock the task.
 	taskc.stepSignal("done")
 	// WaitForOrphans should return when the task is done.
-	err = q.WaitForOrphans(context.Background())
+	err := q.WaitForOrphans(context.Background())
 	if err != nil {
 		t.Fatalf("q.Run() = %v; want nil", err)
 	}
-	// Check that queue will return an error on Add() when queue state is done.
-	err = q.Add(taskc.newTask("a", nil))
-	if err == nil {
-		t.Fatal("q.Add(_) = nil, want error")
+	// Check that queue will return false when queue state is done.
+	ok = q.Add(taskc.newTask("a", nil))
+	if ok {
+		t.Fatalf("q.Add(_) = %v, want false", ok)
 	}
 }

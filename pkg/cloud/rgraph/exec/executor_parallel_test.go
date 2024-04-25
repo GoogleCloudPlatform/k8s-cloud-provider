@@ -18,6 +18,7 @@ package exec
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -133,7 +134,7 @@ func TestParallelExecutorErrorStrategy(t *testing.T) {
 				ex, err := NewParallelExecutor(mockCloud,
 					actions,
 					ErrorStrategyOption(strategy),
-					TimeoutOption(10*time.Second))
+				)
 				if err != nil {
 					t.Fatalf("NewParallelExecutor() = %v, want nil", err)
 				}
@@ -161,38 +162,85 @@ func TestParallelExecutorTimeoutOptions(t *testing.T) {
 
 		timeout               time.Duration
 		waitForOrphansTimeout time.Duration
+		injectError           bool
 		wantErr               bool
 		// actions should be sorted alphabetically for comparison.
 		completed []string
+		pending   []string
+		errors    []string
 	}{
 		{
 			name:                  "All actions should finish within timeout",
 			timeout:               10 * time.Second,
 			waitForOrphansTimeout: 1 * time.Second,
-			completed:             []string{"A", "B", "C"},
+			completed:             []string{"A", "B", "C", "D"},
 		},
 		{
-			name:                  "Actions should finish in waitForOrphans",
+			name:                  "Active actions should finish in waitForOrphans",
 			timeout:               2 * time.Second,
 			waitForOrphansTimeout: 5 * time.Second,
 			completed:             []string{"A", "B", "C"},
+			pending:               []string{"D"},
+			wantErr:               true,
 		},
 		{
-			name:                  "Actions didn't finish in waitForOrphans",
+			name:                  "Actions did not finish in waitForOrphans",
 			timeout:               1 * time.Second,
 			waitForOrphansTimeout: 2 * time.Second,
 			completed:             []string{"A", "B"},
+			pending:               []string{"D"},
+			wantErr:               true,
+		},
+		{
+			name:      "Actions should finish when no timeout is set",
+			completed: []string{"A", "B", "C", "D"},
+		},
+		{
+			name:      "Orphaned actions should finish when no waitForOrphansTimeout is set",
+			timeout:   1 * time.Second,
+			completed: []string{"A", "B", "C"},
+			pending:   []string{"D"},
+			wantErr:   true,
+		},
+		{
+			name:        "Active actions should finish after error without timeout",
+			injectError: true,
+			completed:   []string{"A", "C"},
+			errors:      []string{"B"},
+			pending:     []string{"D"},
+			wantErr:     true,
+		},
+		{
+			name:                  "Active actions should finish after error occurs with waitForOrphansTimeout",
+			waitForOrphansTimeout: 20 * time.Second,
+			injectError:           true,
+			completed:             []string{"A", "C"},
+			errors:                []string{"B"},
+			pending:               []string{"D"},
+			wantErr:               true,
+		},
+		{
+			name:                  "Actions did not finish after error occurs with waitForOrphansTimeout",
+			waitForOrphansTimeout: 1 * time.Second,
+			injectError:           true,
+			completed:             []string{"A"},
+			errors:                []string{"B"},
+			pending:               []string{"D"},
 			wantErr:               true,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 
-			// Prepare actions A -> B; A -> C where C is long lasting operation.
+			// Prepare actions A -> B; A -> C; C->D where C is long lasting operation.
 			a := &testAction{name: "A", events: EventList{StringEvent("A")}}
 			b := &testAction{name: "B"}
+			if tc.injectError {
+				b.err = fmt.Errorf("B action in error")
+			}
 			b.Want = EventList{StringEvent("A")}
 			c := &testAction{
-				name: "C",
+				name:   "C",
+				events: EventList{StringEvent("C")},
 				runHook: func() error {
 					t.Log("Action c run hook, wait 5sec")
 					time.Sleep(5 * time.Second)
@@ -201,11 +249,14 @@ func TestParallelExecutorTimeoutOptions(t *testing.T) {
 				},
 			}
 			c.Want = EventList{StringEvent("A")}
-			actions := []Action{a, b, c}
+			d := &testAction{name: "D"}
+			d.Want = EventList{StringEvent("C")}
+			actions := []Action{a, b, c, d}
 
 			mockCloud := cloud.NewMockGCE(&cloud.SingleProjectRouter{ID: "proj1"})
 			ex, err := NewParallelExecutor(mockCloud,
 				actions,
+				ErrorStrategyOption(StopOnError),
 				TimeoutOption(tc.timeout),
 				WaitForOrphansTimeoutOption(tc.waitForOrphansTimeout),
 			)
@@ -225,6 +276,16 @@ func TestParallelExecutorTimeoutOptions(t *testing.T) {
 			got := sortedStrings(result.Completed, func(a Action) string { return a.(*testAction).name })
 			if diff := cmp.Diff(got, tc.completed); diff != "" {
 				t.Errorf("completed: diff -got,+want: %s", diff)
+			}
+
+			got = sortedStrings(result.Pending, func(a Action) string { return a.(*testAction).name })
+			if diff := cmp.Diff(got, tc.pending); diff != "" {
+				t.Errorf("pending: diff -got,+want: %s", diff)
+			}
+
+			got = sortedStrings(result.Errors, func(a ActionWithErr) string { return a.Action.(*testAction).name })
+			if diff := cmp.Diff(got, tc.errors); diff != "" {
+				t.Errorf("errors: diff -got,+want: %s", diff)
 			}
 		})
 	}

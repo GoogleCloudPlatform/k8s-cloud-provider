@@ -63,7 +63,22 @@ type serialExecutor struct {
 
 var _ Executor = (*serialExecutor)(nil)
 
+// Run executes pending actions sequentially.
+//
+// Use TimeoutOption to define timeout for executor to launch new actions.
+// Note that when timeout occurs the executor will block until active action
+// has returned.
 func (ex *serialExecutor) Run(ctx context.Context) (*Result, error) {
+	if ex.config.Timeout != 0 {
+		var cancel context.CancelFunc
+		klog.V(4).Infof("Run serialExecutor with timeout %v", ex.config.Timeout)
+		ctx, cancel = context.WithTimeout(ctx, ex.config.Timeout)
+		defer cancel()
+	}
+	return ex.runInternal(ctx)
+}
+
+func (ex *serialExecutor) runInternal(ctx context.Context) (*Result, error) {
 	for a := ex.next(); a != nil; a = ex.next() {
 		err := ex.runAction(ctx, a)
 		if err != nil {
@@ -81,7 +96,7 @@ func (ex *serialExecutor) Run(ctx context.Context) (*Result, error) {
 }
 
 func (ex *serialExecutor) runAction(ctx context.Context, a Action) error {
-	klog.Infof("runAction %s", a)
+	klog.V(4).Infof("runAction %s", a)
 
 	te := &TraceEntry{
 		Action: a,
@@ -110,7 +125,7 @@ func (ex *serialExecutor) runAction(ctx context.Context, a Action) error {
 		ex.config.Tracer.Record(te, runErr)
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 func (ex *serialExecutor) next() Action {

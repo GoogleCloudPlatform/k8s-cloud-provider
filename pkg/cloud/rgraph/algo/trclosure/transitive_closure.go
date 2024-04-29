@@ -96,7 +96,9 @@ func doInternal(
 	config := makeConfig(opts...)
 
 	for _, nb := range gr.All() {
-		pq.Add(work{b: nb})
+		if err := pq.Add(work{b: nb}); err != nil {
+			return fmt.Errorf("transitive closure Do() = %w", err)
+		}
 	}
 
 	// graphLock is held when updating gr (rgraph.Builder).
@@ -133,7 +135,9 @@ func doInternal(
 			gr.Add(toNode)
 			graphLock.Unlock()
 
-			pq.Add(work{b: toNode})
+			if err := pq.Add(work{b: toNode}); err != nil {
+				return fmt.Errorf("transitive closure Do() = %w", err)
+			}
 		}
 
 		return nil

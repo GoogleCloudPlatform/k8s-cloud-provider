@@ -150,7 +150,10 @@ func (ex *parallelExecutor) queueRunnableActions() {
 	for _, a := range ex.result.Pending {
 		if a.CanRun() {
 			klog.V(4).Infof("Run task: %s", a)
-			ex.pq.Add(a)
+			if err := ex.pq.Add(a); err != nil {
+				klog.Errorf("error adding task %s to parallel queue: %v", a, err)
+				break
+			}
 			taskWasRun = true
 		} else {
 			notRunnable = append(notRunnable, a)

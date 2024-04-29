@@ -112,3 +112,40 @@ func (m *MinimumRateLimiter) Accept(ctx context.Context, key *RateLimitKey) erro
 func (m *MinimumRateLimiter) Observe(ctx context.Context, err error, key *RateLimitKey) {
 	m.RateLimiter.Observe(ctx, err, key)
 }
+
+// TickerRateLimiter uses time.Ticker to spread Accepts over time.
+//
+// Concurrent calls to Accept will block on the same channel. It is not
+// guaranteed what caller will be unblocked first.
+type TickerRateLimiter struct {
+	ticker *time.Ticker
+}
+
+// NewTickerRateLimiter creates a new TickerRateLimiter which will space Accept
+// calls at least interval/limit time apart.
+//
+// For example, limit=4 interval=time.Minute will unblock a single Accept call
+// every 15 seconds.
+func NewTickerRateLimiter(limit int, interval time.Duration) *TickerRateLimiter {
+	return &TickerRateLimiter{
+		ticker: time.NewTicker(interval / time.Duration(limit)),
+	}
+}
+
+// Accept will block until a time, specified when creating TickerRateLimiter,
+// passes since the last call to Accept.
+func (t *TickerRateLimiter) Accept(ctx context.Context, rlk *RateLimitKey) error {
+	select {
+	case <-t.ticker.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// Observe does nothing.
+func (*TickerRateLimiter) Observe(context.Context, error, *RateLimitKey) {
+}
+
+// Make sure that TickerRateLimiter implements RateLimiter.
+var _ RateLimiter = new(TickerRateLimiter)

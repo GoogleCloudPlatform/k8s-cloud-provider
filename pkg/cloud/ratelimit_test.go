@@ -112,3 +112,119 @@ func TestTickerRateLimiter(t *testing.T) {
 		t.Errorf("TickerRateLimiter.Accept() = %v, want %v", err, ctxCancelled.Err())
 	}
 }
+
+func TestCompositeRateLimiter(t *testing.T) {
+	t.Parallel()
+
+	var calledA bool
+	fa := &FakeAcceptor{accept: func() { calledA = true }}
+	arl := &AcceptRateLimiter{fa}
+	rl := NewCompositeRateLimiter(arl)
+
+	// Call default.
+	err := rl.Accept(context.Background(), nil)
+	if err != nil {
+		t.Errorf("CompositeRateLimiter.Accept = %v, want nil", err)
+	}
+	if !calledA {
+		t.Errorf("`calledA` = false, want true")
+	}
+
+	calledA = false
+	calledB := false
+	fb := &FakeAcceptor{accept: func() { calledB = true }}
+	brl := &AcceptRateLimiter{fb}
+	rl.Register("projectB", "", "", brl)
+
+	// Call registered rate limiter.
+	err = rl.Accept(context.Background(), &CallContextKey{ProjectID: "projectB"})
+	if err != nil {
+		t.Errorf("CompositeRateLimiter.Accept = %v, want nil", err)
+	}
+	if !calledB {
+		t.Errorf("`calledB` = false, want true")
+	}
+	if calledA {
+		t.Errorf("`calledA` = true, want false")
+	}
+
+	calledB = false
+	// Call default rate limiter when registered is not found
+	err = rl.Accept(context.Background(), &CallContextKey{ProjectID: "project-does-not-exist"})
+	if err != nil {
+		t.Errorf("CompositeRateLimiter.Accept = %v, want nil", err)
+	}
+	if !calledA {
+		t.Errorf("`calledA` = false, want true")
+	}
+	if calledB {
+		t.Errorf("`calledB` = true, want false")
+	}
+
+	calledA = false
+	calledC := false
+	fc := &FakeAcceptor{accept: func() { calledC = true }}
+	crl := &AcceptRateLimiter{fc}
+	rl.Register("", "networks", "", crl)
+
+	// Call rate limiter for network service when no project was specified
+	err = rl.Accept(context.Background(), &CallContextKey{ProjectID: "project-does-not-exist", Service: "networks"})
+	if err != nil {
+		t.Errorf("CompositeRateLimiter.Accept = %v, want nil", err)
+	}
+	if !calledC {
+		t.Errorf("`calledC` = false, want true")
+	}
+	if calledA {
+		t.Errorf("`calledA` = true, want false")
+	}
+	if calledB {
+		t.Errorf("`calledB` = true, want false")
+	}
+}
+
+type CountingRateLimiter int
+
+func (crl *CountingRateLimiter) Accept(_ context.Context, key *CallContextKey) error {
+	*crl++
+	return nil
+}
+
+func (*CountingRateLimiter) Observe(context.Context, error, *RateLimitKey) {}
+
+func TestCompositeRateLimiter_Table(t *testing.T) {
+	t.Parallel()
+
+	def := new(CountingRateLimiter)
+	rl := NewCompositeRateLimiter(def)
+	projectBnets := new(CountingRateLimiter)
+	rl.Register("projectB", "networks", "", projectBnets)
+	defNetGets := new(CountingRateLimiter)
+	rl.Register("", "networks", "get", defNetGets)
+
+	for _, project := range []string{"", "projectB", "project-does-not-exist"} {
+		for _, service := range []string{"", "networks", "service-does-not-exist"} {
+			for _, operation := range []string{"", "get", "operation-does-not-exist"} {
+				key := &CallContextKey{
+					ProjectID: project,
+					Service:   service,
+					Operation: operation,
+				}
+				err := rl.Accept(context.Background(), key)
+				if err != nil {
+					t.Errorf("CompositeRateLimiter.Accept = %v, want nil", err)
+				}
+			}
+		}
+	}
+
+	if *def != 22 {
+		t.Errorf("def served %d calls, want = 22", *def)
+	}
+	if *projectBnets != 3 {
+		t.Errorf("projectBnets served %d calls, want = 3", *projectBnets)
+	}
+	if *defNetGets != 2 {
+		t.Errorf("def served %d calls, want = 2", *defNetGets)
+	}
+}

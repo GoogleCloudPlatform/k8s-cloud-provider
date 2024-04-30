@@ -149,3 +149,111 @@ func (*TickerRateLimiter) Observe(context.Context, error, *RateLimitKey) {
 
 // Make sure that TickerRateLimiter implements RateLimiter.
 var _ RateLimiter = new(TickerRateLimiter)
+
+// CompositeRateLimiter combines rate limiters based on RateLimitKey.
+type CompositeRateLimiter struct {
+	// map[project id]map[resource name]map[operation name]RateLimiter
+	rateLimiters map[string]map[string]map[string]RateLimiter
+	// defaultRL is used when no matching RateLimiter was found.
+	defaultRL RateLimiter
+}
+
+// NewCompositeRateLimiter creates a new CompositeRateLimiter that will use
+// provided default rate limiter if no better match is found.
+//
+// # Example
+//
+//	defaultRL := /* default rate limiter */
+//	bsGetListRL := /* backend service rate limiter for get and list operation in project-1 */
+//	projectRL := /* rate limiter for project-1 */
+//	bsOtherProjectRL := /* rate limiter for backend service in other projects */
+//
+//	rl := NewCompositeRateLimiter(defaultRL)
+//	rl.Register("project-1", "", "", projectRL)
+//	rl.Register("project-1", "BackendServices", "Get", bsGetListRL)
+//	rl.Register("project-1", "BackendServices", "List", bsGetListRL)
+//	rl.Register("", "BackendServices", "", bsOtherProjectRL)
+//
+// This rate limiter is not nesting. Only one rate limiter is used for any
+// particular combination of: project, resource, operation. For the case above,
+// rate limiter registered at ("project-1", "", "") won't be applied to
+// operation ("project-1", "BackendServices", "Get"), because a more specific
+// rate limiter was registered.
+func NewCompositeRateLimiter(defaultRL RateLimiter) *CompositeRateLimiter {
+	m := map[string]map[string]map[string]RateLimiter{
+		"": {
+			"": {
+				"": defaultRL,
+			},
+		},
+	}
+	return &CompositeRateLimiter{
+		rateLimiters: m,
+		defaultRL:    defaultRL,
+	}
+}
+
+// ensureExists creates sub-maps as needed.
+func (c *CompositeRateLimiter) ensureExists(project, service string) {
+	if _, ok := c.rateLimiters[project]; !ok {
+		c.rateLimiters[project] = map[string]map[string]RateLimiter{}
+	}
+	if _, ok := c.rateLimiters[project][service]; !ok {
+		c.rateLimiters[project][service] = map[string]RateLimiter{}
+	}
+}
+
+// fillMissing finds all combinations where resource and/or operation name
+// could be omitted and sets it to defaultRL.
+func (c *CompositeRateLimiter) fillMissing() {
+	for _, subProject := range c.rateLimiters {
+		if subProject[""] == nil {
+			subProject[""] = map[string]RateLimiter{}
+		}
+		for _, subService := range subProject {
+			if subService[""] == nil {
+				subService[""] = c.defaultRL
+			}
+		}
+	}
+}
+
+// Register adds provided rl to the composite rate limiter. Any/all of project,
+// service, operation can be omitted by providing an empty string. In this
+// case, the provided rate limiter will be used only when there is no other
+// rate limiter matching a particular project, resource, or operaiton.
+//
+// It replaces previous rate limiter provided for the same project, service,
+// operation combination. Once a rate limiter is added, it can't be removed.
+//
+// Same rate limiter can be used for multiple Register calls.
+func (c *CompositeRateLimiter) Register(project, service, operation string, rl RateLimiter) {
+	c.ensureExists(project, service)
+	c.rateLimiters[project][service][operation] = rl
+	c.fillMissing()
+}
+
+// Accept either calls underlying rate limiter matching rlk or a default rate
+// limiter when none is found.
+func (c *CompositeRateLimiter) Accept(ctx context.Context, rlk *RateLimitKey) error {
+	if rlk == nil {
+		return c.defaultRL.Accept(ctx, rlk)
+	}
+	project := rlk.ProjectID
+	if _, ok := c.rateLimiters[project]; !ok {
+		project = ""
+	}
+	service := rlk.Service
+	if _, ok := c.rateLimiters[project][service]; !ok {
+		service = ""
+	}
+	operation := rlk.Operation
+	if _, ok := c.rateLimiters[project][service][operation]; !ok {
+		operation = ""
+	}
+	return c.rateLimiters[project][service][operation].Accept(ctx, rlk)
+}
+
+// Observe does nothing.
+func (*CompositeRateLimiter) Observe(context.Context, error, *RateLimitKey) {
+}

@@ -34,19 +34,11 @@ func TestHealthcheckUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildHealthCheck(_, hc-update-test, 15) = (_, %v), want (_, nil)", err)
 	}
-	t.Cleanup(func() {
-		err := theCloud.HealthChecks().Delete(ctx, hcID.Key)
-		t.Logf("theCloud.HealthChecks().Delete(ctx, %s): %v", hcID.Key, err)
-	})
 	bsID, err := buildBackendServiceWithNEG(graphBuilder, "hc-update-test-bs", hcID, negID)
 	t.Logf("BackendServices created: %v", bsID)
 	if err != nil {
 		t.Fatalf("buildBackendServiceWithNEG(_, bs-test, _, _) = (_, %v), want (_, nil)", err)
 	}
-	t.Cleanup(func() {
-		err = theCloud.BackendServices().Delete(ctx, bsID.Key)
-		t.Logf("theCloud.BackendServices().Delete(_, %s): %v", bsID.Key, err)
-	})
 	rules := []*networkservices.TcpRouteRouteRule{
 		{
 			Action: &networkservices.TcpRouteRouteAction{
@@ -68,13 +60,9 @@ func TestHealthcheckUpdate(t *testing.T) {
 
 	tcprID, err := buildTCPRoute(graphBuilder, "hc-update-test", meshURL, rules, bsID)
 	if err != nil {
-		t.Fatalf("buildTCPRoute(_, tcproute-test, _, _, _) = (_, %v), want (_, nil)", err)
+		t.Fatalf("buildTCPRoute(_, hc-update-test, _, _, _) = (_, %v), want (_, nil)", err)
 	}
 	t.Logf("TCPRoute created: %v", tcprID)
-	t.Cleanup(func() {
-		err := theCloud.TcpRoutes().Delete(ctx, tcprID.Key)
-		t.Logf("theCloud.TcpRoutes().Delete(_, %s): %v", tcprID.Key, err)
-	})
 
 	expectedActions := []exec.ActionMetadata{
 		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, tcprID)},
@@ -84,9 +72,21 @@ func TestHealthcheckUpdate(t *testing.T) {
 	}
 	processGraphAndExpectActions(t, graphBuilder, expectedActions)
 
+	t.Cleanup(func() {
+		err := theCloud.TcpRoutes().Delete(ctx, tcprID.Key)
+		t.Logf("theCloud.TcpRoutes().Delete(_, %s): %v", tcprID.Key, err)
+		err = theCloud.BackendServices().Delete(ctx, bsID.Key)
+		t.Logf("theCloud.BackendServices().Delete(_, %s): %v", bsID.Key, err)
+		err = theCloud.HealthChecks().Delete(ctx, hcID.Key)
+		t.Logf("theCloud.HealthChecks().Delete(ctx, %s): %v", hcID.Key, err)
+	})
+
 	checkGCEHealthCheck(t, ctx, theCloud, hcID, 15)
+
+	// Update health check
 	hcID, err = buildHealthCheck(graphBuilder, "hc-update-test", 25)
 
+	// TODO(b/337206891) Investigate TcpRoute updates
 	expectedActions = []exec.ActionMetadata{
 		{Type: exec.ActionTypeUpdate, Name: actionName(exec.ActionTypeUpdate, hcID)},
 		{Type: exec.ActionTypeUpdate, Name: actionName(exec.ActionTypeUpdate, tcprID)},

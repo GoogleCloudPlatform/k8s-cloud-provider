@@ -138,8 +138,8 @@ type fieldTrait struct {
 type FieldType string
 
 const (
-	// FieldTypeOrdinary is a ordinary field. It must be set (non-zero or in a
-	// meta-field. It will be compared by value in a diff.
+	// FieldTypeOrdinary is a ordinary field. It will be compared by value in a
+	// diff. It can be zero-value without being in a metafield.
 	FieldTypeOrdinary FieldType = "Ordinary"
 	// FieldTypeSystem fields are internal infrastructure related fields. These are never
 	// copied or diff'd.
@@ -148,8 +148,13 @@ const (
 	// should never be set by the client.
 	FieldTypeOutputOnly FieldType = "OutputOnly"
 	// FieldTypeAllowZeroValue is an ordinary field that can be zero-value
-	// without being in a metafield. This is used for testing.
+	// without being in a metafield. This is used for testing. TODO(kl52752)
+	// remove this field when all resources are migrating to
+	// FieldTypeNonZeroValue.
 	FieldTypeAllowZeroValue FieldType = "AllowZeroValue"
+	// FieldTypeNonZeroValue is a field that's value must be non-zero or
+	// specified in a meta-field. It will be compared by value in a diff.
+	FieldTypeNonZeroValue FieldType = "NonZeroValue"
 )
 
 // CheckSchema validates that the traits are valid and match the schema of the
@@ -179,6 +184,9 @@ func (dt *FieldTraits) System(p Path) { dt.add(p, FieldTypeSystem) }
 
 // AllowZeroValue specifies the type of the given path.
 func (dt *FieldTraits) AllowZeroValue(p Path) { dt.add(p, FieldTypeAllowZeroValue) }
+
+// NonZeroValue specifies the type of the given path.
+func (dt *FieldTraits) NonZeroValue(p Path) { dt.add(p, FieldTypeNonZeroValue) }
 
 // Clone create an exact copy of the traits.
 func (dt *FieldTraits) Clone() *FieldTraits {

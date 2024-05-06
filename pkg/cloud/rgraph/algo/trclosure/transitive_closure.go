@@ -96,7 +96,9 @@ func doInternal(
 	config := makeConfig(opts...)
 
 	for _, nb := range gr.All() {
-		pq.Add(work{b: nb})
+		if ok := pq.Add(work{b: nb}); !ok {
+			return fmt.Errorf("parallel queue is done")
+		}
 	}
 
 	// graphLock is held when updating gr (rgraph.Builder).
@@ -133,7 +135,9 @@ func doInternal(
 			gr.Add(toNode)
 			graphLock.Unlock()
 
-			pq.Add(work{b: toNode})
+			if ok := pq.Add(work{b: toNode}); !ok {
+				return fmt.Errorf("parallel queue is done")
+			}
 		}
 
 		return nil

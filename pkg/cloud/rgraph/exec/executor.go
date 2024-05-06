@@ -32,6 +32,18 @@ type Result struct {
 	Pending []Action
 }
 
+func (r *Result) DeepCopy() *Result {
+	resultCopy := Result{
+		Completed: make([]Action, len(r.Completed)),
+		Pending:   make([]Action, len(r.Pending)),
+		Errors:    make([]ActionWithErr, len(r.Errors)),
+	}
+	copy(resultCopy.Completed, r.Completed)
+	copy(resultCopy.Errors, r.Errors)
+	copy(resultCopy.Pending, r.Pending)
+	return &resultCopy
+}
+
 type ActionWithErr struct {
 	Action Action
 	Err    error

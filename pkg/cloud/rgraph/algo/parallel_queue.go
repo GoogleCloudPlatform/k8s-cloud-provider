@@ -108,16 +108,18 @@ const (
 	stateDone
 )
 
-// Add an item to the queue. This method is threadsafe within op() and
-// can be called during Run(). It is NOT safe to call Add() from
-// a different, unassociated thread.
+// Add an item to the queue. This method is thread safe within op() and can be
+// called during Run(). It is NOT safe to call Add() from a different,
+// unassociated thread. This method returns False when queue state is done.
 //
-// Calling Add(item) from the op() given to Run() guarantees that item
-// will be processed.
-func (q *ParallelQueue[T]) Add(item T) {
+// Calling Add(item) from the op() given to Run() guarantees that item will be
+// processed.
+func (q *ParallelQueue[T]) Add(item T) bool {
 	q.lock.Lock()
 	defer q.lock.Unlock()
-
+	if q.state == stateDone {
+		return false
+	}
 	qe := queueElement[T]{
 		ri: RunInfo{
 			ID:     item.String(),
@@ -136,6 +138,7 @@ func (q *ParallelQueue[T]) Add(item T) {
 		// the <-q.in will happen AFTER append(q.pending).
 		q.in <- struct{}{}
 	}
+	return true
 }
 
 // Run the queue using op() to process each task. Different op()s must

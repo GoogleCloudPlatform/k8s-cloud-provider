@@ -100,10 +100,12 @@ type MinimumRateLimiter struct {
 // Accept blocks on the minimum duration and context. Once the minimum duration is met,
 // the func is blocked on the underlying ratelimiter.
 func (m *MinimumRateLimiter) Accept(ctx context.Context, key *RateLimitKey) error {
+	t := time.NewTimer(m.Minimum)
 	select {
-	case <-time.After(m.Minimum):
+	case <-t.C:
 		return m.RateLimiter.Accept(ctx, key)
 	case <-ctx.Done():
+		t.Stop()
 		return ctx.Err()
 	}
 }

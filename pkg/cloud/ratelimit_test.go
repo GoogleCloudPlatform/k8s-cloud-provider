@@ -134,10 +134,10 @@ func TestCompositeRateLimiter(t *testing.T) {
 	calledB := false
 	fb := &FakeAcceptor{accept: func() { calledB = true }}
 	brl := &AcceptRateLimiter{fb}
-	rl.Register("projectB", "", "", brl)
+	rl.Register("Meshes", "", brl)
 
 	// Call registered rate limiter.
-	err = rl.Accept(context.Background(), &CallContextKey{ProjectID: "projectB"})
+	err = rl.Accept(context.Background(), &CallContextKey{Service: "Meshes"})
 	if err != nil {
 		t.Errorf("CompositeRateLimiter.Accept = %v, want nil", err)
 	}
@@ -150,7 +150,7 @@ func TestCompositeRateLimiter(t *testing.T) {
 
 	calledB = false
 	// Call default rate limiter when registered is not found
-	err = rl.Accept(context.Background(), &CallContextKey{ProjectID: "project-does-not-exist"})
+	err = rl.Accept(context.Background(), &CallContextKey{Service: "service-does-not-exist"})
 	if err != nil {
 		t.Errorf("CompositeRateLimiter.Accept = %v, want nil", err)
 	}
@@ -165,10 +165,10 @@ func TestCompositeRateLimiter(t *testing.T) {
 	calledC := false
 	fc := &FakeAcceptor{accept: func() { calledC = true }}
 	crl := &AcceptRateLimiter{fc}
-	rl.Register("", "networks", "", crl)
+	rl.Register("", "Get", crl)
 
 	// Call rate limiter for network service when no project was specified
-	err = rl.Accept(context.Background(), &CallContextKey{ProjectID: "project-does-not-exist", Service: "networks"})
+	err = rl.Accept(context.Background(), &CallContextKey{ProjectID: "project-does-not-exist", Service: "Networks", Operation: "Get"})
 	if err != nil {
 		t.Errorf("CompositeRateLimiter.Accept = %v, want nil", err)
 	}
@@ -197,10 +197,10 @@ func TestCompositeRateLimiter_Table(t *testing.T) {
 
 	def := new(CountingRateLimiter)
 	rl := NewCompositeRateLimiter(def)
-	projectBnets := new(CountingRateLimiter)
-	rl.Register("projectB", "networks", "", projectBnets)
-	defNetGets := new(CountingRateLimiter)
-	rl.Register("", "networks", "get", defNetGets)
+	defNetRL := new(CountingRateLimiter)
+	rl.Register("networks", "", defNetRL)
+	getNetRL := new(CountingRateLimiter)
+	rl.Register("networks", "get", getNetRL)
 
 	for _, project := range []string{"", "projectB", "project-does-not-exist"} {
 		for _, service := range []string{"", "networks", "service-does-not-exist"} {
@@ -218,13 +218,13 @@ func TestCompositeRateLimiter_Table(t *testing.T) {
 		}
 	}
 
-	if *def != 22 {
-		t.Errorf("def served %d calls, want = 22", *def)
+	if *def != 18 {
+		t.Errorf("def served %d calls, want = 18", *def)
 	}
-	if *projectBnets != 3 {
-		t.Errorf("projectBnets served %d calls, want = 3", *projectBnets)
+	if *defNetRL != 6 {
+		t.Errorf("defNetRL served %d calls, want = 6", *defNetRL)
 	}
-	if *defNetGets != 2 {
-		t.Errorf("def served %d calls, want = 2", *defNetGets)
+	if *getNetRL != 3 {
+		t.Errorf("getNetRL served %d calls, want = 3", *getNetRL)
 	}
 }

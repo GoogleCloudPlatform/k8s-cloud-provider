@@ -154,39 +154,35 @@ var _ RateLimiter = new(TickerRateLimiter)
 
 // CompositeRateLimiter combines rate limiters based on RateLimitKey.
 type CompositeRateLimiter struct {
-	// map[project id]map[resource name]map[operation name]RateLimiter
-	rateLimiters map[string]map[string]map[string]RateLimiter
+	// map[resource name]map[operation name]RateLimiter
+	rateLimiters map[string]map[string]RateLimiter
 	// defaultRL is used when no matching RateLimiter was found.
 	defaultRL RateLimiter
 }
 
 // NewCompositeRateLimiter creates a new CompositeRateLimiter that will use
-// provided default rate limiter if no better match is found.
+// provided default rate limiter if no better match is found. It is intended to
+// be used for a single project.
 //
 // # Example
 //
-//	defaultRL := /* default rate limiter */
-//	bsGetListRL := /* backend service rate limiter for get and list operation in project-1 */
-//	projectRL := /* rate limiter for project-1 */
-//	bsOtherProjectRL := /* rate limiter for backend service in other projects */
+//	bsDefaultRL := /* backend service default rate limiter */
+//	bsGetListRL := /* backend service rate limiter for get and list operations */
 //
 //	rl := NewCompositeRateLimiter(defaultRL)
-//	rl.Register("project-1", "", "", projectRL)
-//	rl.Register("project-1", "BackendServices", "Get", bsGetListRL)
-//	rl.Register("project-1", "BackendServices", "List", bsGetListRL)
-//	rl.Register("", "BackendServices", "", bsOtherProjectRL)
+//	rl.Register("BackendServices", "", bsDefaultRL)
+//	rl.Register("BackendServices", "Get", bsGetListRL)
+//	rl.Register("BackendServices", "List", bsGetListRL)
 //
 // This rate limiter is not nesting. Only one rate limiter is used for any
-// particular combination of: project, resource, operation. For the case above,
-// rate limiter registered at ("project-1", "", "") won't be applied to
-// operation ("project-1", "BackendServices", "Get"), because a more specific
-// rate limiter was registered.
+// particular combination of: resource, operation. For the case above, rate
+// limiter registered at ("BackendServices", "") won't be applied to operation
+// ("BackendServices", "Get"), because a more specific rate limiter was
+// registered.
 func NewCompositeRateLimiter(defaultRL RateLimiter) *CompositeRateLimiter {
-	m := map[string]map[string]map[string]RateLimiter{
+	m := map[string]map[string]RateLimiter{
 		"": {
-			"": {
-				"": defaultRL,
-			},
+			"": defaultRL,
 		},
 	}
 	return &CompositeRateLimiter{
@@ -196,42 +192,34 @@ func NewCompositeRateLimiter(defaultRL RateLimiter) *CompositeRateLimiter {
 }
 
 // ensureExists creates sub-maps as needed.
-func (c *CompositeRateLimiter) ensureExists(project, service string) {
-	if _, ok := c.rateLimiters[project]; !ok {
-		c.rateLimiters[project] = map[string]map[string]RateLimiter{}
-	}
-	if _, ok := c.rateLimiters[project][service]; !ok {
-		c.rateLimiters[project][service] = map[string]RateLimiter{}
+func (c *CompositeRateLimiter) ensureExists(service string) {
+	if _, ok := c.rateLimiters[service]; !ok {
+		c.rateLimiters[service] = map[string]RateLimiter{}
 	}
 }
 
 // fillMissing finds all combinations where resource and/or operation name
 // could be omitted and sets it to defaultRL.
 func (c *CompositeRateLimiter) fillMissing() {
-	for _, subProject := range c.rateLimiters {
-		if subProject[""] == nil {
-			subProject[""] = map[string]RateLimiter{}
-		}
-		for _, subService := range subProject {
-			if subService[""] == nil {
-				subService[""] = c.defaultRL
-			}
+	for _, subService := range c.rateLimiters {
+		if subService[""] == nil {
+			subService[""] = c.defaultRL
 		}
 	}
 }
 
-// Register adds provided rl to the composite rate limiter. Any/all of project,
-// service, operation can be omitted by providing an empty string. In this
-// case, the provided rate limiter will be used only when there is no other
-// rate limiter matching a particular project, resource, or operaiton.
+// Register adds provided rl to the composite rate limiter. Service, operation
+// can be omitted by providing an empty string. In this case, the provided rate
+// limiter will be used only when there is no other rate limiter matching a
+// particular resource, or operation.
 //
-// It replaces previous rate limiter provided for the same project, service,
-// operation combination. Once a rate limiter is added, it can't be removed.
+// It replaces previous rate limiter provided for the same service, operation
+// combination. Once a rate limiter is added, it can't be removed.
 //
 // Same rate limiter can be used for multiple Register calls.
-func (c *CompositeRateLimiter) Register(project, service, operation string, rl RateLimiter) {
-	c.ensureExists(project, service)
-	c.rateLimiters[project][service][operation] = rl
+func (c *CompositeRateLimiter) Register(service, operation string, rl RateLimiter) {
+	c.ensureExists(service)
+	c.rateLimiters[service][operation] = rl
 	c.fillMissing()
 }
 
@@ -241,19 +229,15 @@ func (c *CompositeRateLimiter) Accept(ctx context.Context, rlk *RateLimitKey) er
 	if rlk == nil {
 		return c.defaultRL.Accept(ctx, rlk)
 	}
-	project := rlk.ProjectID
-	if _, ok := c.rateLimiters[project]; !ok {
-		project = ""
-	}
 	service := rlk.Service
-	if _, ok := c.rateLimiters[project][service]; !ok {
+	if _, ok := c.rateLimiters[service]; !ok {
 		service = ""
 	}
 	operation := rlk.Operation
-	if _, ok := c.rateLimiters[project][service][operation]; !ok {
+	if _, ok := c.rateLimiters[service][operation]; !ok {
 		operation = ""
 	}
-	return c.rateLimiters[project][service][operation].Accept(ctx, rlk)
+	return c.rateLimiters[service][operation].Accept(ctx, rlk)
 }
 
 // Observe does nothing.

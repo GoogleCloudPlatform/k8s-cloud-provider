@@ -67,6 +67,12 @@ type parallelExecutor struct {
 
 	pq   *algo.ParallelQueue[Action]
 	done chan *TraceEntry
+
+	// hooks are created for testing and debugging, do not use in production.
+	// hookAfterRun will be called after runActionQueue exits.
+	hookAfterRun func()
+	// hookAfterWaitForOrphans will be called after WaitForOrphas finishes.
+	hookAfterWaitForOrphans func()
 }
 
 // parallelExecutor implements Executor.
@@ -84,8 +90,14 @@ func (ex *parallelExecutor) Run(ctx context.Context) (*Result, error) {
 	ex.queueRunnableActions()
 
 	queueErr := ex.runActionQueue(ctx)
+	if ex.hookAfterRun != nil {
+		ex.hookAfterRun()
+	}
 	if queueErr != nil {
 		waitErr := ex.waitForQueueOrphans(ctx)
+		if ex.hookAfterWaitForOrphans != nil {
+			ex.hookAfterWaitForOrphans()
+		}
 		if waitErr != nil {
 			// Actions might still run and modify the results. Because result is
 			// returned as a pointer we need to deep copy it.

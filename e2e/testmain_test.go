@@ -98,8 +98,26 @@ func TestMain(m *testing.M) {
 		}
 	}
 	client := oauth2.NewClient(ctx, ts)
+
 	mrl := &cloud.MinimumRateLimiter{RateLimiter: &cloud.NopRateLimiter{}, Minimum: 50 * time.Millisecond}
-	svc, err := cloud.NewService(ctx, client, &cloud.SingleProjectRouter{ID: testFlags.project}, mrl)
+	crl := cloud.NewCompositeRateLimiter(mrl)
+
+	// The default limit is 1500 per minute. Leave 200 buffer.
+	computeRL := cloud.NewTickerRateLimiter(1300, time.Minute)
+	crl.Register("HealthChecks", "", computeRL)
+	crl.Register("BackendServices", "", computeRL)
+	crl.Register("NetworkEndpointGroups", "", computeRL)
+
+	// The default limit is 1200 per minute. Leave 200 buffer.
+	networkServicesRL := cloud.NewTickerRateLimiter(1000, time.Minute)
+	crl.Register("TcpRoutes", "", networkServicesRL)
+	crl.Register("Meshes", "", networkServicesRL)
+
+	// To ensure minimum time between operations, wrap the network services rate limiter.
+	orl := &cloud.MinimumRateLimiter{RateLimiter: networkServicesRL, Minimum: 100 * time.Millisecond}
+	crl.Register("Operations", "", orl)
+
+	svc, err := cloud.NewService(ctx, client, &cloud.SingleProjectRouter{ID: testFlags.project}, crl)
 	if err != nil {
 		log.Fatal(err)
 	}

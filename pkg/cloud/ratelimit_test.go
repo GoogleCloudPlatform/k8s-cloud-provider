@@ -98,8 +98,10 @@ func TestTickerRateLimiter(t *testing.T) {
 	if elapsed > time.Second {
 		t.Errorf("TickerRateLimiter.Accept took too long: %v, want <1s", elapsed)
 	}
-	if elapsed < 500*time.Millisecond {
-		t.Errorf("TickerRateLimiter.Accept took too short: %v, want >500ms", elapsed)
+	// The first Accept call doesn't wait for the whole duration between
+	// ticks (it is possible it will return immediately).
+	if elapsed < 490*time.Millisecond {
+		t.Errorf("TickerRateLimiter.Accept took too short: %v, want >490ms", elapsed)
 	}
 
 	// Use context that has been cancelled and expect a context error returned.

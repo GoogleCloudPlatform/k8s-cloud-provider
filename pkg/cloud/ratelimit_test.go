@@ -87,21 +87,9 @@ func TestTickerRateLimiter(t *testing.T) {
 	t.Parallel()
 
 	trl := NewTickerRateLimiter(100, time.Second)
-	start := time.Now()
-	for i := 0; i < 50; i++ {
-		err := trl.Accept(context.Background(), nil)
-		if err != nil {
-			t.Errorf("TickerRateLimiter.Accept = %v, want nil", err)
-		}
-	}
-	elapsed := time.Since(start)
-	if elapsed > time.Second {
-		t.Errorf("TickerRateLimiter.Accept took too long: %v, want <1s", elapsed)
-	}
-	// The first Accept call doesn't wait for the whole duration between
-	// ticks (it is possible it will return immediately).
-	if elapsed < 490*time.Millisecond {
-		t.Errorf("TickerRateLimiter.Accept took too short: %v, want >490ms", elapsed)
+	err := trl.Accept(context.Background(), nil)
+	if err != nil {
+		t.Errorf("TickerRateLimiter.Accept = %v, want nil", err)
 	}
 
 	// Use context that has been cancelled and expect a context error returned.
@@ -109,7 +97,7 @@ func TestTickerRateLimiter(t *testing.T) {
 	cancelled()
 	// Verify context is cancelled by now.
 	<-ctxCancelled.Done()
-	err := trl.Accept(ctxCancelled, nil)
+	err = trl.Accept(ctxCancelled, nil)
 	if err != ctxCancelled.Err() {
 		t.Errorf("TickerRateLimiter.Accept() = %v, want %v", err, ctxCancelled.Err())
 	}

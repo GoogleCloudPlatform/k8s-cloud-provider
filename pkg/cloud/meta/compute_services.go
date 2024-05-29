@@ -653,7 +653,7 @@ var ComputeServices = []*ServiceInfo{
 		Service:     "RegionNetworkEndpointGroups",
 		Resource:    "networkEndpointGroups",
 		version:     VersionAlpha,
-		keyType:     Global,
+		keyType:     Regional,
 		serviceType: reflect.TypeOf(&alpha.RegionNetworkEndpointGroupsService{}),
 		additionalMethods: []string{
 			"AttachNetworkEndpoints",
@@ -666,7 +666,7 @@ var ComputeServices = []*ServiceInfo{
 		Service:     "RegionNetworkEndpointGroups",
 		Resource:    "networkEndpointGroups",
 		version:     VersionBeta,
-		keyType:     Global,
+		keyType:     Regional,
 		serviceType: reflect.TypeOf(&beta.RegionNetworkEndpointGroupsService{}),
 		additionalMethods: []string{
 			"AttachNetworkEndpoints",
@@ -679,7 +679,7 @@ var ComputeServices = []*ServiceInfo{
 		Service:     "RegionNetworkEndpointGroups",
 		Resource:    "networkEndpointGroups",
 		version:     VersionGA,
-		keyType:     Global,
+		keyType:     Regional,
 		serviceType: reflect.TypeOf(&ga.RegionNetworkEndpointGroupsService{}),
 		additionalMethods: []string{
 			"AttachNetworkEndpoints",

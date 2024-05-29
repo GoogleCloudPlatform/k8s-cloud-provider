@@ -2569,11 +2569,11 @@ func TestRegionNetworkEndpointGroupsGroup(t *testing.T) {
 	mock := NewMockGCE(pr)
 
 	var key *meta.Key
-	keyAlpha := meta.GlobalKey("key-alpha")
+	keyAlpha := meta.RegionalKey("key-alpha", "location")
 	key = keyAlpha
-	keyBeta := meta.GlobalKey("key-beta")
+	keyBeta := meta.RegionalKey("key-beta", "location")
 	key = keyBeta
-	keyGA := meta.GlobalKey("key-ga")
+	keyGA := meta.RegionalKey("key-ga", "location")
 	key = keyGA
 	// Ignore unused variables.
 	_, _, _ = ctx, mock, key
@@ -2631,7 +2631,7 @@ func TestRegionNetworkEndpointGroupsGroup(t *testing.T) {
 	}
 	_ = want // ignore unused variables.
 	{
-		objs, err := mock.AlphaRegionNetworkEndpointGroups().List(ctx, filter.None)
+		objs, err := mock.AlphaRegionNetworkEndpointGroups().List(ctx, location, filter.None)
 		if err != nil {
 			t.Errorf("AlphaRegionNetworkEndpointGroups().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
 		} else {
@@ -2645,7 +2645,7 @@ func TestRegionNetworkEndpointGroupsGroup(t *testing.T) {
 		}
 	}
 	{
-		objs, err := mock.BetaRegionNetworkEndpointGroups().List(ctx, filter.None)
+		objs, err := mock.BetaRegionNetworkEndpointGroups().List(ctx, location, filter.None)
 		if err != nil {
 			t.Errorf("BetaRegionNetworkEndpointGroups().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
 		} else {
@@ -2659,7 +2659,7 @@ func TestRegionNetworkEndpointGroupsGroup(t *testing.T) {
 		}
 	}
 	{
-		objs, err := mock.RegionNetworkEndpointGroups().List(ctx, filter.None)
+		objs, err := mock.RegionNetworkEndpointGroups().List(ctx, location, filter.None)
 		if err != nil {
 			t.Errorf("RegionNetworkEndpointGroups().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
 		} else {
@@ -4889,7 +4889,7 @@ func TestResourceIDConversion(t *testing.T) {
 		NewRegionBackendServicesResourceID("some-project", "us-central1", "my-backendServices-resource"),
 		NewRegionDisksResourceID("some-project", "us-central1", "my-disks-resource"),
 		NewRegionHealthChecksResourceID("some-project", "us-central1", "my-healthChecks-resource"),
-		NewRegionNetworkEndpointGroupsResourceID("some-project", "my-networkEndpointGroups-resource"),
+		NewRegionNetworkEndpointGroupsResourceID("some-project", "us-central1", "my-networkEndpointGroups-resource"),
 		NewRegionNetworkFirewallPoliciesResourceID("some-project", "us-central1", "my-regionNetworkFirewallPolicies-resource"),
 		NewRegionSslCertificatesResourceID("some-project", "us-central1", "my-sslCertificates-resource"),
 		NewRegionSslPoliciesResourceID("some-project", "us-central1", "my-sslPolicies-resource"),

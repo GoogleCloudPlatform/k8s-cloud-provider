@@ -29634,12 +29634,12 @@ func (g *GCEGlobalNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Contex
 // AlphaRegionNetworkEndpointGroups is an interface that allows for mocking of RegionNetworkEndpointGroups.
 type AlphaRegionNetworkEndpointGroups interface {
 	Get(ctx context.Context, key *meta.Key, options ...Option) (*computealpha.NetworkEndpointGroup, error)
-	List(ctx context.Context, fl *filter.F, options ...Option) ([]*computealpha.NetworkEndpointGroup, error)
+	List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computealpha.NetworkEndpointGroup, error)
 	Insert(ctx context.Context, key *meta.Key, obj *computealpha.NetworkEndpointGroup, options ...Option) error
 	Delete(ctx context.Context, key *meta.Key, options ...Option) error
-	AttachNetworkEndpoints(context.Context, *meta.Key, string, *computealpha.RegionNetworkEndpointGroupsAttachEndpointsRequest, ...Option) error
-	DetachNetworkEndpoints(context.Context, *meta.Key, string, *computealpha.RegionNetworkEndpointGroupsDetachEndpointsRequest, ...Option) error
-	ListNetworkEndpoints(context.Context, *meta.Key, string, *filter.F, ...Option) ([]*computealpha.NetworkEndpointWithHealthStatus, error)
+	AttachNetworkEndpoints(context.Context, *meta.Key, *computealpha.RegionNetworkEndpointGroupsAttachEndpointsRequest, ...Option) error
+	DetachNetworkEndpoints(context.Context, *meta.Key, *computealpha.RegionNetworkEndpointGroupsDetachEndpointsRequest, ...Option) error
+	ListNetworkEndpoints(context.Context, *meta.Key, *filter.F, ...Option) ([]*computealpha.NetworkEndpointWithHealthStatus, error)
 }
 
 // NewMockAlphaRegionNetworkEndpointGroups returns a new mock for RegionNetworkEndpointGroups.
@@ -29676,12 +29676,12 @@ type MockAlphaRegionNetworkEndpointGroups struct {
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
 	GetHook                    func(ctx context.Context, key *meta.Key, m *MockAlphaRegionNetworkEndpointGroups, options ...Option) (bool, *computealpha.NetworkEndpointGroup, error)
-	ListHook                   func(ctx context.Context, fl *filter.F, m *MockAlphaRegionNetworkEndpointGroups, options ...Option) (bool, []*computealpha.NetworkEndpointGroup, error)
+	ListHook                   func(ctx context.Context, region string, fl *filter.F, m *MockAlphaRegionNetworkEndpointGroups, options ...Option) (bool, []*computealpha.NetworkEndpointGroup, error)
 	InsertHook                 func(ctx context.Context, key *meta.Key, obj *computealpha.NetworkEndpointGroup, m *MockAlphaRegionNetworkEndpointGroups, options ...Option) (bool, error)
 	DeleteHook                 func(ctx context.Context, key *meta.Key, m *MockAlphaRegionNetworkEndpointGroups, options ...Option) (bool, error)
-	AttachNetworkEndpointsHook func(context.Context, *meta.Key, string, *computealpha.RegionNetworkEndpointGroupsAttachEndpointsRequest, *MockAlphaRegionNetworkEndpointGroups, ...Option) error
-	DetachNetworkEndpointsHook func(context.Context, *meta.Key, string, *computealpha.RegionNetworkEndpointGroupsDetachEndpointsRequest, *MockAlphaRegionNetworkEndpointGroups, ...Option) error
-	ListNetworkEndpointsHook   func(context.Context, *meta.Key, string, *filter.F, *MockAlphaRegionNetworkEndpointGroups, ...Option) ([]*computealpha.NetworkEndpointWithHealthStatus, error)
+	AttachNetworkEndpointsHook func(context.Context, *meta.Key, *computealpha.RegionNetworkEndpointGroupsAttachEndpointsRequest, *MockAlphaRegionNetworkEndpointGroups, ...Option) error
+	DetachNetworkEndpointsHook func(context.Context, *meta.Key, *computealpha.RegionNetworkEndpointGroupsDetachEndpointsRequest, *MockAlphaRegionNetworkEndpointGroups, ...Option) error
+	ListNetworkEndpointsHook   func(context.Context, *meta.Key, *filter.F, *MockAlphaRegionNetworkEndpointGroups, ...Option) ([]*computealpha.NetworkEndpointWithHealthStatus, error)
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -29721,11 +29721,11 @@ func (m *MockAlphaRegionNetworkEndpointGroups) Get(ctx context.Context, key *met
 	return nil, err
 }
 
-// List all of the objects in the mock.
-func (m *MockAlphaRegionNetworkEndpointGroups) List(ctx context.Context, fl *filter.F, options ...Option) ([]*computealpha.NetworkEndpointGroup, error) {
+// List all of the objects in the mock in the given region.
+func (m *MockAlphaRegionNetworkEndpointGroups) List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computealpha.NetworkEndpointGroup, error) {
 	if m.ListHook != nil {
-		if intercept, objs, err := m.ListHook(ctx, fl, m, options...); intercept {
-			klog.V(5).Infof("MockAlphaRegionNetworkEndpointGroups.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+		if intercept, objs, err := m.ListHook(ctx, region, fl, m, options...); intercept {
+			klog.V(5).Infof("MockAlphaRegionNetworkEndpointGroups.List(%v, %q, %v) = [%v items], %v", ctx, region, fl, len(objs), err)
 			return objs, err
 		}
 	}
@@ -29735,20 +29735,23 @@ func (m *MockAlphaRegionNetworkEndpointGroups) List(ctx context.Context, fl *fil
 
 	if m.ListError != nil {
 		err := *m.ListError
-		klog.V(5).Infof("MockAlphaRegionNetworkEndpointGroups.List(%v, %v) = nil, %v", ctx, fl, err)
+		klog.V(5).Infof("MockAlphaRegionNetworkEndpointGroups.List(%v, %q, %v) = nil, %v", ctx, region, fl, err)
 
 		return nil, *m.ListError
 	}
 
 	var objs []*computealpha.NetworkEndpointGroup
-	for _, obj := range m.Objects {
+	for key, obj := range m.Objects {
+		if key.Region != region {
+			continue
+		}
 		if !fl.Match(obj.ToAlpha()) {
 			continue
 		}
 		objs = append(objs, obj.ToAlpha())
 	}
 
-	klog.V(5).Infof("MockAlphaRegionNetworkEndpointGroups.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	klog.V(5).Infof("MockAlphaRegionNetworkEndpointGroups.List(%v, %q, %v) = [%v items], nil", ctx, region, fl, len(objs))
 	return objs, nil
 }
 
@@ -29829,25 +29832,25 @@ func (m *MockAlphaRegionNetworkEndpointGroups) Obj(o *computealpha.NetworkEndpoi
 }
 
 // AttachNetworkEndpoints is a mock for the corresponding method.
-func (m *MockAlphaRegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, arg1 *computealpha.RegionNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
+func (m *MockAlphaRegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computealpha.RegionNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
 	if m.AttachNetworkEndpointsHook != nil {
-		return m.AttachNetworkEndpointsHook(ctx, key, arg0, arg1, m)
+		return m.AttachNetworkEndpointsHook(ctx, key, arg0, m)
 	}
 	return nil
 }
 
 // DetachNetworkEndpoints is a mock for the corresponding method.
-func (m *MockAlphaRegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, arg1 *computealpha.RegionNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
+func (m *MockAlphaRegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computealpha.RegionNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
 	if m.DetachNetworkEndpointsHook != nil {
-		return m.DetachNetworkEndpointsHook(ctx, key, arg0, arg1, m)
+		return m.DetachNetworkEndpointsHook(ctx, key, arg0, m)
 	}
 	return nil
 }
 
 // ListNetworkEndpoints is a mock for the corresponding method.
-func (m *MockAlphaRegionNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, fl *filter.F, options ...Option) ([]*computealpha.NetworkEndpointWithHealthStatus, error) {
+func (m *MockAlphaRegionNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, fl *filter.F, options ...Option) ([]*computealpha.NetworkEndpointWithHealthStatus, error) {
 	if m.ListNetworkEndpointsHook != nil {
-		return m.ListNetworkEndpointsHook(ctx, key, arg0, fl, m)
+		return m.ListNetworkEndpointsHook(ctx, key, fl, m)
 	}
 	return nil, nil
 }
@@ -29881,7 +29884,7 @@ func (g *GCEAlphaRegionNetworkEndpointGroups) Get(ctx context.Context, key *meta
 		klog.V(4).Infof("GCEAlphaRegionNetworkEndpointGroups.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
-	call := g.s.Alpha.RegionNetworkEndpointGroups.Get(projectID, key.Name)
+	call := g.s.Alpha.RegionNetworkEndpointGroups.Get(projectID, key.Region, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEAlphaRegionNetworkEndpointGroups.Get(%v, %v) = %+v, %v", ctx, key, v, err)
@@ -29893,9 +29896,9 @@ func (g *GCEAlphaRegionNetworkEndpointGroups) Get(ctx context.Context, key *meta
 }
 
 // List all NetworkEndpointGroup objects.
-func (g *GCEAlphaRegionNetworkEndpointGroups) List(ctx context.Context, fl *filter.F, options ...Option) ([]*computealpha.NetworkEndpointGroup, error) {
+func (g *GCEAlphaRegionNetworkEndpointGroups) List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computealpha.NetworkEndpointGroup, error) {
 	opts := mergeOptions(options)
-	klog.V(5).Infof("GCEAlphaRegionNetworkEndpointGroups.List(%v, %v, %v) called", ctx, fl, opts)
+	klog.V(5).Infof("GCEAlphaRegionNetworkEndpointGroups.List(%v, %v, %v, %v) called", ctx, region, fl, opts)
 	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "alpha", "RegionNetworkEndpointGroups")
 
 	ck := &CallContextKey{
@@ -29909,8 +29912,8 @@ func (g *GCEAlphaRegionNetworkEndpointGroups) List(ctx context.Context, fl *filt
 	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEAlphaRegionNetworkEndpointGroups.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
-	call := g.s.Alpha.RegionNetworkEndpointGroups.List(projectID)
+	klog.V(5).Infof("GCEAlphaRegionNetworkEndpointGroups.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
+	call := g.s.Alpha.RegionNetworkEndpointGroups.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
 	}
@@ -29969,7 +29972,7 @@ func (g *GCEAlphaRegionNetworkEndpointGroups) Insert(ctx context.Context, key *m
 		return err
 	}
 	obj.Name = key.Name
-	call := g.s.Alpha.RegionNetworkEndpointGroups.Insert(projectID, obj)
+	call := g.s.Alpha.RegionNetworkEndpointGroups.Insert(projectID, key.Region, obj)
 	call.Context(ctx)
 
 	op, err := call.Do()
@@ -30009,7 +30012,7 @@ func (g *GCEAlphaRegionNetworkEndpointGroups) Delete(ctx context.Context, key *m
 		klog.V(4).Infof("GCEAlphaRegionNetworkEndpointGroups.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	call := g.s.Alpha.RegionNetworkEndpointGroups.Delete(projectID, key.Name)
+	call := g.s.Alpha.RegionNetworkEndpointGroups.Delete(projectID, key.Region, key.Name)
 
 	call.Context(ctx)
 
@@ -30029,7 +30032,7 @@ func (g *GCEAlphaRegionNetworkEndpointGroups) Delete(ctx context.Context, key *m
 }
 
 // AttachNetworkEndpoints is a method on GCEAlphaRegionNetworkEndpointGroups.
-func (g *GCEAlphaRegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, arg1 *computealpha.RegionNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
+func (g *GCEAlphaRegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computealpha.RegionNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
 	opts := mergeOptions(options)
 	klog.V(5).Infof("GCEAlphaRegionNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
 
@@ -30050,7 +30053,7 @@ func (g *GCEAlphaRegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context
 		klog.V(4).Infof("GCEAlphaRegionNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	call := g.s.Alpha.RegionNetworkEndpointGroups.AttachNetworkEndpoints(projectID, key.Name, arg0, arg1)
+	call := g.s.Alpha.RegionNetworkEndpointGroups.AttachNetworkEndpoints(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
 
@@ -30071,7 +30074,7 @@ func (g *GCEAlphaRegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context
 }
 
 // DetachNetworkEndpoints is a method on GCEAlphaRegionNetworkEndpointGroups.
-func (g *GCEAlphaRegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, arg1 *computealpha.RegionNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
+func (g *GCEAlphaRegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computealpha.RegionNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
 	opts := mergeOptions(options)
 	klog.V(5).Infof("GCEAlphaRegionNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
 
@@ -30092,7 +30095,7 @@ func (g *GCEAlphaRegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context
 		klog.V(4).Infof("GCEAlphaRegionNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	call := g.s.Alpha.RegionNetworkEndpointGroups.DetachNetworkEndpoints(projectID, key.Name, arg0, arg1)
+	call := g.s.Alpha.RegionNetworkEndpointGroups.DetachNetworkEndpoints(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
 
@@ -30113,7 +30116,7 @@ func (g *GCEAlphaRegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context
 }
 
 // ListNetworkEndpoints is a method on GCEAlphaRegionNetworkEndpointGroups.
-func (g *GCEAlphaRegionNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, fl *filter.F, options ...Option) ([]*computealpha.NetworkEndpointWithHealthStatus, error) {
+func (g *GCEAlphaRegionNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, fl *filter.F, options ...Option) ([]*computealpha.NetworkEndpointWithHealthStatus, error) {
 	opts := mergeOptions(options)
 	klog.V(5).Infof("GCEAlphaRegionNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
 
@@ -30134,7 +30137,7 @@ func (g *GCEAlphaRegionNetworkEndpointGroups) ListNetworkEndpoints(ctx context.C
 		klog.V(4).Infof("GCEAlphaRegionNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
-	call := g.s.Alpha.RegionNetworkEndpointGroups.ListNetworkEndpoints(projectID, key.Name, arg0)
+	call := g.s.Alpha.RegionNetworkEndpointGroups.ListNetworkEndpoints(projectID, key.Region, key.Name)
 	var all []*computealpha.NetworkEndpointWithHealthStatus
 	f := func(l *computealpha.NetworkEndpointGroupsListNetworkEndpoints) error {
 		klog.V(5).Infof("GCEAlphaRegionNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): page %+v", ctx, key, l)
@@ -30167,12 +30170,12 @@ func (g *GCEAlphaRegionNetworkEndpointGroups) ListNetworkEndpoints(ctx context.C
 // BetaRegionNetworkEndpointGroups is an interface that allows for mocking of RegionNetworkEndpointGroups.
 type BetaRegionNetworkEndpointGroups interface {
 	Get(ctx context.Context, key *meta.Key, options ...Option) (*computebeta.NetworkEndpointGroup, error)
-	List(ctx context.Context, fl *filter.F, options ...Option) ([]*computebeta.NetworkEndpointGroup, error)
+	List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computebeta.NetworkEndpointGroup, error)
 	Insert(ctx context.Context, key *meta.Key, obj *computebeta.NetworkEndpointGroup, options ...Option) error
 	Delete(ctx context.Context, key *meta.Key, options ...Option) error
-	AttachNetworkEndpoints(context.Context, *meta.Key, string, *computebeta.RegionNetworkEndpointGroupsAttachEndpointsRequest, ...Option) error
-	DetachNetworkEndpoints(context.Context, *meta.Key, string, *computebeta.RegionNetworkEndpointGroupsDetachEndpointsRequest, ...Option) error
-	ListNetworkEndpoints(context.Context, *meta.Key, string, *filter.F, ...Option) ([]*computebeta.NetworkEndpointWithHealthStatus, error)
+	AttachNetworkEndpoints(context.Context, *meta.Key, *computebeta.RegionNetworkEndpointGroupsAttachEndpointsRequest, ...Option) error
+	DetachNetworkEndpoints(context.Context, *meta.Key, *computebeta.RegionNetworkEndpointGroupsDetachEndpointsRequest, ...Option) error
+	ListNetworkEndpoints(context.Context, *meta.Key, *filter.F, ...Option) ([]*computebeta.NetworkEndpointWithHealthStatus, error)
 }
 
 // NewMockBetaRegionNetworkEndpointGroups returns a new mock for RegionNetworkEndpointGroups.
@@ -30209,12 +30212,12 @@ type MockBetaRegionNetworkEndpointGroups struct {
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
 	GetHook                    func(ctx context.Context, key *meta.Key, m *MockBetaRegionNetworkEndpointGroups, options ...Option) (bool, *computebeta.NetworkEndpointGroup, error)
-	ListHook                   func(ctx context.Context, fl *filter.F, m *MockBetaRegionNetworkEndpointGroups, options ...Option) (bool, []*computebeta.NetworkEndpointGroup, error)
+	ListHook                   func(ctx context.Context, region string, fl *filter.F, m *MockBetaRegionNetworkEndpointGroups, options ...Option) (bool, []*computebeta.NetworkEndpointGroup, error)
 	InsertHook                 func(ctx context.Context, key *meta.Key, obj *computebeta.NetworkEndpointGroup, m *MockBetaRegionNetworkEndpointGroups, options ...Option) (bool, error)
 	DeleteHook                 func(ctx context.Context, key *meta.Key, m *MockBetaRegionNetworkEndpointGroups, options ...Option) (bool, error)
-	AttachNetworkEndpointsHook func(context.Context, *meta.Key, string, *computebeta.RegionNetworkEndpointGroupsAttachEndpointsRequest, *MockBetaRegionNetworkEndpointGroups, ...Option) error
-	DetachNetworkEndpointsHook func(context.Context, *meta.Key, string, *computebeta.RegionNetworkEndpointGroupsDetachEndpointsRequest, *MockBetaRegionNetworkEndpointGroups, ...Option) error
-	ListNetworkEndpointsHook   func(context.Context, *meta.Key, string, *filter.F, *MockBetaRegionNetworkEndpointGroups, ...Option) ([]*computebeta.NetworkEndpointWithHealthStatus, error)
+	AttachNetworkEndpointsHook func(context.Context, *meta.Key, *computebeta.RegionNetworkEndpointGroupsAttachEndpointsRequest, *MockBetaRegionNetworkEndpointGroups, ...Option) error
+	DetachNetworkEndpointsHook func(context.Context, *meta.Key, *computebeta.RegionNetworkEndpointGroupsDetachEndpointsRequest, *MockBetaRegionNetworkEndpointGroups, ...Option) error
+	ListNetworkEndpointsHook   func(context.Context, *meta.Key, *filter.F, *MockBetaRegionNetworkEndpointGroups, ...Option) ([]*computebeta.NetworkEndpointWithHealthStatus, error)
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -30254,11 +30257,11 @@ func (m *MockBetaRegionNetworkEndpointGroups) Get(ctx context.Context, key *meta
 	return nil, err
 }
 
-// List all of the objects in the mock.
-func (m *MockBetaRegionNetworkEndpointGroups) List(ctx context.Context, fl *filter.F, options ...Option) ([]*computebeta.NetworkEndpointGroup, error) {
+// List all of the objects in the mock in the given region.
+func (m *MockBetaRegionNetworkEndpointGroups) List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computebeta.NetworkEndpointGroup, error) {
 	if m.ListHook != nil {
-		if intercept, objs, err := m.ListHook(ctx, fl, m, options...); intercept {
-			klog.V(5).Infof("MockBetaRegionNetworkEndpointGroups.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+		if intercept, objs, err := m.ListHook(ctx, region, fl, m, options...); intercept {
+			klog.V(5).Infof("MockBetaRegionNetworkEndpointGroups.List(%v, %q, %v) = [%v items], %v", ctx, region, fl, len(objs), err)
 			return objs, err
 		}
 	}
@@ -30268,20 +30271,23 @@ func (m *MockBetaRegionNetworkEndpointGroups) List(ctx context.Context, fl *filt
 
 	if m.ListError != nil {
 		err := *m.ListError
-		klog.V(5).Infof("MockBetaRegionNetworkEndpointGroups.List(%v, %v) = nil, %v", ctx, fl, err)
+		klog.V(5).Infof("MockBetaRegionNetworkEndpointGroups.List(%v, %q, %v) = nil, %v", ctx, region, fl, err)
 
 		return nil, *m.ListError
 	}
 
 	var objs []*computebeta.NetworkEndpointGroup
-	for _, obj := range m.Objects {
+	for key, obj := range m.Objects {
+		if key.Region != region {
+			continue
+		}
 		if !fl.Match(obj.ToBeta()) {
 			continue
 		}
 		objs = append(objs, obj.ToBeta())
 	}
 
-	klog.V(5).Infof("MockBetaRegionNetworkEndpointGroups.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	klog.V(5).Infof("MockBetaRegionNetworkEndpointGroups.List(%v, %q, %v) = [%v items], nil", ctx, region, fl, len(objs))
 	return objs, nil
 }
 
@@ -30362,25 +30368,25 @@ func (m *MockBetaRegionNetworkEndpointGroups) Obj(o *computebeta.NetworkEndpoint
 }
 
 // AttachNetworkEndpoints is a mock for the corresponding method.
-func (m *MockBetaRegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, arg1 *computebeta.RegionNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
+func (m *MockBetaRegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computebeta.RegionNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
 	if m.AttachNetworkEndpointsHook != nil {
-		return m.AttachNetworkEndpointsHook(ctx, key, arg0, arg1, m)
+		return m.AttachNetworkEndpointsHook(ctx, key, arg0, m)
 	}
 	return nil
 }
 
 // DetachNetworkEndpoints is a mock for the corresponding method.
-func (m *MockBetaRegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, arg1 *computebeta.RegionNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
+func (m *MockBetaRegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computebeta.RegionNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
 	if m.DetachNetworkEndpointsHook != nil {
-		return m.DetachNetworkEndpointsHook(ctx, key, arg0, arg1, m)
+		return m.DetachNetworkEndpointsHook(ctx, key, arg0, m)
 	}
 	return nil
 }
 
 // ListNetworkEndpoints is a mock for the corresponding method.
-func (m *MockBetaRegionNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, fl *filter.F, options ...Option) ([]*computebeta.NetworkEndpointWithHealthStatus, error) {
+func (m *MockBetaRegionNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, fl *filter.F, options ...Option) ([]*computebeta.NetworkEndpointWithHealthStatus, error) {
 	if m.ListNetworkEndpointsHook != nil {
-		return m.ListNetworkEndpointsHook(ctx, key, arg0, fl, m)
+		return m.ListNetworkEndpointsHook(ctx, key, fl, m)
 	}
 	return nil, nil
 }
@@ -30414,7 +30420,7 @@ func (g *GCEBetaRegionNetworkEndpointGroups) Get(ctx context.Context, key *meta.
 		klog.V(4).Infof("GCEBetaRegionNetworkEndpointGroups.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
-	call := g.s.Beta.RegionNetworkEndpointGroups.Get(projectID, key.Name)
+	call := g.s.Beta.RegionNetworkEndpointGroups.Get(projectID, key.Region, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCEBetaRegionNetworkEndpointGroups.Get(%v, %v) = %+v, %v", ctx, key, v, err)
@@ -30426,9 +30432,9 @@ func (g *GCEBetaRegionNetworkEndpointGroups) Get(ctx context.Context, key *meta.
 }
 
 // List all NetworkEndpointGroup objects.
-func (g *GCEBetaRegionNetworkEndpointGroups) List(ctx context.Context, fl *filter.F, options ...Option) ([]*computebeta.NetworkEndpointGroup, error) {
+func (g *GCEBetaRegionNetworkEndpointGroups) List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computebeta.NetworkEndpointGroup, error) {
 	opts := mergeOptions(options)
-	klog.V(5).Infof("GCEBetaRegionNetworkEndpointGroups.List(%v, %v, %v) called", ctx, fl, opts)
+	klog.V(5).Infof("GCEBetaRegionNetworkEndpointGroups.List(%v, %v, %v, %v) called", ctx, region, fl, opts)
 	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "beta", "RegionNetworkEndpointGroups")
 
 	ck := &CallContextKey{
@@ -30442,8 +30448,8 @@ func (g *GCEBetaRegionNetworkEndpointGroups) List(ctx context.Context, fl *filte
 	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCEBetaRegionNetworkEndpointGroups.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
-	call := g.s.Beta.RegionNetworkEndpointGroups.List(projectID)
+	klog.V(5).Infof("GCEBetaRegionNetworkEndpointGroups.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
+	call := g.s.Beta.RegionNetworkEndpointGroups.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
 	}
@@ -30502,7 +30508,7 @@ func (g *GCEBetaRegionNetworkEndpointGroups) Insert(ctx context.Context, key *me
 		return err
 	}
 	obj.Name = key.Name
-	call := g.s.Beta.RegionNetworkEndpointGroups.Insert(projectID, obj)
+	call := g.s.Beta.RegionNetworkEndpointGroups.Insert(projectID, key.Region, obj)
 	call.Context(ctx)
 
 	op, err := call.Do()
@@ -30542,7 +30548,7 @@ func (g *GCEBetaRegionNetworkEndpointGroups) Delete(ctx context.Context, key *me
 		klog.V(4).Infof("GCEBetaRegionNetworkEndpointGroups.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	call := g.s.Beta.RegionNetworkEndpointGroups.Delete(projectID, key.Name)
+	call := g.s.Beta.RegionNetworkEndpointGroups.Delete(projectID, key.Region, key.Name)
 
 	call.Context(ctx)
 
@@ -30562,7 +30568,7 @@ func (g *GCEBetaRegionNetworkEndpointGroups) Delete(ctx context.Context, key *me
 }
 
 // AttachNetworkEndpoints is a method on GCEBetaRegionNetworkEndpointGroups.
-func (g *GCEBetaRegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, arg1 *computebeta.RegionNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
+func (g *GCEBetaRegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computebeta.RegionNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
 	opts := mergeOptions(options)
 	klog.V(5).Infof("GCEBetaRegionNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
 
@@ -30583,7 +30589,7 @@ func (g *GCEBetaRegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.
 		klog.V(4).Infof("GCEBetaRegionNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	call := g.s.Beta.RegionNetworkEndpointGroups.AttachNetworkEndpoints(projectID, key.Name, arg0, arg1)
+	call := g.s.Beta.RegionNetworkEndpointGroups.AttachNetworkEndpoints(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
 
@@ -30604,7 +30610,7 @@ func (g *GCEBetaRegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.
 }
 
 // DetachNetworkEndpoints is a method on GCEBetaRegionNetworkEndpointGroups.
-func (g *GCEBetaRegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, arg1 *computebeta.RegionNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
+func (g *GCEBetaRegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computebeta.RegionNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
 	opts := mergeOptions(options)
 	klog.V(5).Infof("GCEBetaRegionNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
 
@@ -30625,7 +30631,7 @@ func (g *GCEBetaRegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.
 		klog.V(4).Infof("GCEBetaRegionNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	call := g.s.Beta.RegionNetworkEndpointGroups.DetachNetworkEndpoints(projectID, key.Name, arg0, arg1)
+	call := g.s.Beta.RegionNetworkEndpointGroups.DetachNetworkEndpoints(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
 
@@ -30646,7 +30652,7 @@ func (g *GCEBetaRegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.
 }
 
 // ListNetworkEndpoints is a method on GCEBetaRegionNetworkEndpointGroups.
-func (g *GCEBetaRegionNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, fl *filter.F, options ...Option) ([]*computebeta.NetworkEndpointWithHealthStatus, error) {
+func (g *GCEBetaRegionNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, fl *filter.F, options ...Option) ([]*computebeta.NetworkEndpointWithHealthStatus, error) {
 	opts := mergeOptions(options)
 	klog.V(5).Infof("GCEBetaRegionNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
 
@@ -30667,7 +30673,7 @@ func (g *GCEBetaRegionNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Co
 		klog.V(4).Infof("GCEBetaRegionNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
-	call := g.s.Beta.RegionNetworkEndpointGroups.ListNetworkEndpoints(projectID, key.Name, arg0)
+	call := g.s.Beta.RegionNetworkEndpointGroups.ListNetworkEndpoints(projectID, key.Region, key.Name)
 	var all []*computebeta.NetworkEndpointWithHealthStatus
 	f := func(l *computebeta.NetworkEndpointGroupsListNetworkEndpoints) error {
 		klog.V(5).Infof("GCEBetaRegionNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): page %+v", ctx, key, l)
@@ -30700,12 +30706,12 @@ func (g *GCEBetaRegionNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Co
 // RegionNetworkEndpointGroups is an interface that allows for mocking of RegionNetworkEndpointGroups.
 type RegionNetworkEndpointGroups interface {
 	Get(ctx context.Context, key *meta.Key, options ...Option) (*computega.NetworkEndpointGroup, error)
-	List(ctx context.Context, fl *filter.F, options ...Option) ([]*computega.NetworkEndpointGroup, error)
+	List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computega.NetworkEndpointGroup, error)
 	Insert(ctx context.Context, key *meta.Key, obj *computega.NetworkEndpointGroup, options ...Option) error
 	Delete(ctx context.Context, key *meta.Key, options ...Option) error
-	AttachNetworkEndpoints(context.Context, *meta.Key, string, *computega.RegionNetworkEndpointGroupsAttachEndpointsRequest, ...Option) error
-	DetachNetworkEndpoints(context.Context, *meta.Key, string, *computega.RegionNetworkEndpointGroupsDetachEndpointsRequest, ...Option) error
-	ListNetworkEndpoints(context.Context, *meta.Key, string, *filter.F, ...Option) ([]*computega.NetworkEndpointWithHealthStatus, error)
+	AttachNetworkEndpoints(context.Context, *meta.Key, *computega.RegionNetworkEndpointGroupsAttachEndpointsRequest, ...Option) error
+	DetachNetworkEndpoints(context.Context, *meta.Key, *computega.RegionNetworkEndpointGroupsDetachEndpointsRequest, ...Option) error
+	ListNetworkEndpoints(context.Context, *meta.Key, *filter.F, ...Option) ([]*computega.NetworkEndpointWithHealthStatus, error)
 }
 
 // NewMockRegionNetworkEndpointGroups returns a new mock for RegionNetworkEndpointGroups.
@@ -30742,12 +30748,12 @@ type MockRegionNetworkEndpointGroups struct {
 	// execution flow of the mock. Return (false, nil, nil) to continue with
 	// normal mock behavior/ after the hook function executes.
 	GetHook                    func(ctx context.Context, key *meta.Key, m *MockRegionNetworkEndpointGroups, options ...Option) (bool, *computega.NetworkEndpointGroup, error)
-	ListHook                   func(ctx context.Context, fl *filter.F, m *MockRegionNetworkEndpointGroups, options ...Option) (bool, []*computega.NetworkEndpointGroup, error)
+	ListHook                   func(ctx context.Context, region string, fl *filter.F, m *MockRegionNetworkEndpointGroups, options ...Option) (bool, []*computega.NetworkEndpointGroup, error)
 	InsertHook                 func(ctx context.Context, key *meta.Key, obj *computega.NetworkEndpointGroup, m *MockRegionNetworkEndpointGroups, options ...Option) (bool, error)
 	DeleteHook                 func(ctx context.Context, key *meta.Key, m *MockRegionNetworkEndpointGroups, options ...Option) (bool, error)
-	AttachNetworkEndpointsHook func(context.Context, *meta.Key, string, *computega.RegionNetworkEndpointGroupsAttachEndpointsRequest, *MockRegionNetworkEndpointGroups, ...Option) error
-	DetachNetworkEndpointsHook func(context.Context, *meta.Key, string, *computega.RegionNetworkEndpointGroupsDetachEndpointsRequest, *MockRegionNetworkEndpointGroups, ...Option) error
-	ListNetworkEndpointsHook   func(context.Context, *meta.Key, string, *filter.F, *MockRegionNetworkEndpointGroups, ...Option) ([]*computega.NetworkEndpointWithHealthStatus, error)
+	AttachNetworkEndpointsHook func(context.Context, *meta.Key, *computega.RegionNetworkEndpointGroupsAttachEndpointsRequest, *MockRegionNetworkEndpointGroups, ...Option) error
+	DetachNetworkEndpointsHook func(context.Context, *meta.Key, *computega.RegionNetworkEndpointGroupsDetachEndpointsRequest, *MockRegionNetworkEndpointGroups, ...Option) error
+	ListNetworkEndpointsHook   func(context.Context, *meta.Key, *filter.F, *MockRegionNetworkEndpointGroups, ...Option) ([]*computega.NetworkEndpointWithHealthStatus, error)
 
 	// X is extra state that can be used as part of the mock. Generated code
 	// will not use this field.
@@ -30787,11 +30793,11 @@ func (m *MockRegionNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key
 	return nil, err
 }
 
-// List all of the objects in the mock.
-func (m *MockRegionNetworkEndpointGroups) List(ctx context.Context, fl *filter.F, options ...Option) ([]*computega.NetworkEndpointGroup, error) {
+// List all of the objects in the mock in the given region.
+func (m *MockRegionNetworkEndpointGroups) List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computega.NetworkEndpointGroup, error) {
 	if m.ListHook != nil {
-		if intercept, objs, err := m.ListHook(ctx, fl, m, options...); intercept {
-			klog.V(5).Infof("MockRegionNetworkEndpointGroups.List(%v, %v) = [%v items], %v", ctx, fl, len(objs), err)
+		if intercept, objs, err := m.ListHook(ctx, region, fl, m, options...); intercept {
+			klog.V(5).Infof("MockRegionNetworkEndpointGroups.List(%v, %q, %v) = [%v items], %v", ctx, region, fl, len(objs), err)
 			return objs, err
 		}
 	}
@@ -30801,20 +30807,23 @@ func (m *MockRegionNetworkEndpointGroups) List(ctx context.Context, fl *filter.F
 
 	if m.ListError != nil {
 		err := *m.ListError
-		klog.V(5).Infof("MockRegionNetworkEndpointGroups.List(%v, %v) = nil, %v", ctx, fl, err)
+		klog.V(5).Infof("MockRegionNetworkEndpointGroups.List(%v, %q, %v) = nil, %v", ctx, region, fl, err)
 
 		return nil, *m.ListError
 	}
 
 	var objs []*computega.NetworkEndpointGroup
-	for _, obj := range m.Objects {
+	for key, obj := range m.Objects {
+		if key.Region != region {
+			continue
+		}
 		if !fl.Match(obj.ToGA()) {
 			continue
 		}
 		objs = append(objs, obj.ToGA())
 	}
 
-	klog.V(5).Infof("MockRegionNetworkEndpointGroups.List(%v, %v) = [%v items], nil", ctx, fl, len(objs))
+	klog.V(5).Infof("MockRegionNetworkEndpointGroups.List(%v, %q, %v) = [%v items], nil", ctx, region, fl, len(objs))
 	return objs, nil
 }
 
@@ -30895,25 +30904,25 @@ func (m *MockRegionNetworkEndpointGroups) Obj(o *computega.NetworkEndpointGroup)
 }
 
 // AttachNetworkEndpoints is a mock for the corresponding method.
-func (m *MockRegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, arg1 *computega.RegionNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
+func (m *MockRegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computega.RegionNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
 	if m.AttachNetworkEndpointsHook != nil {
-		return m.AttachNetworkEndpointsHook(ctx, key, arg0, arg1, m)
+		return m.AttachNetworkEndpointsHook(ctx, key, arg0, m)
 	}
 	return nil
 }
 
 // DetachNetworkEndpoints is a mock for the corresponding method.
-func (m *MockRegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, arg1 *computega.RegionNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
+func (m *MockRegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computega.RegionNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
 	if m.DetachNetworkEndpointsHook != nil {
-		return m.DetachNetworkEndpointsHook(ctx, key, arg0, arg1, m)
+		return m.DetachNetworkEndpointsHook(ctx, key, arg0, m)
 	}
 	return nil
 }
 
 // ListNetworkEndpoints is a mock for the corresponding method.
-func (m *MockRegionNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, fl *filter.F, options ...Option) ([]*computega.NetworkEndpointWithHealthStatus, error) {
+func (m *MockRegionNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, fl *filter.F, options ...Option) ([]*computega.NetworkEndpointWithHealthStatus, error) {
 	if m.ListNetworkEndpointsHook != nil {
-		return m.ListNetworkEndpointsHook(ctx, key, arg0, fl, m)
+		return m.ListNetworkEndpointsHook(ctx, key, fl, m)
 	}
 	return nil, nil
 }
@@ -30947,7 +30956,7 @@ func (g *GCERegionNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key,
 		klog.V(4).Infof("GCERegionNetworkEndpointGroups.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
-	call := g.s.GA.RegionNetworkEndpointGroups.Get(projectID, key.Name)
+	call := g.s.GA.RegionNetworkEndpointGroups.Get(projectID, key.Region, key.Name)
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("GCERegionNetworkEndpointGroups.Get(%v, %v) = %+v, %v", ctx, key, v, err)
@@ -30959,9 +30968,9 @@ func (g *GCERegionNetworkEndpointGroups) Get(ctx context.Context, key *meta.Key,
 }
 
 // List all NetworkEndpointGroup objects.
-func (g *GCERegionNetworkEndpointGroups) List(ctx context.Context, fl *filter.F, options ...Option) ([]*computega.NetworkEndpointGroup, error) {
+func (g *GCERegionNetworkEndpointGroups) List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computega.NetworkEndpointGroup, error) {
 	opts := mergeOptions(options)
-	klog.V(5).Infof("GCERegionNetworkEndpointGroups.List(%v, %v, %v) called", ctx, fl, opts)
+	klog.V(5).Infof("GCERegionNetworkEndpointGroups.List(%v, %v, %v, %v) called", ctx, region, fl, opts)
 	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "ga", "RegionNetworkEndpointGroups")
 
 	ck := &CallContextKey{
@@ -30975,8 +30984,8 @@ func (g *GCERegionNetworkEndpointGroups) List(ctx context.Context, fl *filter.F,
 	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
 		return nil, err
 	}
-	klog.V(5).Infof("GCERegionNetworkEndpointGroups.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
-	call := g.s.GA.RegionNetworkEndpointGroups.List(projectID)
+	klog.V(5).Infof("GCERegionNetworkEndpointGroups.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
+	call := g.s.GA.RegionNetworkEndpointGroups.List(projectID, region)
 	if fl != filter.None {
 		call.Filter(fl.String())
 	}
@@ -31035,7 +31044,7 @@ func (g *GCERegionNetworkEndpointGroups) Insert(ctx context.Context, key *meta.K
 		return err
 	}
 	obj.Name = key.Name
-	call := g.s.GA.RegionNetworkEndpointGroups.Insert(projectID, obj)
+	call := g.s.GA.RegionNetworkEndpointGroups.Insert(projectID, key.Region, obj)
 	call.Context(ctx)
 
 	op, err := call.Do()
@@ -31075,7 +31084,7 @@ func (g *GCERegionNetworkEndpointGroups) Delete(ctx context.Context, key *meta.K
 		klog.V(4).Infof("GCERegionNetworkEndpointGroups.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	call := g.s.GA.RegionNetworkEndpointGroups.Delete(projectID, key.Name)
+	call := g.s.GA.RegionNetworkEndpointGroups.Delete(projectID, key.Region, key.Name)
 
 	call.Context(ctx)
 
@@ -31095,7 +31104,7 @@ func (g *GCERegionNetworkEndpointGroups) Delete(ctx context.Context, key *meta.K
 }
 
 // AttachNetworkEndpoints is a method on GCERegionNetworkEndpointGroups.
-func (g *GCERegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, arg1 *computega.RegionNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
+func (g *GCERegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computega.RegionNetworkEndpointGroupsAttachEndpointsRequest, options ...Option) error {
 	opts := mergeOptions(options)
 	klog.V(5).Infof("GCERegionNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
 
@@ -31116,7 +31125,7 @@ func (g *GCERegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Cont
 		klog.V(4).Infof("GCERegionNetworkEndpointGroups.AttachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	call := g.s.GA.RegionNetworkEndpointGroups.AttachNetworkEndpoints(projectID, key.Name, arg0, arg1)
+	call := g.s.GA.RegionNetworkEndpointGroups.AttachNetworkEndpoints(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
 
@@ -31137,7 +31146,7 @@ func (g *GCERegionNetworkEndpointGroups) AttachNetworkEndpoints(ctx context.Cont
 }
 
 // DetachNetworkEndpoints is a method on GCERegionNetworkEndpointGroups.
-func (g *GCERegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, arg1 *computega.RegionNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
+func (g *GCERegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 *computega.RegionNetworkEndpointGroupsDetachEndpointsRequest, options ...Option) error {
 	opts := mergeOptions(options)
 	klog.V(5).Infof("GCERegionNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
 
@@ -31158,7 +31167,7 @@ func (g *GCERegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Cont
 		klog.V(4).Infof("GCERegionNetworkEndpointGroups.DetachNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return err
 	}
-	call := g.s.GA.RegionNetworkEndpointGroups.DetachNetworkEndpoints(projectID, key.Name, arg0, arg1)
+	call := g.s.GA.RegionNetworkEndpointGroups.DetachNetworkEndpoints(projectID, key.Region, key.Name, arg0)
 	call.Context(ctx)
 	op, err := call.Do()
 
@@ -31179,7 +31188,7 @@ func (g *GCERegionNetworkEndpointGroups) DetachNetworkEndpoints(ctx context.Cont
 }
 
 // ListNetworkEndpoints is a method on GCERegionNetworkEndpointGroups.
-func (g *GCERegionNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, arg0 string, fl *filter.F, options ...Option) ([]*computega.NetworkEndpointWithHealthStatus, error) {
+func (g *GCERegionNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Context, key *meta.Key, fl *filter.F, options ...Option) ([]*computega.NetworkEndpointWithHealthStatus, error) {
 	opts := mergeOptions(options)
 	klog.V(5).Infof("GCERegionNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, %v, ...): called", ctx, key, opts)
 
@@ -31200,7 +31209,7 @@ func (g *GCERegionNetworkEndpointGroups) ListNetworkEndpoints(ctx context.Contex
 		klog.V(4).Infof("GCERegionNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
 		return nil, err
 	}
-	call := g.s.GA.RegionNetworkEndpointGroups.ListNetworkEndpoints(projectID, key.Name, arg0)
+	call := g.s.GA.RegionNetworkEndpointGroups.ListNetworkEndpoints(projectID, key.Region, key.Name)
 	var all []*computega.NetworkEndpointWithHealthStatus
 	f := func(l *computega.NetworkEndpointGroupsListNetworkEndpoints) error {
 		klog.V(5).Infof("GCERegionNetworkEndpointGroups.ListNetworkEndpoints(%v, %v, ...): page %+v", ctx, key, l)
@@ -52045,8 +52054,8 @@ func NewRegionHealthChecksResourceID(project, region, name string) *ResourceID {
 }
 
 // NewRegionNetworkEndpointGroupsResourceID creates a ResourceID for the RegionNetworkEndpointGroups resource.
-func NewRegionNetworkEndpointGroupsResourceID(project, name string) *ResourceID {
-	key := meta.GlobalKey(name)
+func NewRegionNetworkEndpointGroupsResourceID(project, region, name string) *ResourceID {
+	key := meta.RegionalKey(name, region)
 	return &ResourceID{project, "compute", "networkEndpointGroups", key}
 }
 

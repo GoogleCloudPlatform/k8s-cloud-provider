@@ -2561,6 +2561,141 @@ func TestRegionHealthChecksGroup(t *testing.T) {
 	}
 }
 
+func TestRegionNetworkEndpointGroupsGroup(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pr := &SingleProjectRouter{"mock-project"}
+	mock := NewMockGCE(pr)
+
+	var key *meta.Key
+	keyAlpha := meta.GlobalKey("key-alpha")
+	key = keyAlpha
+	keyBeta := meta.GlobalKey("key-beta")
+	key = keyBeta
+	keyGA := meta.GlobalKey("key-ga")
+	key = keyGA
+	// Ignore unused variables.
+	_, _, _ = ctx, mock, key
+
+	// Get not found.
+	if _, err := mock.AlphaRegionNetworkEndpointGroups().Get(ctx, key); err == nil {
+		t.Errorf("AlphaRegionNetworkEndpointGroups().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.BetaRegionNetworkEndpointGroups().Get(ctx, key); err == nil {
+		t.Errorf("BetaRegionNetworkEndpointGroups().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.RegionNetworkEndpointGroups().Get(ctx, key); err == nil {
+		t.Errorf("RegionNetworkEndpointGroups().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+
+	// Insert.
+	{
+		obj := &computealpha.NetworkEndpointGroup{}
+		if err := mock.AlphaRegionNetworkEndpointGroups().Insert(ctx, keyAlpha, obj); err != nil {
+			t.Errorf("AlphaRegionNetworkEndpointGroups().Insert(%v, %v, %v) = %v; want nil", ctx, keyAlpha, obj, err)
+		}
+	}
+	{
+		obj := &computebeta.NetworkEndpointGroup{}
+		if err := mock.BetaRegionNetworkEndpointGroups().Insert(ctx, keyBeta, obj); err != nil {
+			t.Errorf("BetaRegionNetworkEndpointGroups().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
+		}
+	}
+	{
+		obj := &computega.NetworkEndpointGroup{}
+		if err := mock.RegionNetworkEndpointGroups().Insert(ctx, keyGA, obj); err != nil {
+			t.Errorf("RegionNetworkEndpointGroups().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
+		}
+	}
+
+	// Get across versions.
+	if obj, err := mock.AlphaRegionNetworkEndpointGroups().Get(ctx, key); err != nil {
+		t.Errorf("AlphaRegionNetworkEndpointGroups().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+	if obj, err := mock.BetaRegionNetworkEndpointGroups().Get(ctx, key); err != nil {
+		t.Errorf("BetaRegionNetworkEndpointGroups().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+	if obj, err := mock.RegionNetworkEndpointGroups().Get(ctx, key); err != nil {
+		t.Errorf("RegionNetworkEndpointGroups().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+
+	// List.
+	mock.MockAlphaRegionNetworkEndpointGroups.Objects[*keyAlpha] = mock.MockAlphaRegionNetworkEndpointGroups.Obj(&computealpha.NetworkEndpointGroup{Name: keyAlpha.Name})
+	mock.MockBetaRegionNetworkEndpointGroups.Objects[*keyBeta] = mock.MockBetaRegionNetworkEndpointGroups.Obj(&computebeta.NetworkEndpointGroup{Name: keyBeta.Name})
+	mock.MockRegionNetworkEndpointGroups.Objects[*keyGA] = mock.MockRegionNetworkEndpointGroups.Obj(&computega.NetworkEndpointGroup{Name: keyGA.Name})
+	want := map[string]bool{
+		"key-alpha": true,
+		"key-beta":  true,
+		"key-ga":    true,
+	}
+	_ = want // ignore unused variables.
+	{
+		objs, err := mock.AlphaRegionNetworkEndpointGroups().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("AlphaRegionNetworkEndpointGroups().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("AlphaRegionNetworkEndpointGroups().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.BetaRegionNetworkEndpointGroups().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("BetaRegionNetworkEndpointGroups().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("BetaRegionNetworkEndpointGroups().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.RegionNetworkEndpointGroups().List(ctx, filter.None)
+		if err != nil {
+			t.Errorf("RegionNetworkEndpointGroups().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("RegionNetworkEndpointGroups().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+
+	// Delete across versions.
+	if err := mock.AlphaRegionNetworkEndpointGroups().Delete(ctx, keyAlpha); err != nil {
+		t.Errorf("AlphaRegionNetworkEndpointGroups().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
+	}
+	if err := mock.BetaRegionNetworkEndpointGroups().Delete(ctx, keyBeta); err != nil {
+		t.Errorf("BetaRegionNetworkEndpointGroups().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
+	}
+	if err := mock.RegionNetworkEndpointGroups().Delete(ctx, keyGA); err != nil {
+		t.Errorf("RegionNetworkEndpointGroups().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
+	}
+
+	// Delete not found.
+	if err := mock.AlphaRegionNetworkEndpointGroups().Delete(ctx, keyAlpha); err == nil {
+		t.Errorf("AlphaRegionNetworkEndpointGroups().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+	if err := mock.BetaRegionNetworkEndpointGroups().Delete(ctx, keyBeta); err == nil {
+		t.Errorf("BetaRegionNetworkEndpointGroups().Delete(%v, %v) = nil; want error", ctx, keyBeta)
+	}
+	if err := mock.RegionNetworkEndpointGroups().Delete(ctx, keyGA); err == nil {
+		t.Errorf("RegionNetworkEndpointGroups().Delete(%v, %v) = nil; want error", ctx, keyGA)
+	}
+}
+
 func TestRegionNetworkFirewallPoliciesGroup(t *testing.T) {
 	t.Parallel()
 
@@ -4754,6 +4889,7 @@ func TestResourceIDConversion(t *testing.T) {
 		NewRegionBackendServicesResourceID("some-project", "us-central1", "my-backendServices-resource"),
 		NewRegionDisksResourceID("some-project", "us-central1", "my-disks-resource"),
 		NewRegionHealthChecksResourceID("some-project", "us-central1", "my-healthChecks-resource"),
+		NewRegionNetworkEndpointGroupsResourceID("some-project", "my-networkEndpointGroups-resource"),
 		NewRegionNetworkFirewallPoliciesResourceID("some-project", "us-central1", "my-regionNetworkFirewallPolicies-resource"),
 		NewRegionSslCertificatesResourceID("some-project", "us-central1", "my-sslCertificates-resource"),
 		NewRegionSslPoliciesResourceID("some-project", "us-central1", "my-sslPolicies-resource"),

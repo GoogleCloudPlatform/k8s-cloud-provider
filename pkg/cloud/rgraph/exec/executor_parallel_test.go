@@ -241,7 +241,7 @@ func TestParallelExecutorTimeoutOptions(t *testing.T) {
 			c := &testAction{
 				name:   "C",
 				events: EventList{StringEvent("C")},
-				runHook: func() error {
+				runHook: func(ctx context.Context) error {
 					t.Log("Action c run hook, wait 5sec")
 					time.Sleep(5 * time.Second)
 					t.Log("Action c run hook, finish wait")

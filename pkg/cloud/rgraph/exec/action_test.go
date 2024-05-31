@@ -32,7 +32,7 @@ type testAction struct {
 	name    string
 	events  EventList
 	err     error
-	runHook func() error
+	runHook func(context.Context) error
 }
 
 func (a *testAction) String() string {
@@ -43,9 +43,9 @@ func (a *testAction) DryRun() EventList {
 	return a.events
 }
 
-func (a *testAction) Run(context.Context, cloud.Cloud) (EventList, error) {
+func (a *testAction) Run(ctx context.Context, _ cloud.Cloud) (EventList, error) {
 	if a.runHook != nil {
-		if runErr := a.runHook(); runErr != nil {
+		if runErr := a.runHook(ctx); runErr != nil {
 			a.err = runErr
 		}
 	}

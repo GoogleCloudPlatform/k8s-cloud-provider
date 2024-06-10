@@ -179,7 +179,7 @@ func fillNullAndForceSend(traits *FieldTraits, v reflect.Value) error {
 			fType := traits.fieldType(p.Field(ft.Name))
 			fv := v.Field(i)
 
-			if fType == FieldTypeOrdinary {
+			if fType == FieldTypeNonZeroValue {
 				switch {
 				case fv.IsZero() && fv.Type().Kind() == reflect.Pointer:
 					nullFields[ft.Name] = true

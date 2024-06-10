@@ -20,9 +20,12 @@ import (
 	"testing"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/meta"
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/exec"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode"
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/fake"
 	"github.com/google/go-cmp/cmp"
 	alpha "google.golang.org/api/compute/v0.alpha"
+	beta "google.golang.org/api/compute/v0.beta"
 	"google.golang.org/api/compute/v1"
 )
 
@@ -55,6 +58,17 @@ func newDefaultAlphaHC() alpha.HealthCheck {
 		Type:               "UDP",
 		UnhealthyThreshold: 4,
 		UdpHealthCheck:     &alpha.UDPHealthCheck{Port: 60},
+	}
+}
+func newDefaultBetaHC() beta.HealthCheck {
+	return beta.HealthCheck{
+		Name:               "hc-1",
+		HealthyThreshold:   10,
+		CheckIntervalSec:   7,
+		TimeoutSec:         5,
+		Type:               "TCP",
+		UnhealthyThreshold: 4,
+		TcpHealthCheck:     &beta.TCPHealthCheck{Port: 60},
 	}
 }
 func TestHealthCheckBuilder(t *testing.T) {
@@ -165,6 +179,7 @@ func TestHealthCheckAlphaFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("hcMutRes.Access(_) = %v, want nil", err)
 	}
+
 	hcRes, err := hcMutRes.Freeze()
 	if err != nil {
 		t.Fatalf("hcMutRes.Freeze(_) = %v, want nil", err)
@@ -191,6 +206,44 @@ func TestHealthCheckAlphaFields(t *testing.T) {
 		t.Fatalf("cmp.Diff(_, _) = %v, want nil", diff)
 	}
 }
+func TestHealthCheckBeta(t *testing.T) {
+	id := ID(projectID, meta.GlobalKey("hc-1"))
+	hcMutRes := NewMutableHealthCheck(projectID, id.Key)
+	err := hcMutRes.AccessBeta(func(x *beta.HealthCheck) {
+		x.Name = "hc-1"
+		x.HealthyThreshold = 10
+		x.CheckIntervalSec = 7
+		x.TimeoutSec = 5
+		x.Type = "TCP"
+		x.UnhealthyThreshold = 4
+		x.TcpHealthCheck = &beta.TCPHealthCheck{Port: 80}
+	})
+	if err != nil {
+		t.Fatalf("hcMutRes.AccessBeta(_) = %v, want nil", err)
+	}
+
+	hcRes, err := hcMutRes.Freeze()
+	if err != nil {
+		t.Fatalf("hcMutRes.Freeze(_) = %v, want nil", err)
+	}
+	b := NewBuilder(id)
+	b.SetOwnership(rnode.OwnershipManaged)
+	b.SetResource(hcRes)
+	b.SetState(rnode.NodeExists)
+	node, err := b.Build()
+	if err != nil {
+		t.Fatalf("b.Build() = %v, want nil", err)
+	}
+	hcNode := node.(*healthCheckNode)
+	beta, err := hcNode.resource.ToBeta()
+	if err != nil {
+		t.Fatalf("hcNode.resource.ToBeta() = %v, want nil", err)
+	}
+	hc := newDefaultBetaHC()
+	if diff := cmp.Diff(beta, &hc); diff == "" {
+		t.Fatal("cmp.Diff(_, _) = nil, want diff")
+	}
+}
 
 func buildHCNode(t *testing.T, name string, hc compute.HealthCheck) rnode.Node {
 	id := ID(projectID, meta.GlobalKey(name))
@@ -206,6 +259,7 @@ func buildHCNode(t *testing.T, name string, hc compute.HealthCheck) rnode.Node {
 		t.Fatalf("hcMutRes.Freeze(_) = %v, want nil", err)
 	}
 	b := NewBuilderWithResource(hcRes)
+	b.SetState(rnode.NodeExists)
 	node, err := b.Build()
 	if err != nil {
 		t.Fatalf("b.Build() = %v, want nil", err)
@@ -267,8 +321,22 @@ func TestHealthCheckDiff(t *testing.T) {
 		t.Fatalf("wantNode.Diff(wantNode) = (%v, %v), want (plan, nil)", plan, err)
 	}
 	if plan.Operation != rnode.OpUpdate {
-		t.Fatalf("plan.Operation mismatch, got: %s, want %s", plan.Operation, rnode.OpNothing)
+		t.Fatalf("plan.Operation mismatch, got: %s, want %s", plan.Operation, rnode.OpUpdate)
 	}
+
+	// compare with fake Node
+	fakeId := ID(projectID, meta.GlobalKey("fake-resource"))
+	fakeBuilder := fake.NewBuilder(fakeId)
+	fakeRes := fake.NewMutableFake(projectID, fakeId.Key)
+	res, err := fakeRes.Freeze()
+	fakeBuilder.SetResource(res)
+	fakeNode, err := fakeBuilder.Build()
+
+	_, err = wantNode.Diff(fakeNode)
+	if err == nil {
+		t.Fatal("wantNode.Diff(fakeNode) = nil, want error")
+	}
+
 }
 
 func TestAction(t *testing.T) {
@@ -280,32 +348,32 @@ func TestAction(t *testing.T) {
 		desc    string
 		op      rnode.Operation
 		wantErr bool
-		want    int
+		want    []exec.ActionType
 	}{
 		{
 			desc: "create action",
 			op:   rnode.OpCreate,
-			want: 1,
+			want: []exec.ActionType{exec.ActionTypeCreate},
 		},
 		{
 			desc: "delete action",
-			op:   rnode.OpCreate,
-			want: 1,
+			op:   rnode.OpDelete,
+			want: []exec.ActionType{exec.ActionTypeDelete},
 		},
 		{
 			desc: "recreate action",
 			op:   rnode.OpRecreate,
-			want: 2,
+			want: []exec.ActionType{exec.ActionTypeDelete, exec.ActionTypeCreate},
 		},
 		{
 			desc: "no action",
 			op:   rnode.OpNothing,
-			want: 1,
+			want: []exec.ActionType{exec.ActionTypeMeta},
 		},
 		{
-			desc:    "update action - not implemented",
-			op:      rnode.OpUpdate,
-			wantErr: true,
+			desc: "update action",
+			op:   rnode.OpUpdate,
+			want: []exec.ActionType{exec.ActionTypeUpdate},
 		},
 		{
 			desc:    "default",
@@ -319,10 +387,10 @@ func TestAction(t *testing.T) {
 				Operation: tc.op,
 				Why:       "test plan",
 			})
-			a, err := n1.Actions(n2)
+			actions, err := n1.Actions(n2)
 			isError := (err != nil)
 			if tc.wantErr != isError {
-				t.Fatalf("n.Actions(_) got error %v, want %v", tc.wantErr, isError)
+				t.Fatalf("n.Actions(_) =%v got error %v, want %v", err, tc.wantErr, isError)
 			}
 			if tc.wantErr {
 				return
@@ -330,8 +398,13 @@ func TestAction(t *testing.T) {
 			if err != nil {
 				t.Fatalf("n.Actions(_) = %v, want nil", err)
 			}
-			if len(a) != tc.want {
-				t.Fatalf("n.Actions(%q) returned list with elements %d want %d", tc.op, len(a), tc.want)
+			if len(actions) != len(tc.want) {
+				t.Fatalf("n.Actions(%q) returned list with elements %d want %d", tc.op, len(actions), len(tc.want))
+			}
+			for i, a := range actions {
+				if a.Metadata().Type != tc.want[i] {
+					t.Errorf("Actions mismatch: got: %s, want: %s", a.Metadata().Name, tc.want[i])
+				}
 			}
 		})
 	}

@@ -40,12 +40,16 @@ func TestCheckFieldsAreSet(t *testing.T) {
 	}
 
 	ft := NewFieldTraits()
+	ft.NonZeroValue(Path{}.Pointer().Field("A"))
 
 	ftSystemField := ft.Clone()
-	ftSystemField.System(Path{}.Pointer().Field("A"))
+	ftSystemField.System(Path{}.Pointer().Field("B"))
 
 	ftOutputOnly := ft.Clone()
-	ftOutputOnly.OutputOnly(Path{}.Pointer().Field("A"))
+	ftOutputOnly.OutputOnly(Path{}.Pointer().Field("B"))
+
+	ftSubstruct := ft.Clone()
+	ftSubstruct.NonZeroValue(Path{}.Pointer().Field("S").Pointer().Field("A"))
 
 	for _, tc := range []struct {
 		name    string
@@ -93,7 +97,7 @@ func TestCheckFieldsAreSet(t *testing.T) {
 				B: 2,
 				S: &sti{},
 			},
-			ft:      ft,
+			ft:      ftSubstruct,
 			wantErr: true,
 		},
 		{
@@ -122,7 +126,7 @@ func TestCheckFieldsAreSet(t *testing.T) {
 				A:          1,
 				B:          2,
 				S:          &sti{A: 1},
-				NullFields: []string{"S"},
+				NullFields: []string{"A"},
 			},
 			ft:      ft,
 			wantErr: true},

@@ -52,14 +52,14 @@ func checkPostAccess(traits *FieldTraits, v reflect.Value) error {
 				if !fv.IsZero() {
 					return false, fmt.Errorf("%s has a non-zero value (%v) but is an OutputOnly field", fv.Interface(), fp)
 				}
-			case FieldTypeOrdinary:
+			case FieldTypeNonZeroValue:
 				switch {
 				case fv.IsZero() && !acc.inNull(ft.Name) && !acc.inForceSend(ft.Name):
 					return false, fmt.Errorf("%s is zero value but not in a NullFields or ForceSendFields %v %t", fp, fv.Interface(), fv.IsZero())
 				case !fv.IsZero() && acc.inNull(ft.Name):
 					return false, fmt.Errorf("%s is non-nil and also in NullFields", fp)
 				}
-			case FieldTypeAllowZeroValue:
+			case FieldTypeOrdinary, FieldTypeAllowZeroValue:
 				continue
 			default:
 				return false, fmt.Errorf("invalid FieldType: %q", fType)

@@ -19,8 +19,7 @@ package exec
 import (
 	"context"
 	"fmt"
-
-	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
+	"time"
 )
 
 type Result struct {
@@ -33,6 +32,18 @@ type Result struct {
 	Pending []Action
 }
 
+func (r *Result) DeepCopy() *Result {
+	resultCopy := Result{
+		Completed: make([]Action, len(r.Completed)),
+		Pending:   make([]Action, len(r.Pending)),
+		Errors:    make([]ActionWithErr, len(r.Errors)),
+	}
+	copy(resultCopy.Completed, r.Completed)
+	copy(resultCopy.Errors, r.Errors)
+	copy(resultCopy.Pending, r.Pending)
+	return &resultCopy
+}
+
 type ActionWithErr struct {
 	Action Action
 	Err    error
@@ -42,7 +53,7 @@ type ActionWithErr struct {
 type Executor interface {
 	// Run the actions. Returns non-nil if there was an error in execution of
 	// one or more Actions.
-	Run(context.Context, cloud.Cloud) (*Result, error)
+	Run(context.Context) (*Result, error)
 }
 
 type Option func(*ExecutorConfig)
@@ -55,6 +66,19 @@ func TracerOption(t Tracer) Option {
 // DryRunOption will run in dry run mode if true.
 func DryRunOption(dryRun bool) Option {
 	return func(c *ExecutorConfig) { c.DryRun = dryRun }
+}
+
+// TimeoutOption sets timeout for executor Run function.
+// This option can be used with parallel executor only.
+func TimeoutOption(t time.Duration) Option {
+	return func(c *ExecutorConfig) { c.Timeout = t }
+}
+
+// WaitForOrphansTimeoutOption sets timeout for cleaning up the orphans when the
+// executor finishes with error. This option can be used with parallel executor
+// only.
+func WaitForOrphansTimeoutOption(t time.Duration) Option {
+	return func(c *ExecutorConfig) { c.WaitForOrphansTimeout = t }
 }
 
 // ErrorStrategy to use when an Action returns an error.
@@ -85,9 +109,11 @@ func defaultExecutorConfig() *ExecutorConfig {
 
 // ExecutorConfig for the executor implementation.
 type ExecutorConfig struct {
-	Tracer        Tracer
-	DryRun        bool
-	ErrorStrategy ErrorStrategy
+	Tracer                Tracer
+	DryRun                bool
+	ErrorStrategy         ErrorStrategy
+	Timeout               time.Duration
+	WaitForOrphansTimeout time.Duration
 }
 
 func (c *ExecutorConfig) validate() error {

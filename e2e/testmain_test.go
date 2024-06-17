@@ -24,13 +24,17 @@ import (
 	"math/rand"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
+	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"k8s.io/klog/v2"
 
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/impersonate"
+	"google.golang.org/api/option"
 )
 
 var (
@@ -38,11 +42,13 @@ var (
 	theCloud cloud.Cloud
 	// testFlags passed in from the command line.
 	testFlags = struct {
-		project        string
-		resourcePrefix string
+		project            string
+		resourcePrefix     string
+		serviceAccountName string
 	}{
-		project:        "",
-		resourcePrefix: "k8scp-",
+		project:            "",
+		resourcePrefix:     "k8scp-",
+		serviceAccountName: "",
 	}
 	runID string
 )
@@ -52,6 +58,7 @@ func init() {
 
 	flag.StringVar(&testFlags.project, "project", testFlags.project, "GCP project ID")
 	flag.StringVar(&testFlags.resourcePrefix, "resourcePrefix", testFlags.resourcePrefix, "Prefix used to name all resources created in the tests. Any resources with this prefix will be removed during cleanup.")
+	flag.StringVar(&testFlags.serviceAccountName, "sa-name", testFlags.serviceAccountName, "Name of the Service Account to impersonate")
 
 	runID = fmt.Sprintf("%0x", rand.Int63()&0xffff)
 }
@@ -73,11 +80,44 @@ func TestMain(m *testing.M) {
 	parseFlagsOrDie()
 
 	ctx := context.Background()
-	client, err := google.DefaultClient(ctx, compute.ComputeScope)
+
+	credentials, err := google.FindDefaultCredentials(ctx, compute.ComputeScope)
 	if err != nil {
 		log.Fatal(err)
 	}
-	svc, err := cloud.NewService(ctx, client, &cloud.SingleProjectRouter{ID: testFlags.project}, &cloud.NopRateLimiter{})
+	ts := credentials.TokenSource
+
+	// Optionally, impersonate service account by replacing token source for http client.
+	if testFlags.serviceAccountName != "" {
+		ts, err = impersonate.CredentialsTokenSource(ctx, impersonate.CredentialsConfig{
+			TargetPrincipal: testFlags.serviceAccountName,
+			Scopes:          []string{compute.ComputeScope, compute.CloudPlatformScope},
+		}, option.WithCredentials(credentials))
+		if err != nil {
+			log.Fatalf("Failed to use %q credentials: %v", testFlags.serviceAccountName, err)
+		}
+	}
+	client := oauth2.NewClient(ctx, ts)
+
+	mrl := &cloud.MinimumRateLimiter{RateLimiter: &cloud.NopRateLimiter{}, Minimum: 50 * time.Millisecond}
+	crl := cloud.NewCompositeRateLimiter(mrl)
+
+	// The default limit is 1500 per minute. Leave 200 buffer.
+	computeRL := cloud.NewTickerRateLimiter(1300, time.Minute)
+	crl.Register("HealthChecks", "", computeRL)
+	crl.Register("BackendServices", "", computeRL)
+	crl.Register("NetworkEndpointGroups", "", computeRL)
+
+	// The default limit is 1200 per minute. Leave 200 buffer.
+	networkServicesRL := cloud.NewTickerRateLimiter(1000, time.Minute)
+	crl.Register("TcpRoutes", "", networkServicesRL)
+	crl.Register("Meshes", "", networkServicesRL)
+
+	// To ensure minimum time between operations, wrap the network services rate limiter.
+	orl := &cloud.MinimumRateLimiter{RateLimiter: networkServicesRL, Minimum: 100 * time.Millisecond}
+	crl.Register("Operations", "", orl)
+
+	svc, err := cloud.NewService(ctx, client, &cloud.SingleProjectRouter{ID: testFlags.project}, crl)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -18,9 +18,12 @@ package exec
 
 import (
 	"context"
+	"errors"
 	"sort"
 	"testing"
+	"time"
 
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -96,14 +99,15 @@ func TestSerialExecutor(t *testing.T) {
 					actions := actionsFromGraphStr(tc.graph)
 
 					tr := NewGraphvizTracer()
-					ex, err := NewSerialExecutor(actions,
+					ex, err := NewSerialExecutor(nil,
+						actions,
 						ErrorStrategyOption(StopOnError),
 						TracerOption(tr),
 						DryRunOption(dryRun == "dry run"))
 					if err != nil {
 						t.Fatalf("NewSerialExecutor() = %v, want nil", err)
 					}
-					result, err := ex.Run(context.Background(), nil)
+					result, err := ex.Run(context.Background())
 					if gotErr := err != nil; gotErr != tc.wantErr {
 						t.Fatalf("Run() = %v; gotErr = %t, want %t", err, gotErr, tc.wantErr)
 					}
@@ -160,14 +164,15 @@ func TestSerialExecutorErrorStrategy(t *testing.T) {
 			actions := actionsFromGraphStr(tc.graph)
 
 			var tr GraphvizTracer
-			ex, err := NewSerialExecutor(actions,
+			ex, err := NewSerialExecutor(nil,
+				actions,
 				ErrorStrategyOption(tc.strategy),
 				TracerOption(&tr),
 				DryRunOption(false))
 			if err != nil {
 				t.Fatalf("NewSerialExecutor() = %v, want nil", err)
 			}
-			result, err := ex.Run(context.Background(), nil)
+			result, err := ex.Run(context.Background())
 			if gotErr := err != nil; gotErr != tc.wantErr {
 				t.Fatalf("Run() = %v; gotErr = %t, want %t", err, gotErr, tc.wantErr)
 			}
@@ -180,6 +185,92 @@ func TestSerialExecutorErrorStrategy(t *testing.T) {
 				t.Errorf("errors: diff -got,+want: %s", diff)
 			}
 			t.Log(tr.String())
+		})
+	}
+}
+
+func TestSerialExecutorTimeoutOptions(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+
+		execTimeout  time.Duration
+		eventTimeout time.Duration
+		wantErr      bool
+
+		// actions should be sorted alphabetically for comparison.
+		completed []string
+		errors    []string
+		pending   []string
+	}{
+		{
+			name:         "All actions should finish within timeout",
+			execTimeout:  30 * time.Second,
+			eventTimeout: 0 * time.Second,
+			completed:    []string{"A", "B"},
+		},
+		{
+			name:         "Actions longer than timeout",
+			execTimeout:  1 * time.Millisecond,
+			eventTimeout: 30 * time.Second,
+			completed:    []string{"A"},
+			errors:       []string{"B"},
+			wantErr:      true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// Prepare actions A -> B; where B is long lasting operation.
+			a := &testAction{name: "A", events: EventList{StringEvent("A")}}
+			b := &testAction{
+				name:   "B",
+				events: EventList{StringEvent("B")},
+				runHook: func(ctx context.Context) error {
+					if tc.eventTimeout > 0 {
+						ticker := time.NewTicker(tc.eventTimeout)
+						select {
+						case <-ticker.C:
+						case <-ctx.Done():
+							return errors.New("context canceled")
+						}
+					}
+					return nil
+				},
+			}
+			b.Want = EventList{StringEvent("A")}
+
+			mockCloud := cloud.NewMockGCE(&cloud.SingleProjectRouter{ID: "proj1"})
+			ex, err := NewSerialExecutor(mockCloud,
+				[]Action{a, b},
+				TimeoutOption(tc.execTimeout),
+			)
+			if err != nil {
+				t.Fatalf("NewSerialExecutor(_, _, %v) = %v; want nil", tc.execTimeout, err)
+			}
+			result, err := ex.Run(context.Background())
+
+			t.Logf("result.Completed: %v", result.Completed)
+			t.Logf("result.Error: %v", result.Errors)
+			t.Logf("result.Pending: %v", result.Pending)
+
+			gotErr := err != nil
+			if tc.wantErr != gotErr {
+				t.Fatalf("ex.Run(_) = %v, got error: %v want error: %v", err, gotErr, tc.wantErr)
+			}
+
+			cmpA := func(desc string, got []Action, want []string) {
+				gotS := sortedStrings(got, func(a Action) string { return a.(*testAction).name })
+				if diff := cmp.Diff(gotS, want); diff != "" {
+					t.Errorf("%s: diff -got,+want: %s", desc, diff)
+				}
+			}
+			cmpAE := func(desc string, got []ActionWithErr, want []string) {
+				gotS := sortedStrings(got, func(a ActionWithErr) string { return a.Action.(*testAction).name })
+				if diff := cmp.Diff(gotS, want); diff != "" {
+					t.Errorf("%s: diff -got,+want: %s", desc, diff)
+				}
+			}
+			cmpA("completed", result.Completed, tc.completed)
+			cmpAE("errors", result.Errors, tc.errors)
+			cmpA("pending", result.Pending, tc.pending)
 		})
 	}
 }

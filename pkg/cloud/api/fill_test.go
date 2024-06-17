@@ -103,6 +103,10 @@ func TestFill(t *testing.T) {
 
 func TestFillNullAndForceSend(t *testing.T) {
 	t.Parallel()
+	ft := NewFieldTraits()
+	ft.NonZeroValue(Path{}.Pointer().Field("A"))
+	ft.NonZeroValue(Path{}.Pointer().Field("B"))
+	ft.NonZeroValue(Path{}.Pointer().Field("D").Pointer().Field("A"))
 
 	type sti struct {
 		A               int
@@ -132,27 +136,26 @@ func TestFillNullAndForceSend(t *testing.T) {
 	}{
 		{
 			name: "fill with zero values",
-			ft:   NewFieldTraits(),
+			ft:   ft,
 			in:   &st{},
 			want: &st{
-				NullFields:      []string{"B", "D"},
-				ForceSendFields: []string{"A", "C"},
+				NullFields:      []string{"B"},
+				ForceSendFields: []string{"A"},
 			},
 		},
 		{
 			name: "fill no zeros",
-			ft:   NewFieldTraits(),
+			ft:   ft,
 			in:   &st{A: 5, B: new(string), C: "x", D: &sti{A: 2}},
 			want: &st{A: 5, B: new(string), C: "x", D: &sti{A: 2}},
 		},
 		{
 			name: "fill substruct",
-			ft:   NewFieldTraits(),
+			ft:   ft,
 			in:   &st{A: 5, D: &sti{}},
 			want: &st{
-				A:               5,
-				NullFields:      []string{"B"},
-				ForceSendFields: []string{"C"},
+				A:          5,
+				NullFields: []string{"B"},
 				D: &sti{
 					ForceSendFields: []string{"A"},
 				},
@@ -160,7 +163,7 @@ func TestFillNullAndForceSend(t *testing.T) {
 		},
 		{
 			name: "ignore .ServerResponse",
-			ft:   NewFieldTraits(),
+			ft:   ft,
 			in:   &stServerResponse{},
 			want: &stServerResponse{},
 		},

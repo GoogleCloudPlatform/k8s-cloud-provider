@@ -133,11 +133,11 @@ func TestLB(t *testing.T) {
 	}
 
 	var viz exec.GraphvizTracer
-	ex, err := exec.NewSerialExecutor(res.Actions, exec.DryRunOption(true), exec.TracerOption(&viz))
+	ex, err := exec.NewSerialExecutor(nil, res.Actions, exec.DryRunOption(true), exec.TracerOption(&viz))
 	if err != nil {
 		t.Fatalf("NewSerialExecutor() = %v, want nil", err)
 	}
-	execResult, err := ex.Run(context.TODO(), nil)
+	execResult, err := ex.Run(context.TODO())
 	for _, p := range execResult.Pending {
 		t.Logf("%+v", p.Metadata())
 	}

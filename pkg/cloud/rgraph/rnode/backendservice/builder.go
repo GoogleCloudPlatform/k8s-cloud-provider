@@ -120,7 +120,7 @@ func (b *builder) OutRefs() ([]rnode.ResourceRef, error) {
 		}
 		ret = append(ret, rnode.ResourceRef{
 			From: b.ID(),
-			Path: api.Path{}.Field("SecurityPolicy"),
+			Path: api.Path{}.Field("EdgeSecurityPolicy"),
 			To:   id,
 		})
 	}

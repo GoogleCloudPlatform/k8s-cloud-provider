@@ -38,47 +38,23 @@ func (*typeTrait) FieldTraits(v meta.Version) *api.FieldTraits {
 	dt.OutputOnly(api.Path{}.Pointer().Field("Region"))
 	dt.OutputOnly(api.Path{}.Pointer().Field("SelfLink"))
 
-	// Optional fields
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("Description"))
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("LogConfig"))
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("GrpcHealthCheck"))
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("GrpcHealthCheck").Pointer().Field("GrpcServiceName"))
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("GrpcHealthCheck").Pointer().Field("Port"))
 	// This field is not supported
 	dt.OutputOnly(api.Path{}.Pointer().Field("GrpcHealthCheck").Pointer().Field("PortName"))
-
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("Http2HealthCheck"))
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("Http2HealthCheck").Pointer().Field("Response"))
-	// This field is not supported
 	dt.OutputOnly(api.Path{}.Pointer().Field("Http2HealthCheck").Pointer().Field("PortName"))
-
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("HttpHealthCheck"))
-	// This field is not supported
 	dt.OutputOnly(api.Path{}.Pointer().Field("HttpHealthCheck").Pointer().Field("PortName"))
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("HttpHealthCheck").Pointer().Field("Response"))
-
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("HttpsHealthCheck"))
-	// This field is not supported
-	dt.OutputOnly(api.Path{}.Pointer().Field("HttpsHealthCheck").Pointer().Field("PortName"))
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("HttpsHealthCheck").Pointer().Field("Response"))
-
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("SslHealthCheck"))
-	// This field is not supported
 	dt.OutputOnly(api.Path{}.Pointer().Field("SslHealthCheck").Pointer().Field("PortName"))
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("SslHealthCheck").Pointer().Field("Request"))
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("SslHealthCheck").Pointer().Field("Response"))
+	dt.OutputOnly(api.Path{}.Pointer().Field("HttpsHealthCheck").Pointer().Field("PortName"))
 
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("TcpHealthCheck"))
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("TcpHealthCheck").Pointer().Field("Request"))
-	dt.AllowZeroValue(api.Path{}.Pointer().Field("TcpHealthCheck").Pointer().Field("Response"))
+	// required fields
+	dt.NonZeroValue(api.Path{}.Pointer().Field("HealthyThreshold"))
+	dt.NonZeroValue(api.Path{}.Pointer().Field("UnhealthyThreshold"))
+	dt.NonZeroValue(api.Path{}.Pointer().Field("CheckIntervalSec"))
+	dt.NonZeroValue(api.Path{}.Pointer().Field("TimeoutSec"))
+	dt.NonZeroValue(api.Path{}.Pointer().Field("Type"))
 
 	if v == meta.VersionAlpha {
 		dt.OutputOnly(api.Path{}.Pointer().Field("SelfLinkWithId"))
-		dt.AllowZeroValue(api.Path{}.Pointer().Field("SourceRegions"))
-		dt.AllowZeroValue(api.Path{}.Pointer().Field("UdpHealthCheck"))
 		dt.OutputOnly(api.Path{}.Pointer().Field("UdpHealthCheck").Pointer().Field("PortName"))
-		dt.AllowZeroValue(api.Path{}.Pointer().Field("UdpHealthCheck").Pointer().Field("Request"))
-		dt.AllowZeroValue(api.Path{}.Pointer().Field("UdpHealthCheck").Pointer().Field("Response"))
 	}
 
 	return dt

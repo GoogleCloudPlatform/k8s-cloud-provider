@@ -43,8 +43,5 @@ func (*tcpRouteTypeTrait) FieldTraits(meta.Version) *api.FieldTraits {
 	dt.AllowZeroValue(api.Path{}.Pointer().Field("Rules").AnySliceIndex().Pointer().Field("Action").Pointer().Field("Destinations"))
 	dt.AllowZeroValue(api.Path{}.Pointer().Field("Rules").AnySliceIndex().Pointer().Field("Action").Pointer().Field("OriginalDestination"))
 
-	// For TcpRoute "Name" field is marked as System field to avoid updating TcpRoute every time the graph is being processed.
-	// The updates are consequence of different name formatting in rgraph and in the cloud.
-	dt.System(api.Path{}.Pointer().Field("Name"))
 	return dt
 }

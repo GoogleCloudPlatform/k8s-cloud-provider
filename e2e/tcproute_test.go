@@ -444,30 +444,28 @@ func defaultSubnetworkURL() string {
 	return cloud.NewSubnetworksResourceID(testFlags.project, region, "default").SelfLink(meta.VersionGA)
 }
 
-func createManyHealthchecks(graphBuilder *rgraph.Builder, hcNum int, name string) ([]*cloud.ResourceID, error) {
+func createManyBackendServicesWithHC(graphBuilder *rgraph.Builder, bsCount int, name string) ([]*cloud.ResourceID, []*cloud.ResourceID, error) {
+	var allErrs error
 	var hcs []*cloud.ResourceID
-	var e error
-	for i := 0; i < hcNum; i++ {
-		hc, err := buildHealthCheck(graphBuilder, "hc-"+name+"-"+strconv.Itoa(i), 15)
-		errors.Join(e, err)
+	for i := 0; i < bsCount; i++ {
+		hc, err := buildHealthCheck(graphBuilder, fmt.Sprintf("hc-%s-%d", name, i), 15)
+		errors.Join(allErrs, err)
 		hcs = append(hcs, hc)
 	}
-	return hcs, e
-}
-
-func createManyBackendServicesWithHC(graphBuilder *rgraph.Builder, bsNum int, name string, hcs []*cloud.ResourceID) ([]*cloud.ResourceID, error) {
-	hcNum := len(hcs)
-	if len(hcs) < bsNum {
-		return nil, fmt.Errorf("createManyBackendServicesWithHC: not enough healthchecks: want %d, got %d", bsNum, hcNum)
+	if allErrs != nil {
+		return nil, nil, allErrs
 	}
+
 	var bss []*cloud.ResourceID
-	var e error
-	for i := 0; i < bsNum; i++ {
+	for i := 0; i < bsCount; i++ {
 		bs, err := buildBackendServiceWithLBScheme(graphBuilder, name+"-"+strconv.Itoa(i)+"-bs", hcs[i], "INTERNAL_SELF_MANAGED")
-		errors.Join(e, err)
+		errors.Join(allErrs, err)
 		bss = append(bss, bs)
 	}
-	return bss, e
+	if allErrs != nil {
+		return nil, nil, allErrs
+	}
+	return bss, hcs, nil
 }
 
 func createTcpRule(bsID *cloud.ResourceID, routeCIDR string) *networkservices.TcpRouteRouteRule {
@@ -496,7 +494,7 @@ func createTCPRoutes(t *testing.T, graphBuilder *rgraph.Builder, numTCPR int, na
 		return nil, fmt.Errorf("ccreateTCPRoutes: not enough BackendServices: want %d, got %d", bsNum, 2*numTCPR)
 	}
 	var tcprs []*cloud.ResourceID
-	var e error
+	var allErrs error
 	for i := 0; i < 2*numTCPR; i += 2 {
 		cidr1, cidr2 := "10.240."+strconv.Itoa(i)+".83/32", "10.240."+strconv.Itoa(i+1)+".83/32"
 		tcprRules := []*networkservices.TcpRouteRouteRule{
@@ -506,12 +504,12 @@ func createTCPRoutes(t *testing.T, graphBuilder *rgraph.Builder, numTCPR int, na
 		name := namePrefix + "-" + strconv.Itoa(i/2)
 		tcpr, err := buildTCPRoute(graphBuilder, name, meshURL, tcprRules)
 		if err != nil {
-			errors.Join(e, fmt.Errorf("buildTcpRoute(_, %s, %s, %v) = %v, want nil", name, meshURL, tcprRules, err))
+			errors.Join(allErrs, fmt.Errorf("buildTcpRoute(_, %s, %s, %v) = %v, want nil", name, meshURL, tcprRules, err))
 		}
 		tcprs = append(tcprs, tcpr)
 		t.Logf("%s = %s", name, pretty.Sprint(tcpr))
 	}
-	return tcprs, e
+	return tcprs, allErrs
 }
 func TestMeshWithMultipleTCPRoutes(t *testing.T) {
 	t.Parallel()
@@ -525,12 +523,7 @@ func TestMeshWithMultipleTCPRoutes(t *testing.T) {
 		t.Logf("theCloud.Meshes().Delete(ctx, %s): %v", meshKey, err)
 	})
 
-	hcs, err := createManyHealthchecks(graphBuilder, 6, resUniqueIdPart)
-	if err != nil {
-		t.Fatalf("createManyHealthchecks(_, 6, %s) = (_, %v), want (_, nil)", resUniqueIdPart, err)
-	}
-
-	bss, err := createManyBackendServicesWithHC(graphBuilder, 6, resUniqueIdPart, hcs)
+	bss, hcs, err := createManyBackendServicesWithHC(graphBuilder, 6, resUniqueIdPart)
 	if err != nil {
 		t.Fatalf("createManyBackendServicesWithHC(_, 6, %s) = (_, %v), want (_, nil)", resUniqueIdPart, err)
 	}

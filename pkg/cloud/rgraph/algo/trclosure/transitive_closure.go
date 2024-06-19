@@ -171,6 +171,7 @@ func syncNode(ctx context.Context, cl cloud.Cloud, config Config, b rnode.Builde
 		klog.V(2).Infof("Node %s externally owned, no outRefs", b.ID())
 		return nil, nil
 	}
+
 	outRefs, err := b.OutRefs()
 	if err != nil {
 		return nil, makeErr("%w", err)

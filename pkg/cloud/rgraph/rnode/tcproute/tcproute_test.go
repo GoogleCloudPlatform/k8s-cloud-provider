@@ -38,7 +38,7 @@ func TestTcpRouteSchema(t *testing.T) {
 }
 
 func TestTCPRouteBuilder(t *testing.T) {
-	id := ID(projectID, meta.GlobalKey(""))
+	id := ID(projectID, meta.GlobalKey("tcproute-1"))
 	b := NewBuilder(id)
 	tcpMutResource := defaultTCPRouteResource(t, id)
 	match := &networkservices.TcpRouteRouteMatch{
@@ -72,7 +72,7 @@ func TestTCPRouteBuilder(t *testing.T) {
 }
 
 func TestBuildTcpRouteWithResource(t *testing.T) {
-	id := ID(projectID, meta.GlobalKey(""))
+	id := ID(projectID, meta.GlobalKey("tcproute-1"))
 	tcpMutResource := defaultTCPRouteResource(t, id)
 	res, err := tcpMutResource.Freeze()
 	if err != nil {
@@ -83,7 +83,7 @@ func TestBuildTcpRouteWithResource(t *testing.T) {
 }
 
 func TestNodeDiffResource(t *testing.T) {
-	id := ID(projectID, meta.GlobalKey(""))
+	id := ID(projectID, meta.GlobalKey("tcproute-1"))
 
 	n1 := createTcpNode(t, id, rnode.NodeExists)
 	mutRes := defaultTCPRouteResource(t, id)
@@ -118,7 +118,7 @@ func TestNodeDiffResource(t *testing.T) {
 }
 
 func TestNodeDiffTheSameResource(t *testing.T) {
-	id := ID(projectID, meta.GlobalKey(""))
+	id := ID(projectID, meta.GlobalKey("tcproute-1"))
 	n1 := createTcpNode(t, id, rnode.NodeExists)
 	n2 := createTcpNode(t, id, rnode.NodeExists)
 
@@ -136,7 +136,7 @@ func TestNodeDiffTheSameResource(t *testing.T) {
 }
 
 func TestAction(t *testing.T) {
-	id := ID(projectID, meta.GlobalKey(""))
+	id := ID(projectID, meta.GlobalKey("tcp-n1"))
 	n1 := createTcpNode(t, id, rnode.NodeExists)
 	n2 := createTcpNode(t, id, rnode.NodeDoesNotExist)
 

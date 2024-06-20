@@ -83,7 +83,7 @@ func TestMinimumRateLimiter(t *testing.T) {
 	}
 }
 
-func TestTickerRateLimiter(t *testing.T) {
+func TestTickerRateLimiter_Tick(t *testing.T) {
 	t.Parallel()
 
 	trl := NewTickerRateLimiter(100, time.Second)
@@ -91,13 +91,18 @@ func TestTickerRateLimiter(t *testing.T) {
 	if err != nil {
 		t.Errorf("TickerRateLimiter.Accept = %v, want nil", err)
 	}
+}
 
+func TestTickerRateLimiter_Cancel(t *testing.T) {
+	t.Parallel()
+
+	trl := NewTickerRateLimiter(1, time.Hour)
 	// Use context that has been cancelled and expect a context error returned.
 	ctxCancelled, cancelled := context.WithCancel(context.Background())
 	cancelled()
 	// Verify context is cancelled by now.
 	<-ctxCancelled.Done()
-	err = trl.Accept(ctxCancelled, nil)
+	err := trl.Accept(ctxCancelled, nil)
 	if err != ctxCancelled.Err() {
 		t.Errorf("TickerRateLimiter.Accept() = %v, want %v", err, ctxCancelled.Err())
 	}

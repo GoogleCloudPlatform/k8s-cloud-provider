@@ -136,7 +136,7 @@ func TestNodeDiffTheSameResource(t *testing.T) {
 }
 
 func TestAction(t *testing.T) {
-	id := ID(projectID, meta.GlobalKey("tcp-n1"))
+	id := ID(projectID, meta.GlobalKey("tcproute-1"))
 	n1 := createTcpNode(t, id, rnode.NodeExists)
 	n2 := createTcpNode(t, id, rnode.NodeDoesNotExist)
 

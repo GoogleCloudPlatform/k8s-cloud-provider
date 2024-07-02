@@ -785,7 +785,7 @@ func TestAlphaFields(t *testing.T) {
 	}
 	err = bsMutResource.AccessAlpha(func(x *alpha.BackendService) {
 		x.Subsetting = &alpha.Subsetting{Policy: "NONE"}
-		x.ExternalManagedMigrationTestingRate = 10
+		x.ExternalManagedMigrationTestingPercentage = 10
 		x.IpAddressSelectionPolicy = "IPV6_ONLY"
 	})
 	// error expected not all Alpha RequiredFields are set

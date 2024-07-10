@@ -17,7 +17,9 @@ package e2e
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
@@ -171,7 +173,7 @@ func buildBackendServiceWithNEG(graphBuilder *rgraph.Builder, name string, hcID,
 	return bsID, nil
 }
 
-func buildTCPRoute(graphBuilder *rgraph.Builder, name, meshURL string, rules []*networkservices.TcpRouteRouteRule, bsID *cloud.ResourceID) (*cloud.ResourceID, error) {
+func buildTCPRoute(graphBuilder *rgraph.Builder, name, meshURL string, rules []*networkservices.TcpRouteRouteRule) (*cloud.ResourceID, error) {
 	tcpID := tcproute.ID(testFlags.project, meta.GlobalKey(resourceName(name)))
 	tcpMutRes := tcproute.NewMutableTcpRoute(testFlags.project, tcpID.Key)
 
@@ -274,8 +276,8 @@ func ensureMesh(ctx context.Context, t *testing.T, meshName string) (string, *me
 
 func TestRgraphTCPRouteAddBackends(t *testing.T) {
 	t.Parallel()
-
 	ctx := context.Background()
+
 	meshURL, meshKey := ensureMesh(ctx, t, "test-mesh")
 	t.Cleanup(func() {
 		err := theCloud.Meshes().Delete(ctx, meshKey)
@@ -327,7 +329,7 @@ func TestRgraphTCPRouteAddBackends(t *testing.T) {
 		},
 	}
 
-	tcprID, err := buildTCPRoute(graphBuilder, "tcproute-test", meshURL, rules, bsID)
+	tcprID, err := buildTCPRoute(graphBuilder, "tcproute-test", meshURL, rules)
 	if err != nil {
 		t.Fatalf("buildTCPRoute(_, tcproute-test, _, _, _) = (_, %v), want (_, nil)", err)
 	}
@@ -440,4 +442,289 @@ func defaultNetworkURL() string {
 
 func defaultSubnetworkURL() string {
 	return cloud.NewSubnetworksResourceID(testFlags.project, region, "default").SelfLink(meta.VersionGA)
+}
+
+func createManyHealthchecks(graphBuilder *rgraph.Builder, hcNum int, name string) ([]*cloud.ResourceID, error) {
+	var hcs []*cloud.ResourceID
+	var e error
+	for i := 0; i < hcNum; i++ {
+		hc, err := buildHealthCheck(graphBuilder, "hc-"+name+"-"+strconv.Itoa(i), 15)
+		errors.Join(e, err)
+		hcs = append(hcs, hc)
+	}
+	return hcs, e
+}
+
+func createManyBackendServicesWithHC(graphBuilder *rgraph.Builder, bsNum int, name string, hcs []*cloud.ResourceID) ([]*cloud.ResourceID, error) {
+	hcNum := len(hcs)
+	if len(hcs) < bsNum {
+		return nil, fmt.Errorf("createManyBackendServicesWithHC: not enough healthchecks: want %d, got %d", bsNum, hcNum)
+	}
+	var bss []*cloud.ResourceID
+	var e error
+	for i := 0; i < bsNum; i++ {
+		bs, err := buildBackendServiceWithLBScheme(graphBuilder, name+"-"+strconv.Itoa(i)+"-bs", hcs[i], "INTERNAL_SELF_MANAGED")
+		errors.Join(e, err)
+		bss = append(bss, bs)
+	}
+	return bss, e
+}
+
+func createTcpRule(bsID *cloud.ResourceID, routeCIDR string) *networkservices.TcpRouteRouteRule {
+	return &networkservices.TcpRouteRouteRule{
+		Action: &networkservices.TcpRouteRouteAction{
+			Destinations: []*networkservices.TcpRouteRouteDestination{
+				{
+					ServiceName: resourceSelfLink(bsID),
+					Weight:      10,
+				},
+			},
+		},
+		Matches: []*networkservices.TcpRouteRouteMatch{
+			{
+				Address: routeCIDR,
+				Port:    "80",
+			},
+		},
+	}
+}
+
+func createTCPRoutes(t *testing.T, graphBuilder *rgraph.Builder, numTCPR int, namePrefix string, meshURL string, bss []*cloud.ResourceID) ([]*cloud.ResourceID, error) {
+
+	bsNum := len(bss)
+	if len(bss) < 2*numTCPR {
+		return nil, fmt.Errorf("ccreateTCPRoutes: not enough BackendServices: want %d, got %d", bsNum, 2*numTCPR)
+	}
+	var tcprs []*cloud.ResourceID
+	var e error
+	for i := 0; i < 2*numTCPR; i += 2 {
+		cidr1, cidr2 := "10.240."+strconv.Itoa(i)+".83/32", "10.240."+strconv.Itoa(i+1)+".83/32"
+		tcprRules := []*networkservices.TcpRouteRouteRule{
+			createTcpRule(bss[i], cidr1),
+			createTcpRule(bss[i+1], cidr2),
+		}
+		name := namePrefix + "-" + strconv.Itoa(i/2)
+		tcpr, err := buildTCPRoute(graphBuilder, name, meshURL, tcprRules)
+		if err != nil {
+			errors.Join(e, fmt.Errorf("buildTcpRoute(_, %s, %s, %v) = %v, want nil", name, meshURL, tcprRules, err))
+		}
+		tcprs = append(tcprs, tcpr)
+		t.Logf("%s = %s", name, pretty.Sprint(tcpr))
+	}
+	return tcprs, e
+}
+func TestMeshWithMultipleTCPRoutes(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	graphBuilder := rgraph.NewBuilder()
+	resUniqueIdPart := "multiple-tcpr"
+	meshURL, meshKey := ensureMesh(ctx, t, "multiple-tcpr-mesh")
+
+	t.Cleanup(func() {
+		err := theCloud.Meshes().Delete(ctx, meshKey)
+		t.Logf("theCloud.Meshes().Delete(ctx, %s): %v", meshKey, err)
+	})
+
+	hcs, err := createManyHealthchecks(graphBuilder, 6, resUniqueIdPart)
+	if err != nil {
+		t.Fatalf("createManyHealthchecks(_, 6, %s) = (_, %v), want (_, nil)", resUniqueIdPart, err)
+	}
+
+	bss, err := createManyBackendServicesWithHC(graphBuilder, 6, resUniqueIdPart, hcs)
+	if err != nil {
+		t.Fatalf("createManyBackendServicesWithHC(_, 6, %s) = (_, %v), want (_, nil)", resUniqueIdPart, err)
+	}
+
+	tcprs, err := createTCPRoutes(t, graphBuilder, 3, resUniqueIdPart, meshURL, bss)
+
+	graph, err := graphBuilder.Build()
+	if err != nil {
+		t.Fatalf("graphBuilder.Build() = %v, want nil", err)
+	}
+
+	result, err := plan.Do(ctx, theCloud, graph)
+	if err != nil {
+		t.Fatalf("plan.Do(_, _, _) = %v, want nil", err)
+	}
+
+	ex, err := exec.NewSerialExecutor(theCloud, result.Actions)
+	if err != nil {
+		t.Fatalf("exec.NewSerialExecutor(_, _) err: %v", err)
+		return
+	}
+	res, err := ex.Run(ctx)
+	if err != nil || res == nil {
+		t.Errorf("ex.Run(_,_) = %v, want nil", err)
+	}
+
+	for i := 0; i < len(hcs); i++ {
+		hcKey := hcs[i].Key
+		_, err = theCloud.HealthChecks().Get(ctx, hcKey)
+		if err != nil {
+			t.Fatalf("theCloud.Healthchecks().Get(_, %s) = %v, want nil", hcKey, err)
+		}
+	}
+
+	for i := 0; i < len(bss); i++ {
+		bsKey := bss[i].Key
+		_, err = theCloud.BackendServices().Get(ctx, bsKey)
+		if err != nil {
+			t.Fatalf("theCloud.BackendServices().Get(_, %s) = %v, want nil", bsKey, err)
+		}
+	}
+
+	for i := 0; i < len(tcprs); i++ {
+		tcprKey := tcprs[i].Key
+		_, err = theCloud.TcpRoutes().Get(ctx, tcprKey)
+		if err != nil {
+			t.Fatalf("theCloud.TcpRoutes().Get(_, %s) = %v, want nil", tcprKey, err)
+		}
+	}
+
+	t.Cleanup(func() {
+		for _, r := range tcprs {
+			err := theCloud.TcpRoutes().Delete(ctx, r.Key)
+			if err != nil {
+				t.Logf("delete TCProute: %v", err)
+			}
+		}
+		for _, bs := range bss {
+			err = theCloud.BackendServices().Delete(ctx, bs.Key)
+			if err != nil {
+				t.Logf("delete backend service: %v", err)
+			}
+		}
+		for _, hc := range hcs {
+			err = theCloud.HealthChecks().Delete(ctx, hc.Key)
+			t.Logf("theCloud.HealthChecks().Delete(ctx, %s): %v", hc.Key, err)
+		}
+	})
+
+	rules := []*networkservices.TcpRouteRouteRule{
+		{
+			Action: &networkservices.TcpRouteRouteAction{
+				Destinations: []*networkservices.TcpRouteRouteDestination{
+					{
+						ServiceName: resourceSelfLink(bss[1]),
+						Weight:      10,
+					},
+				},
+			},
+			Matches: []*networkservices.TcpRouteRouteMatch{
+				{
+					Address: "10.240.1.83/32",
+					Port:    "80",
+				},
+			},
+		},
+	}
+	// Update TCP rules by removing rule pointing to removed BackendService
+	tcprs[0], err = buildTCPRoute(graphBuilder, "multiple-tcpr-0", meshURL, rules)
+	if err != nil {
+		t.Fatalf(fmt.Sprintf("buildTcpRoute(_, %s, multiple-tcpr-0, %v) = %v, want nil", meshURL, rules, err))
+	}
+
+	expectedActions := []exec.ActionMetadata{
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[0])},
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[1])},
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[2])},
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[3])},
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[4])},
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[5])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[0])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[1])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[2])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[3])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[4])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[5])},
+		{Type: exec.ActionTypeMeta, Name: eventName(tcprs[1])},
+		{Type: exec.ActionTypeMeta, Name: eventName(tcprs[2])},
+		{Type: exec.ActionTypeUpdate, Name: actionName(exec.ActionTypeUpdate, tcprs[0])},
+	}
+
+	processGraphAndExpectActions(t, graphBuilder, expectedActions)
+
+	updatedTcpr, err := theCloud.TcpRoutes().Get(ctx, tcprs[0].Key)
+	if err != nil {
+		t.Fatalf("theCloud.TcpRoutes().Get(_, %v) = nil, %v, want _, nil", tcprs[0].Key, err)
+	}
+	fmt.Printf("Updated tcproute rules: %v, rules len: %d", updatedTcpr.Rules[0], len(updatedTcpr.Rules))
+
+	updatedRules := updatedTcpr.Rules
+	if len(updatedRules) != 1 {
+		t.Fatalf("theCloud.TcpRoutes().Get(_, %v).Rules = %v, want 1 rule", tcprs[0].Key, updatedRules)
+	}
+	// Remove one of BackendServices
+	graphBuilder.Get(bss[0]).SetState(rnode.NodeDoesNotExist)
+	graphBuilder.Get(hcs[0]).SetState(rnode.NodeDoesNotExist)
+	removedBS, bss := bss[0], bss[1:]
+	removedHC, hcs := hcs[0], hcs[1:]
+
+	expectedActions = []exec.ActionMetadata{
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[0])},
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[1])},
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[2])},
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[3])},
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[4])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[0])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[1])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[2])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[3])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[4])},
+		{Type: exec.ActionTypeMeta, Name: eventName(tcprs[0])},
+		{Type: exec.ActionTypeMeta, Name: eventName(tcprs[1])},
+		{Type: exec.ActionTypeMeta, Name: eventName(tcprs[2])},
+		{Type: exec.ActionTypeDelete, Name: actionName(exec.ActionTypeDelete, removedBS)},
+		{Type: exec.ActionTypeDelete, Name: actionName(exec.ActionTypeDelete, removedHC)},
+	}
+
+	processGraphAndExpectActions(t, graphBuilder, expectedActions)
+
+	bs, err := theCloud.BackendServices().Get(ctx, removedBS.Key)
+	if err == nil {
+		t.Fatalf("theCloud.BackendServices().Get(_, %v) = %v, nil, want err", removedBS.Key, bs)
+	}
+
+	graphBuilder.Get(tcprs[0]).SetState(rnode.NodeDoesNotExist)
+	graphBuilder.Get(bss[0]).SetState(rnode.NodeDoesNotExist)
+	graphBuilder.Get(hcs[0]).SetState(rnode.NodeDoesNotExist)
+
+	removedBS1, bss := bss[0], bss[1:]
+	removedHC1, hcs := hcs[0], hcs[1:]
+	removedTcpr, tcprs := tcprs[0], tcprs[1:]
+
+	expectedActions = []exec.ActionMetadata{
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[0])},
+		{Type: exec.ActionTypeMeta, Name: eventName(removedBS)},
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[1])},
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[2])},
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[3])},
+		{Type: exec.ActionTypeMeta, Name: eventName(removedHC)},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[0])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[1])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[2])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[3])},
+		{Type: exec.ActionTypeDelete, Name: actionName(exec.ActionTypeDelete, removedHC1)},
+		{Type: exec.ActionTypeDelete, Name: actionName(exec.ActionTypeDelete, removedBS1)},
+		{Type: exec.ActionTypeDelete, Name: actionName(exec.ActionTypeDelete, removedTcpr)},
+		{Type: exec.ActionTypeMeta, Name: eventName(tcprs[0])},
+		{Type: exec.ActionTypeMeta, Name: eventName(tcprs[1])},
+	}
+
+	processGraphAndExpectActions(t, graphBuilder, expectedActions)
+
+	bs, err = theCloud.BackendServices().Get(ctx, removedBS1.Key)
+	if err == nil {
+		t.Fatalf("theCloud.BackendServices().Get(_, %v) = %v, nil, want err", removedBS1.Key, bs)
+	}
+
+	hc, err := theCloud.HealthChecks().Get(ctx, removedHC1.Key)
+	if err == nil {
+		t.Fatalf("theCloud.HealthChecks().Get(_, %v) = %v, nil, want err", removedHC1, hc)
+	}
+
+	tcpr, err := theCloud.TcpRoutes().Get(ctx, removedTcpr.Key)
+	if err == nil {
+		t.Fatalf("theCloud.TcpRoutes().Get(_, %v) = %v, nil, want err", removedTcpr.Key, tcpr)
+	}
 }

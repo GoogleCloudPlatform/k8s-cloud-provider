@@ -46,6 +46,12 @@ func (n *tcpRouteNode) Diff(gotNode rnode.Node) (*rnode.PlanDetails, error) {
 		return nil, fmt.Errorf("TcpRouteNode: Diff %w", err)
 	}
 
+	for i, item := range diff.Items {
+		if item.Path.Equal(api.Path{"*", ".Name"}) {
+			diff.Items = append(diff.Items[:i], diff.Items[i+1:]...)
+			break
+		}
+	}
 	if diff.HasDiff() {
 		return &rnode.PlanDetails{
 			Operation: rnode.OpUpdate,

@@ -934,12 +934,12 @@ func (g *{{.GCPWrapType}}) Insert(ctx context.Context, key *meta.Key, obj *{{.FQ
 	call.Context(ctx)
 
 	op, err := call.Do()
+	klog.V(4).Infof("{{.GCPWrapType}}.Insert(%v, %v, ...) = %+v", ctx, key, err)
 
 	callObserverEnd(ctx, ck, err)
 	g.s.RateLimiter.Observe(ctx, err, ck)
 
 	if err != nil {
-		klog.V(4).Infof("{{.GCPWrapType}}.Insert(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
 
@@ -990,12 +990,12 @@ func (g *{{.GCPWrapType}}) Delete(ctx context.Context, key *meta.Key, options...
 	call.Context(ctx)
 
 	op, err := call.Do()
+	klog.V(4).Infof("{{.GCPWrapType}}.Delete(%v, %v) = %v", ctx, key, err)
 
 	callObserverEnd(ctx, ck, err)
 	g.s.RateLimiter.Observe(ctx, err, ck)
 
 	if err != nil {
-		klog.V(4).Infof("{{.GCPWrapType}}.Delete(%v, %v) = %v", ctx, key, err)
 		return err
 	}
 
@@ -1167,12 +1167,12 @@ func (g *{{.GCPWrapType}}) {{.FcnArgs}} {
 {{- if .IsOperation}}
 	call.Context(ctx)
 	op, err := call.Do()
+	klog.V(4).Infof("{{.GCPWrapType}}.{{.Name}}(%v, %v, ...) = %+v", ctx, key, err)
 
 	if err != nil {
 		callObserverEnd(ctx, ck, err)
 		g.s.RateLimiter.Observe(ctx, err, ck)
 
-		klog.V(4).Infof("{{.GCPWrapType}}.{{.Name}}(%v, %v, ...) = %+v", ctx, key, err)
 		return err
 	}
 

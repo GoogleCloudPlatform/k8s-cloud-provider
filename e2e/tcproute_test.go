@@ -288,28 +288,18 @@ func TestRgraphTCPRouteAddBackends(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildNEG(_, neg-test, %s) = (_, %v), want (_, nil)", zone, err)
 	}
-	t.Cleanup(func() {
-		err := theCloud.NetworkEndpointGroups().Delete(ctx, negID.Key)
-		t.Logf("theCloud.NetworkEndpointGroups().Delete(ctx, %s): %v", negID.Key, err)
-	})
 
 	hcID, err := buildHealthCheck(graphBuilder, "hc-test", 15)
 	if err != nil {
 		t.Fatalf("buildHealthCheck(_, hc-test, 15) = (_, %v), want (_, nil)", err)
 	}
-	t.Cleanup(func() {
-		err := theCloud.HealthChecks().Delete(ctx, hcID.Key)
-		t.Logf("theCloud.HealthChecks().Delete(ctx, %s): %v", hcID.Key, err)
-	})
+
 	bsID, err := buildBackendServiceWithNEG(graphBuilder, "bs-test", hcID, negID)
 	t.Logf("BackendServices created: %v", bsID)
 	if err != nil {
 		t.Fatalf("buildBackendServiceWithNEG(_, bs-test, _, _) = (_, %v), want (_, nil)", err)
 	}
-	t.Cleanup(func() {
-		err = theCloud.BackendServices().Delete(ctx, bsID.Key)
-		t.Logf("theCloud.BackendServices().Delete(_, %s): %v", bsID.Key, err)
-	})
+
 	rules := []*networkservices.TcpRouteRouteRule{
 		{
 			Action: &networkservices.TcpRouteRouteAction{
@@ -334,10 +324,6 @@ func TestRgraphTCPRouteAddBackends(t *testing.T) {
 		t.Fatalf("buildTCPRoute(_, tcproute-test, _, _, _) = (_, %v), want (_, nil)", err)
 	}
 	t.Logf("TCPRoute created: %v", tcprID)
-	t.Cleanup(func() {
-		err := theCloud.TcpRoutes().Delete(ctx, tcprID.Key)
-		t.Logf("theCloud.TcpRoutes().Delete(_, %s): %v", tcprID.Key, err)
-	})
 
 	expectedActions := []exec.ActionMetadata{
 		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, tcprID)},
@@ -345,7 +331,19 @@ func TestRgraphTCPRouteAddBackends(t *testing.T) {
 		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, hcID)},
 		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, negID)},
 	}
+
 	processGraphAndExpectActions(t, graphBuilder, expectedActions)
+	t.Cleanup(func() {
+		var err error
+		err = theCloud.TcpRoutes().Delete(ctx, tcprID.Key)
+		t.Logf("theCloud.TcpRoutes().Delete(_, %s): %v", tcprID.Key, err)
+		err = theCloud.BackendServices().Delete(ctx, bsID.Key)
+		t.Logf("theCloud.BackendServices().Delete(_, %s): %v", bsID.Key, err)
+		err = theCloud.NetworkEndpointGroups().Delete(ctx, negID.Key)
+		t.Logf("theCloud.NetworkEndpointGroups().Delete(ctx, %s): %v", negID.Key, err)
+		err = theCloud.HealthChecks().Delete(ctx, hcID.Key)
+		t.Logf("theCloud.HealthChecks().Delete(ctx, %s): %v", hcID.Key, err)
+	})
 
 	checkGCEBackendService(t, ctx, theCloud, hcID, bsID, 80)
 	checkAppNetTCPRoute(t, ctx, theCloud, tcprID.Key.Name, meshURL, bsID)
@@ -588,6 +586,7 @@ func TestMeshWithMultipleTCPRoutes(t *testing.T) {
 				t.Logf("delete TCProute: %v", err)
 			}
 		}
+
 		for _, bs := range bss {
 			err = theCloud.BackendServices().Delete(ctx, bs.Key)
 			if err != nil {

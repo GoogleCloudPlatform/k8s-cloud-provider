@@ -156,7 +156,7 @@ func (d *differ[T]) do(p Path, av, bv reflect.Value) error {
 			}
 
 			fp := p.Field(aft.Name)
-			switch d.traits.fieldType(fp) {
+			switch d.traits.FieldType(fp) {
 			case FieldTypeOutputOnly, FieldTypeSystem:
 				continue
 			}

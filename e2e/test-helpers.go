@@ -18,13 +18,16 @@ package e2e
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/meta"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/exec"
 	"github.com/google/go-cmp/cmp"
+	"google.golang.org/api/googleapi"
 )
 
 // expectActions checks if got contains actions in want.
@@ -126,4 +129,12 @@ Outer:
 		}
 		t.Fatalf("Rule ServiceName %s, not found in expected: %v", rule.Action.Destinations[0].ServiceName, svcIds)
 	}
+}
+
+func IsNotFoundError(err error) bool {
+	var gerr *googleapi.Error
+	if errors.As(err, &gerr) {
+		return gerr.Code == http.StatusNotFound
+	}
+	return false
 }

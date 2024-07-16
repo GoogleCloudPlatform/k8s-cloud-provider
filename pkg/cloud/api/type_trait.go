@@ -195,7 +195,8 @@ func (dt *FieldTraits) Clone() *FieldTraits {
 	}
 }
 
-func (dt *FieldTraits) fieldType(p Path) FieldType { return dt.fieldTrait(p).fType }
+// FieldType returns field trait type for a given path
+func (dt *FieldTraits) FieldType(p Path) FieldType { return dt.fieldTrait(p).fType }
 
 func (dt *FieldTraits) fieldTrait(p Path) fieldTrait {
 	// TODO(bowei): this can be made very efficient with a tree, early bailout

@@ -176,7 +176,7 @@ func fillNullAndForceSend(traits *FieldTraits, v reflect.Value) error {
 			if ft.Name == "NullFields" || ft.Name == "ForceSendFields" {
 				continue
 			}
-			fType := traits.fieldType(p.Field(ft.Name))
+			fType := traits.FieldType(p.Field(ft.Name))
 			fv := v.Field(i)
 
 			if fType == FieldTypeNonZeroValue {

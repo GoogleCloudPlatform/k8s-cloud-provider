@@ -28,7 +28,6 @@ import (
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/exec"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode"
-	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/backendservice"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/networkendpointgroup"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/tcproute"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/workflow/plan"
@@ -138,10 +137,8 @@ func buildNEG(graphBuilder *rgraph.Builder, name, zone string) (*cloud.ResourceI
 }
 
 func buildBackendServiceWithNEG(graphBuilder *rgraph.Builder, name string, hcID, negID *cloud.ResourceID) (*cloud.ResourceID, error) {
-	bsID := backendservice.ID(testFlags.project, meta.GlobalKey(resourceName(name)))
 
-	bsMutResource := backendservice.NewMutableBackendService(testFlags.project, bsID.Key)
-	bsMutResource.Access(func(x *compute.BackendService) {
+	f := func(x *compute.BackendService) {
 		x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 		x.Protocol = "TCP"
 		x.PortName = "http"
@@ -158,19 +155,8 @@ func buildBackendServiceWithNEG(graphBuilder *rgraph.Builder, name string, hcID,
 		}
 		x.ConnectionDraining = &compute.ConnectionDraining{}
 		x.HealthChecks = []string{hcID.SelfLink(meta.VersionGA)}
-	})
-	bsResource, err := bsMutResource.Freeze()
-	if err != nil {
-		return nil, err
 	}
-
-	bsBuilder := backendservice.NewBuilder(bsID)
-	bsBuilder.SetOwnership(rnode.OwnershipManaged)
-	bsBuilder.SetState(rnode.NodeExists)
-	bsBuilder.SetResource(bsResource)
-
-	graphBuilder.Add(bsBuilder)
-	return bsID, nil
+	return buildBackendServiceWith(graphBuilder, name, f)
 }
 
 func buildTCPRoute(graphBuilder *rgraph.Builder, name, meshURL string, rules []*networkservices.TcpRouteRouteRule) (*cloud.ResourceID, error) {

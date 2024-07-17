@@ -442,7 +442,7 @@ func defaultSubnetworkURL() string {
 	return cloud.NewSubnetworksResourceID(testFlags.project, region, "default").SelfLink(meta.VersionGA)
 }
 
-func createManyHealthchecks(graphBuilder *rgraph.Builder, hcNum int, name string) ([]*cloud.ResourceID, error) {
+func createHealthchecks(graphBuilder *rgraph.Builder, hcNum int, name string) ([]*cloud.ResourceID, error) {
 	var hcs []*cloud.ResourceID
 	var e error
 	for i := 0; i < hcNum; i++ {
@@ -453,10 +453,10 @@ func createManyHealthchecks(graphBuilder *rgraph.Builder, hcNum int, name string
 	return hcs, e
 }
 
-func createManyBackendServicesWithHC(graphBuilder *rgraph.Builder, bsNum int, name string, hcs []*cloud.ResourceID) ([]*cloud.ResourceID, error) {
+func createBackendServicesWithHC(graphBuilder *rgraph.Builder, bsNum int, name string, hcs []*cloud.ResourceID) ([]*cloud.ResourceID, error) {
 	hcNum := len(hcs)
 	if len(hcs) < bsNum {
-		return nil, fmt.Errorf("createManyBackendServicesWithHC: not enough healthchecks: want %d, got %d", bsNum, hcNum)
+		return nil, fmt.Errorf("createBackendServicesWithHC: not enough healthchecks: want %d, got %d", bsNum, hcNum)
 	}
 	var bss []*cloud.ResourceID
 	var e error
@@ -523,14 +523,14 @@ func TestMeshWithMultipleTCPRoutes(t *testing.T) {
 		t.Logf("theCloud.Meshes().Delete(ctx, %s): %v", meshKey, err)
 	})
 
-	hcs, err := createManyHealthchecks(graphBuilder, 6, resUniqueIdPart)
+	hcs, err := createHealthchecks(graphBuilder, 6, resUniqueIdPart)
 	if err != nil {
-		t.Fatalf("createManyHealthchecks(_, 6, %s) = (_, %v), want (_, nil)", resUniqueIdPart, err)
+		t.Fatalf("createHealthchecks(_, 6, %s) = (_, %v), want (_, nil)", resUniqueIdPart, err)
 	}
 
-	bss, err := createManyBackendServicesWithHC(graphBuilder, 6, resUniqueIdPart, hcs)
+	bss, err := createBackendServicesWithHC(graphBuilder, 6, resUniqueIdPart, hcs)
 	if err != nil {
-		t.Fatalf("createManyBackendServicesWithHC(_, 6, %s) = (_, %v), want (_, nil)", resUniqueIdPart, err)
+		t.Fatalf("createBackendServicesWithHC(_, 6, %s, _) = (_, %v), want (_, nil)", resUniqueIdPart, err)
 	}
 
 	tcprs, err := createTCPRoutes(t, graphBuilder, 3, resUniqueIdPart, meshURL, bss)
@@ -680,7 +680,7 @@ func TestMeshWithMultipleTCPRoutes(t *testing.T) {
 	processGraphAndExpectActions(t, graphBuilder, expectedActions)
 
 	bs, err := theCloud.BackendServices().Get(ctx, removedBS.Key)
-	if err == nil {
+	if !IsNotFoundError(err) {
 		t.Fatalf("theCloud.BackendServices().Get(_, %v) = %v, nil, want err", removedBS.Key, bs)
 	}
 
@@ -713,17 +713,143 @@ func TestMeshWithMultipleTCPRoutes(t *testing.T) {
 	processGraphAndExpectActions(t, graphBuilder, expectedActions)
 
 	bs, err = theCloud.BackendServices().Get(ctx, removedBS1.Key)
-	if err == nil {
+	if !IsNotFoundError(err) {
 		t.Fatalf("theCloud.BackendServices().Get(_, %v) = %v, nil, want err", removedBS1.Key, bs)
 	}
 
 	hc, err := theCloud.HealthChecks().Get(ctx, removedHC1.Key)
-	if err == nil {
+	if !IsNotFoundError(err) {
 		t.Fatalf("theCloud.HealthChecks().Get(_, %v) = %v, nil, want err", removedHC1, hc)
 	}
 
 	tcpr, err := theCloud.TcpRoutes().Get(ctx, removedTcpr.Key)
-	if err == nil {
+	if !IsNotFoundError(err) {
 		t.Fatalf("theCloud.TcpRoutes().Get(_, %v) = %v, nil, want err", removedTcpr.Key, tcpr)
 	}
+}
+
+func TestTcpRouteDeletion(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	graphBuilder := rgraph.NewBuilder()
+	resUniqueIdPart := "tcpr-deletion"
+	meshURL, meshKey := ensureMesh(ctx, t, resUniqueIdPart+"-mesh")
+
+	t.Cleanup(func() {
+		err := theCloud.Meshes().Delete(ctx, meshKey)
+		t.Logf("theCloud.Meshes().Delete(ctx, %s): %v", meshKey, err)
+	})
+
+	hcs, err := createHealthchecks(graphBuilder, 3, resUniqueIdPart)
+	if err != nil {
+		t.Fatalf("createHealthchecks(_, 3, %s) = (_, %v), want (_, nil)", resUniqueIdPart, err)
+	}
+
+	bss, err := createBackendServicesWithHC(graphBuilder, 3, resUniqueIdPart, hcs)
+	if err != nil {
+		t.Fatalf("createBackendServicesWithHC(_, 3, %s, _) = (_, %v), want (_, nil)", resUniqueIdPart, err)
+	}
+
+	var rules []*networkservices.TcpRouteRouteRule
+	for i := 0; i < len(bss); i += 2 {
+		cidr := "10.240." + strconv.Itoa(i) + ".84/32"
+		rules = append(rules, createTcpRule(bss[i], cidr))
+	}
+
+	tcprID, err := buildTCPRoute(graphBuilder, resUniqueIdPart+"-tcpr", meshURL, rules)
+
+	expectedActions := []exec.ActionMetadata{
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, bss[0])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, bss[1])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, bss[2])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, hcs[0])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, hcs[1])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, hcs[2])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, tcprID)},
+	}
+
+	processGraphAndExpectActions(t, graphBuilder, expectedActions)
+	t.Cleanup(func() {
+		err := theCloud.TcpRoutes().Delete(ctx, tcprID.Key)
+		if err != nil {
+			t.Logf("theCloud.TcpRoutes().Delete(ctx, %s): %v", tcprID.Key, err)
+		}
+
+		for _, bs := range bss {
+			err = theCloud.BackendServices().Delete(ctx, bs.Key)
+			if err != nil {
+				t.Logf("theCloud.BackendServices().Delete(ctx, %s): %v", bs.Key, err)
+			}
+		}
+		for _, hc := range hcs {
+			err = theCloud.HealthChecks().Delete(ctx, hc.Key)
+			t.Logf("theCloud.HealthChecks().Delete(ctx, %s): %v", hc.Key, err)
+		}
+	})
+
+	for i := 0; i < len(bss); i++ {
+		checkGCEBackendService(t, ctx, theCloud, hcs[i], bss[i], 80)
+	}
+
+	negID, err := buildNEG(graphBuilder, resUniqueIdPart+"-neg", zone)
+	if err != nil {
+		t.Fatalf("buildNEG((_, %s, _) = (_, %v), want (_, nil)", resUniqueIdPart, err)
+	}
+
+	for i := 0; i < len(bss); i++ {
+		bss[i], err = buildBackendServiceWithNEG(graphBuilder, resUniqueIdPart+"-"+strconv.Itoa(i)+"-bs", hcs[i], negID)
+		if err != nil {
+			t.Fatalf("buildBackendServiceWithNEG(_, %s, %s, %s) = (_, %v), want (_, nil)", resUniqueIdPart, hcs[i], negID, err)
+		}
+	}
+
+	expectedActions = []exec.ActionMetadata{
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, negID)},
+		{Type: exec.ActionTypeUpdate, Name: actionName(exec.ActionTypeUpdate, bss[0])},
+		{Type: exec.ActionTypeUpdate, Name: actionName(exec.ActionTypeUpdate, bss[1])},
+		{Type: exec.ActionTypeUpdate, Name: actionName(exec.ActionTypeUpdate, bss[2])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[0])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[1])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[2])},
+		{Type: exec.ActionTypeMeta, Name: eventName(tcprID)},
+	}
+
+	processGraphAndExpectActions(t, graphBuilder, expectedActions)
+	t.Cleanup(func() {
+		err = theCloud.NetworkEndpointGroups().Delete(ctx, negID.Key)
+		t.Logf("theCloud.NetworkEndpointGroups().Delete(ctx, %s): %v", negID.Key, err)
+	})
+
+	graphBuilder.Get(tcprID).SetState(rnode.NodeDoesNotExist)
+	for i := 0; i < len(bss); i++ {
+		graphBuilder.Get(bss[i]).SetState(rnode.NodeDoesNotExist)
+		graphBuilder.Get(hcs[i]).SetState(rnode.NodeDoesNotExist)
+	}
+	expectedActions = []exec.ActionMetadata{
+		{Type: exec.ActionTypeMeta, Name: eventName(negID)},
+		{Type: exec.ActionTypeDelete, Name: actionName(exec.ActionTypeDelete, bss[0])},
+		{Type: exec.ActionTypeDelete, Name: actionName(exec.ActionTypeDelete, bss[1])},
+		{Type: exec.ActionTypeDelete, Name: actionName(exec.ActionTypeDelete, bss[2])},
+		{Type: exec.ActionTypeDelete, Name: actionName(exec.ActionTypeDelete, hcs[0])},
+		{Type: exec.ActionTypeDelete, Name: actionName(exec.ActionTypeDelete, hcs[1])},
+		{Type: exec.ActionTypeDelete, Name: actionName(exec.ActionTypeDelete, hcs[2])},
+		{Type: exec.ActionTypeDelete, Name: actionName(exec.ActionTypeDelete, tcprID)},
+	}
+
+	processGraphAndExpectActions(t, graphBuilder, expectedActions)
+	_, err = theCloud.TcpRoutes().Get(ctx, tcprID.Key)
+	if !IsNotFoundError(err) {
+		t.Fatalf("Tcpr %s was not deleted correctly", tcprID)
+	}
+	for i := 0; i < len(bss); i++ {
+		_, err = theCloud.BackendServices().Get(ctx, bss[i].Key)
+		if !IsNotFoundError(err) {
+			t.Fatalf("BackendService %s was not deleted correctly", bss[i])
+		}
+		_, err = theCloud.HealthChecks().Get(ctx, hcs[i].Key)
+		if !IsNotFoundError(err) {
+			t.Fatalf("Healthcheck %s was not deleted correctly", hcs[i])
+		}
+	}
+	bss, hcs = []*cloud.ResourceID{}, []*cloud.ResourceID{}
 }

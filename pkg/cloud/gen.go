@@ -13863,6 +13863,7 @@ type ForwardingRules interface {
 	List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computega.ForwardingRule, error)
 	Insert(ctx context.Context, key *meta.Key, obj *computega.ForwardingRule, options ...Option) error
 	Delete(ctx context.Context, key *meta.Key, options ...Option) error
+	Patch(context.Context, *meta.Key, *computega.ForwardingRule, ...Option) error
 	SetLabels(context.Context, *meta.Key, *computega.RegionSetLabelsRequest, ...Option) error
 	SetTarget(context.Context, *meta.Key, *computega.TargetReference, ...Option) error
 }
@@ -13904,6 +13905,7 @@ type MockForwardingRules struct {
 	ListHook      func(ctx context.Context, region string, fl *filter.F, m *MockForwardingRules, options ...Option) (bool, []*computega.ForwardingRule, error)
 	InsertHook    func(ctx context.Context, key *meta.Key, obj *computega.ForwardingRule, m *MockForwardingRules, options ...Option) (bool, error)
 	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockForwardingRules, options ...Option) (bool, error)
+	PatchHook     func(context.Context, *meta.Key, *computega.ForwardingRule, *MockForwardingRules, ...Option) error
 	SetLabelsHook func(context.Context, *meta.Key, *computega.RegionSetLabelsRequest, *MockForwardingRules, ...Option) error
 	SetTargetHook func(context.Context, *meta.Key, *computega.TargetReference, *MockForwardingRules, ...Option) error
 
@@ -14053,6 +14055,14 @@ func (m *MockForwardingRules) Delete(ctx context.Context, key *meta.Key, options
 // Obj wraps the object for use in the mock.
 func (m *MockForwardingRules) Obj(o *computega.ForwardingRule) *MockForwardingRulesObj {
 	return &MockForwardingRulesObj{o}
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockForwardingRules) Patch(ctx context.Context, key *meta.Key, arg0 *computega.ForwardingRule, options ...Option) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetLabels is a mock for the corresponding method.
@@ -14247,6 +14257,48 @@ func (g *GCEForwardingRules) Delete(ctx context.Context, key *meta.Key, options 
 	return err
 }
 
+// Patch is a method on GCEForwardingRules.
+func (g *GCEForwardingRules) Patch(ctx context.Context, key *meta.Key, arg0 *computega.ForwardingRule, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEForwardingRules.Patch(%v, %v, %v, ...): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEForwardingRules.Patch(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "ga", "ForwardingRules")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("ga"),
+		Service:   "ForwardingRules",
+	}
+	klog.V(5).Infof("GCEForwardingRules.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEForwardingRules.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.ForwardingRules.Patch(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	klog.V(4).Infof("GCEForwardingRules.Patch(%v, %v, ...) = %+v", ctx, key, err)
+
+	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
+	klog.V(4).Infof("GCEForwardingRules.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // SetLabels is a method on GCEForwardingRules.
 func (g *GCEForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 *computega.RegionSetLabelsRequest, options ...Option) error {
 	opts := mergeOptions(options)
@@ -14337,6 +14389,7 @@ type AlphaForwardingRules interface {
 	List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computealpha.ForwardingRule, error)
 	Insert(ctx context.Context, key *meta.Key, obj *computealpha.ForwardingRule, options ...Option) error
 	Delete(ctx context.Context, key *meta.Key, options ...Option) error
+	Patch(context.Context, *meta.Key, *computealpha.ForwardingRule, ...Option) error
 	SetLabels(context.Context, *meta.Key, *computealpha.RegionSetLabelsRequest, ...Option) error
 	SetTarget(context.Context, *meta.Key, *computealpha.TargetReference, ...Option) error
 }
@@ -14378,6 +14431,7 @@ type MockAlphaForwardingRules struct {
 	ListHook      func(ctx context.Context, region string, fl *filter.F, m *MockAlphaForwardingRules, options ...Option) (bool, []*computealpha.ForwardingRule, error)
 	InsertHook    func(ctx context.Context, key *meta.Key, obj *computealpha.ForwardingRule, m *MockAlphaForwardingRules, options ...Option) (bool, error)
 	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockAlphaForwardingRules, options ...Option) (bool, error)
+	PatchHook     func(context.Context, *meta.Key, *computealpha.ForwardingRule, *MockAlphaForwardingRules, ...Option) error
 	SetLabelsHook func(context.Context, *meta.Key, *computealpha.RegionSetLabelsRequest, *MockAlphaForwardingRules, ...Option) error
 	SetTargetHook func(context.Context, *meta.Key, *computealpha.TargetReference, *MockAlphaForwardingRules, ...Option) error
 
@@ -14527,6 +14581,14 @@ func (m *MockAlphaForwardingRules) Delete(ctx context.Context, key *meta.Key, op
 // Obj wraps the object for use in the mock.
 func (m *MockAlphaForwardingRules) Obj(o *computealpha.ForwardingRule) *MockForwardingRulesObj {
 	return &MockForwardingRulesObj{o}
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockAlphaForwardingRules) Patch(ctx context.Context, key *meta.Key, arg0 *computealpha.ForwardingRule, options ...Option) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetLabels is a mock for the corresponding method.
@@ -14721,6 +14783,48 @@ func (g *GCEAlphaForwardingRules) Delete(ctx context.Context, key *meta.Key, opt
 	return err
 }
 
+// Patch is a method on GCEAlphaForwardingRules.
+func (g *GCEAlphaForwardingRules) Patch(ctx context.Context, key *meta.Key, arg0 *computealpha.ForwardingRule, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEAlphaForwardingRules.Patch(%v, %v, %v, ...): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaForwardingRules.Patch(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "alpha", "ForwardingRules")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("alpha"),
+		Service:   "ForwardingRules",
+	}
+	klog.V(5).Infof("GCEAlphaForwardingRules.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEAlphaForwardingRules.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.ForwardingRules.Patch(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	klog.V(4).Infof("GCEAlphaForwardingRules.Patch(%v, %v, ...) = %+v", ctx, key, err)
+
+	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
+	klog.V(4).Infof("GCEAlphaForwardingRules.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // SetLabels is a method on GCEAlphaForwardingRules.
 func (g *GCEAlphaForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 *computealpha.RegionSetLabelsRequest, options ...Option) error {
 	opts := mergeOptions(options)
@@ -14811,6 +14915,7 @@ type BetaForwardingRules interface {
 	List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computebeta.ForwardingRule, error)
 	Insert(ctx context.Context, key *meta.Key, obj *computebeta.ForwardingRule, options ...Option) error
 	Delete(ctx context.Context, key *meta.Key, options ...Option) error
+	Patch(context.Context, *meta.Key, *computebeta.ForwardingRule, ...Option) error
 	SetLabels(context.Context, *meta.Key, *computebeta.RegionSetLabelsRequest, ...Option) error
 	SetTarget(context.Context, *meta.Key, *computebeta.TargetReference, ...Option) error
 }
@@ -14852,6 +14957,7 @@ type MockBetaForwardingRules struct {
 	ListHook      func(ctx context.Context, region string, fl *filter.F, m *MockBetaForwardingRules, options ...Option) (bool, []*computebeta.ForwardingRule, error)
 	InsertHook    func(ctx context.Context, key *meta.Key, obj *computebeta.ForwardingRule, m *MockBetaForwardingRules, options ...Option) (bool, error)
 	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockBetaForwardingRules, options ...Option) (bool, error)
+	PatchHook     func(context.Context, *meta.Key, *computebeta.ForwardingRule, *MockBetaForwardingRules, ...Option) error
 	SetLabelsHook func(context.Context, *meta.Key, *computebeta.RegionSetLabelsRequest, *MockBetaForwardingRules, ...Option) error
 	SetTargetHook func(context.Context, *meta.Key, *computebeta.TargetReference, *MockBetaForwardingRules, ...Option) error
 
@@ -15001,6 +15107,14 @@ func (m *MockBetaForwardingRules) Delete(ctx context.Context, key *meta.Key, opt
 // Obj wraps the object for use in the mock.
 func (m *MockBetaForwardingRules) Obj(o *computebeta.ForwardingRule) *MockForwardingRulesObj {
 	return &MockForwardingRulesObj{o}
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockBetaForwardingRules) Patch(ctx context.Context, key *meta.Key, arg0 *computebeta.ForwardingRule, options ...Option) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetLabels is a mock for the corresponding method.
@@ -15195,6 +15309,48 @@ func (g *GCEBetaForwardingRules) Delete(ctx context.Context, key *meta.Key, opti
 	return err
 }
 
+// Patch is a method on GCEBetaForwardingRules.
+func (g *GCEBetaForwardingRules) Patch(ctx context.Context, key *meta.Key, arg0 *computebeta.ForwardingRule, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEBetaForwardingRules.Patch(%v, %v, %v, ...): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaForwardingRules.Patch(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "beta", "ForwardingRules")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("beta"),
+		Service:   "ForwardingRules",
+	}
+	klog.V(5).Infof("GCEBetaForwardingRules.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEBetaForwardingRules.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.ForwardingRules.Patch(projectID, key.Region, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	klog.V(4).Infof("GCEBetaForwardingRules.Patch(%v, %v, ...) = %+v", ctx, key, err)
+
+	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
+	klog.V(4).Infof("GCEBetaForwardingRules.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // SetLabels is a method on GCEBetaForwardingRules.
 func (g *GCEBetaForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 *computebeta.RegionSetLabelsRequest, options ...Option) error {
 	opts := mergeOptions(options)
@@ -15285,6 +15441,7 @@ type AlphaGlobalForwardingRules interface {
 	List(ctx context.Context, fl *filter.F, options ...Option) ([]*computealpha.ForwardingRule, error)
 	Insert(ctx context.Context, key *meta.Key, obj *computealpha.ForwardingRule, options ...Option) error
 	Delete(ctx context.Context, key *meta.Key, options ...Option) error
+	Patch(context.Context, *meta.Key, *computealpha.ForwardingRule, ...Option) error
 	SetLabels(context.Context, *meta.Key, *computealpha.GlobalSetLabelsRequest, ...Option) error
 	SetTarget(context.Context, *meta.Key, *computealpha.TargetReference, ...Option) error
 }
@@ -15326,6 +15483,7 @@ type MockAlphaGlobalForwardingRules struct {
 	ListHook      func(ctx context.Context, fl *filter.F, m *MockAlphaGlobalForwardingRules, options ...Option) (bool, []*computealpha.ForwardingRule, error)
 	InsertHook    func(ctx context.Context, key *meta.Key, obj *computealpha.ForwardingRule, m *MockAlphaGlobalForwardingRules, options ...Option) (bool, error)
 	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockAlphaGlobalForwardingRules, options ...Option) (bool, error)
+	PatchHook     func(context.Context, *meta.Key, *computealpha.ForwardingRule, *MockAlphaGlobalForwardingRules, ...Option) error
 	SetLabelsHook func(context.Context, *meta.Key, *computealpha.GlobalSetLabelsRequest, *MockAlphaGlobalForwardingRules, ...Option) error
 	SetTargetHook func(context.Context, *meta.Key, *computealpha.TargetReference, *MockAlphaGlobalForwardingRules, ...Option) error
 
@@ -15472,6 +15630,14 @@ func (m *MockAlphaGlobalForwardingRules) Delete(ctx context.Context, key *meta.K
 // Obj wraps the object for use in the mock.
 func (m *MockAlphaGlobalForwardingRules) Obj(o *computealpha.ForwardingRule) *MockGlobalForwardingRulesObj {
 	return &MockGlobalForwardingRulesObj{o}
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockAlphaGlobalForwardingRules) Patch(ctx context.Context, key *meta.Key, arg0 *computealpha.ForwardingRule, options ...Option) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetLabels is a mock for the corresponding method.
@@ -15666,6 +15832,48 @@ func (g *GCEAlphaGlobalForwardingRules) Delete(ctx context.Context, key *meta.Ke
 	return err
 }
 
+// Patch is a method on GCEAlphaGlobalForwardingRules.
+func (g *GCEAlphaGlobalForwardingRules) Patch(ctx context.Context, key *meta.Key, arg0 *computealpha.ForwardingRule, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.Patch(%v, %v, %v, ...): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaGlobalForwardingRules.Patch(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "alpha", "GlobalForwardingRules")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("alpha"),
+		Service:   "GlobalForwardingRules",
+	}
+	klog.V(5).Infof("GCEAlphaGlobalForwardingRules.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEAlphaGlobalForwardingRules.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.GlobalForwardingRules.Patch(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	klog.V(4).Infof("GCEAlphaGlobalForwardingRules.Patch(%v, %v, ...) = %+v", ctx, key, err)
+
+	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
+	klog.V(4).Infof("GCEAlphaGlobalForwardingRules.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // SetLabels is a method on GCEAlphaGlobalForwardingRules.
 func (g *GCEAlphaGlobalForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 *computealpha.GlobalSetLabelsRequest, options ...Option) error {
 	opts := mergeOptions(options)
@@ -15756,6 +15964,7 @@ type BetaGlobalForwardingRules interface {
 	List(ctx context.Context, fl *filter.F, options ...Option) ([]*computebeta.ForwardingRule, error)
 	Insert(ctx context.Context, key *meta.Key, obj *computebeta.ForwardingRule, options ...Option) error
 	Delete(ctx context.Context, key *meta.Key, options ...Option) error
+	Patch(context.Context, *meta.Key, *computebeta.ForwardingRule, ...Option) error
 	SetLabels(context.Context, *meta.Key, *computebeta.GlobalSetLabelsRequest, ...Option) error
 	SetTarget(context.Context, *meta.Key, *computebeta.TargetReference, ...Option) error
 }
@@ -15797,6 +16006,7 @@ type MockBetaGlobalForwardingRules struct {
 	ListHook      func(ctx context.Context, fl *filter.F, m *MockBetaGlobalForwardingRules, options ...Option) (bool, []*computebeta.ForwardingRule, error)
 	InsertHook    func(ctx context.Context, key *meta.Key, obj *computebeta.ForwardingRule, m *MockBetaGlobalForwardingRules, options ...Option) (bool, error)
 	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockBetaGlobalForwardingRules, options ...Option) (bool, error)
+	PatchHook     func(context.Context, *meta.Key, *computebeta.ForwardingRule, *MockBetaGlobalForwardingRules, ...Option) error
 	SetLabelsHook func(context.Context, *meta.Key, *computebeta.GlobalSetLabelsRequest, *MockBetaGlobalForwardingRules, ...Option) error
 	SetTargetHook func(context.Context, *meta.Key, *computebeta.TargetReference, *MockBetaGlobalForwardingRules, ...Option) error
 
@@ -15943,6 +16153,14 @@ func (m *MockBetaGlobalForwardingRules) Delete(ctx context.Context, key *meta.Ke
 // Obj wraps the object for use in the mock.
 func (m *MockBetaGlobalForwardingRules) Obj(o *computebeta.ForwardingRule) *MockGlobalForwardingRulesObj {
 	return &MockGlobalForwardingRulesObj{o}
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockBetaGlobalForwardingRules) Patch(ctx context.Context, key *meta.Key, arg0 *computebeta.ForwardingRule, options ...Option) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetLabels is a mock for the corresponding method.
@@ -16137,6 +16355,48 @@ func (g *GCEBetaGlobalForwardingRules) Delete(ctx context.Context, key *meta.Key
 	return err
 }
 
+// Patch is a method on GCEBetaGlobalForwardingRules.
+func (g *GCEBetaGlobalForwardingRules) Patch(ctx context.Context, key *meta.Key, arg0 *computebeta.ForwardingRule, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEBetaGlobalForwardingRules.Patch(%v, %v, %v, ...): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaGlobalForwardingRules.Patch(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "beta", "GlobalForwardingRules")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("beta"),
+		Service:   "GlobalForwardingRules",
+	}
+	klog.V(5).Infof("GCEBetaGlobalForwardingRules.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEBetaGlobalForwardingRules.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.GlobalForwardingRules.Patch(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	klog.V(4).Infof("GCEBetaGlobalForwardingRules.Patch(%v, %v, ...) = %+v", ctx, key, err)
+
+	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
+	klog.V(4).Infof("GCEBetaGlobalForwardingRules.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // SetLabels is a method on GCEBetaGlobalForwardingRules.
 func (g *GCEBetaGlobalForwardingRules) SetLabels(ctx context.Context, key *meta.Key, arg0 *computebeta.GlobalSetLabelsRequest, options ...Option) error {
 	opts := mergeOptions(options)
@@ -16227,6 +16487,7 @@ type GlobalForwardingRules interface {
 	List(ctx context.Context, fl *filter.F, options ...Option) ([]*computega.ForwardingRule, error)
 	Insert(ctx context.Context, key *meta.Key, obj *computega.ForwardingRule, options ...Option) error
 	Delete(ctx context.Context, key *meta.Key, options ...Option) error
+	Patch(context.Context, *meta.Key, *computega.ForwardingRule, ...Option) error
 	SetLabels(context.Context, *meta.Key, *computega.GlobalSetLabelsRequest, ...Option) error
 	SetTarget(context.Context, *meta.Key, *computega.TargetReference, ...Option) error
 }
@@ -16268,6 +16529,7 @@ type MockGlobalForwardingRules struct {
 	ListHook      func(ctx context.Context, fl *filter.F, m *MockGlobalForwardingRules, options ...Option) (bool, []*computega.ForwardingRule, error)
 	InsertHook    func(ctx context.Context, key *meta.Key, obj *computega.ForwardingRule, m *MockGlobalForwardingRules, options ...Option) (bool, error)
 	DeleteHook    func(ctx context.Context, key *meta.Key, m *MockGlobalForwardingRules, options ...Option) (bool, error)
+	PatchHook     func(context.Context, *meta.Key, *computega.ForwardingRule, *MockGlobalForwardingRules, ...Option) error
 	SetLabelsHook func(context.Context, *meta.Key, *computega.GlobalSetLabelsRequest, *MockGlobalForwardingRules, ...Option) error
 	SetTargetHook func(context.Context, *meta.Key, *computega.TargetReference, *MockGlobalForwardingRules, ...Option) error
 
@@ -16414,6 +16676,14 @@ func (m *MockGlobalForwardingRules) Delete(ctx context.Context, key *meta.Key, o
 // Obj wraps the object for use in the mock.
 func (m *MockGlobalForwardingRules) Obj(o *computega.ForwardingRule) *MockGlobalForwardingRulesObj {
 	return &MockGlobalForwardingRulesObj{o}
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockGlobalForwardingRules) Patch(ctx context.Context, key *meta.Key, arg0 *computega.ForwardingRule, options ...Option) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetLabels is a mock for the corresponding method.
@@ -16605,6 +16875,48 @@ func (g *GCEGlobalForwardingRules) Delete(ctx context.Context, key *meta.Key, op
 
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCEGlobalForwardingRules.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// Patch is a method on GCEGlobalForwardingRules.
+func (g *GCEGlobalForwardingRules) Patch(ctx context.Context, key *meta.Key, arg0 *computega.ForwardingRule, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEGlobalForwardingRules.Patch(%v, %v, %v, ...): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEGlobalForwardingRules.Patch(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "ga", "GlobalForwardingRules")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("ga"),
+		Service:   "GlobalForwardingRules",
+	}
+	klog.V(5).Infof("GCEGlobalForwardingRules.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEGlobalForwardingRules.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.GlobalForwardingRules.Patch(projectID, key.Name, arg0)
+	call.Context(ctx)
+	op, err := call.Do()
+	klog.V(4).Infof("GCEGlobalForwardingRules.Patch(%v, %v, ...) = %+v", ctx, key, err)
+
+	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
+	klog.V(4).Infof("GCEGlobalForwardingRules.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
 

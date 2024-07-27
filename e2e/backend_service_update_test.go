@@ -226,3 +226,39 @@ func TestBackendServiceUpdate(t *testing.T) {
 	wantBS = &compute.BackendService{LoadBalancingScheme: "INTERNAL_MANAGED"}
 	checkBackendService(t, ctx, theCloud, bs1ID, wantBS, compareLBScheme)
 }
+
+func TestEnsureBackendService(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	resUniqueId := "ensure-bs-test"
+	graphBuilder := rgraph.NewBuilder()
+	hcID, err := buildHealthCheck(graphBuilder, resUniqueId+"-hc", 15)
+	if err != nil {
+		t.Fatalf("buildHealthCheck(_, hc1-test, 15) = (_, %v), want (_, nil)", err)
+	}
+	bsID, err := buildBackendServiceWithLBScheme(graphBuilder, resUniqueId+"-bs", hcID, "INTERNAL_SELF_MANAGED")
+	if err != nil {
+		t.Fatalf("buildBackendServiceWithLBScheme(_, %s, _) = %v, want nil", resUniqueId+"-bs", err)
+	}
+	expectedActions := []exec.ActionMetadata{
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, bsID)},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, hcID)},
+	}
+
+	graph, err := graphBuilder.Build()
+
+	result, err := plan.Do(ctx, theCloud, graph)
+	if err != nil {
+		t.Fatalf("plan.Do(_, _, _) = %v, want nil", err)
+	}
+
+	t.Logf("\nPlan.Actions: %v", result.Actions)
+	t.Logf("\nPlan.Got: %v", result.Got)
+	t.Logf("\nPlan.Want: %v", result.Want)
+
+	err = expectActions(result.Actions, expectedActions)
+	if err != nil {
+		t.Fatalf("expectActions(_, _) = %v, want nil", err)
+	}
+}

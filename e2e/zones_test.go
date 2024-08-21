@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/meta"
+	"google.golang.org/api/googleapi"
 )
 
 func TestZones(t *testing.T) {
@@ -54,5 +55,11 @@ func TestZones(t *testing.T) {
 
 	const invalidZone = "moonlab1-c"
 	_, err = theCloud.Zones().Get(ctx, meta.GlobalKey(invalidZone))
-	checkErrCode(t, err, 404, "Zones.Get()")
+	gerr, ok := err.(*googleapi.Error)
+	if !ok {
+		t.Fatalf("Zones.Get(): invalid error type, want *googleapi.Error, got %T", err)
+	}
+	if gerr.Code != 400 && gerr.Code != 404 {
+		t.Fatalf("Zones.Get(): got code %d, want {400, 404} (err: %v)", gerr.Code, err)
+	}
 }

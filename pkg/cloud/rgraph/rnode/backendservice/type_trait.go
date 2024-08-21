@@ -49,7 +49,6 @@ func (*typeTrait) FieldTraits(v meta.Version) *api.FieldTraits {
 
 	dt.NonZeroValue(api.Path{}.Pointer().Field("LoadBalancingScheme"))
 	dt.NonZeroValue(api.Path{}.Pointer().Field("Protocol"))
-	dt.NonZeroValue(api.Path{}.Pointer().Field("CompressionMode"))
 	// TODO(kl52752) change this field to mandatory after fixing type traits check.
 	// Type traits check should be per path and not inherited from parent.
 	dt.AllowZeroValue(api.Path{}.Pointer().Field("ConnectionDraining"))
@@ -68,5 +67,6 @@ func (*typeTrait) FieldTraits(v meta.Version) *api.FieldTraits {
 		dt.NonZeroValue(api.Path{}.Pointer().Field("VpcNetworkScope"))
 		dt.NonZeroValue(api.Path{}.Pointer().Field("ExternalManagedMigrationState"))
 	}
+
 	return dt
 }

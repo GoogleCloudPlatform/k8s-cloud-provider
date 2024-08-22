@@ -37,6 +37,21 @@ func TestKeyType(t *testing.T) {
 	}
 }
 
+func TestKeyLocation(t *testing.T) {
+	for _, tc := range []struct {
+		key  *Key
+		want string
+	}{
+		{GlobalKey("abc"), "global"},
+		{ZonalKey("abc", "us-central1-b"), "us-central1-b"},
+		{RegionalKey("abc", "us-central1"), "us-central1"},
+	} {
+		if tc.key.Location() != tc.want {
+			t.Errorf("key.Location() == %v, want %v", tc.key.Type(), tc.want)
+		}
+	}
+}
+
 func TestKeyString(t *testing.T) {
 	t.Parallel()
 

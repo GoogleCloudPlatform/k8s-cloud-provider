@@ -728,6 +728,98 @@ func TestMeshWithMultipleTCPRoutes(t *testing.T) {
 	}
 }
 
+func TestEnsureTcpRoute(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	graphBuilder := rgraph.NewBuilder()
+	resUniqueIdPart := "ensure-tcpr"
+	meshURL, meshKey := ensureMesh(ctx, t, resUniqueIdPart+"-mesh")
+
+	t.Cleanup(func() {
+		err := theCloud.Meshes().Delete(ctx, meshKey)
+		t.Logf("theCloud.Meshes().Delete(ctx, %s): %v", meshKey, err)
+	})
+
+	hcs, err := createHealthchecks(graphBuilder, 6, resUniqueIdPart)
+	if err != nil {
+		t.Fatalf("createHealthchecks(_, 6, %s) = (_, %v), want (_, nil)", resUniqueIdPart, err)
+	}
+
+	bss, err := createBackendServicesWithHC(graphBuilder, 6, resUniqueIdPart, hcs)
+	if err != nil {
+		t.Fatalf("createBackendServicesWithHC(_, 6, %s) = (_, %v), want (_, nil)", resUniqueIdPart, err)
+	}
+
+	tcprs, err := createTCPRoutes(t, graphBuilder, 3, resUniqueIdPart, meshURL, bss)
+
+	graph, err := graphBuilder.Build()
+	if err != nil {
+		t.Fatalf("graphBuilder.Build() = %v, want nil", err)
+	}
+
+	expectedActions := []exec.ActionMetadata{
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, bss[0])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, bss[1])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, bss[2])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, bss[3])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, bss[4])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, bss[5])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, hcs[0])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, hcs[1])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, hcs[2])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, hcs[3])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, hcs[4])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, hcs[5])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, tcprs[0])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, tcprs[1])},
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, tcprs[2])},
+	}
+
+	result, err := plan.Do(ctx, theCloud, graph)
+	if err != nil {
+		t.Fatalf("plan.Do(_, _, _) = %v, want nil", err)
+	}
+
+	t.Logf("\nPlan.Actions: %v", result.Actions)
+	t.Logf("\nPlan.Got: %v", result.Got)
+	t.Logf("\nPlan.Want: %v", result.Want)
+
+	processGraphAndExpectActions(t, graphBuilder, expectedActions)
+
+	expectedActions = []exec.ActionMetadata{
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[0])},
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[1])},
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[2])},
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[3])},
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[4])},
+		{Type: exec.ActionTypeMeta, Name: eventName(bss[5])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[0])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[1])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[2])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[3])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[4])},
+		{Type: exec.ActionTypeMeta, Name: eventName(hcs[5])},
+		{Type: exec.ActionTypeMeta, Name: eventName(tcprs[0])},
+		{Type: exec.ActionTypeMeta, Name: eventName(tcprs[1])},
+		{Type: exec.ActionTypeMeta, Name: eventName(tcprs[2])},
+	}
+
+	result, err = plan.Do(ctx, theCloud, graph)
+	if err != nil {
+		t.Fatalf("plan.Do(_, _, _) = %v, want nil", err)
+	}
+
+	t.Logf("\nPlan.Actions: %v", result.Actions)
+	t.Logf("\nPlan.Got: %v", result.Got)
+	t.Logf("\nPlan.Want: %v", result.Want)
+
+	err = expectActions(result.Actions, expectedActions)
+	if err != nil {
+		t.Fatalf("expectActions(_, _) = %v, want nil", err)
+	}
+
+}
+
 func TestTcpRouteDeletion(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

@@ -3213,6 +3213,141 @@ func TestRegionTargetHttpsProxiesGroup(t *testing.T) {
 	}
 }
 
+func TestRegionTargetTcpProxiesGroup(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pr := &SingleProjectRouter{"mock-project"}
+	mock := NewMockGCE(pr)
+
+	var key *meta.Key
+	keyAlpha := meta.RegionalKey("key-alpha", "location")
+	key = keyAlpha
+	keyBeta := meta.RegionalKey("key-beta", "location")
+	key = keyBeta
+	keyGA := meta.RegionalKey("key-ga", "location")
+	key = keyGA
+	// Ignore unused variables.
+	_, _, _ = ctx, mock, key
+
+	// Get not found.
+	if _, err := mock.AlphaRegionTargetTcpProxies().Get(ctx, key); err == nil {
+		t.Errorf("AlphaRegionTargetTcpProxies().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.BetaRegionTargetTcpProxies().Get(ctx, key); err == nil {
+		t.Errorf("BetaRegionTargetTcpProxies().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+	if _, err := mock.RegionTargetTcpProxies().Get(ctx, key); err == nil {
+		t.Errorf("RegionTargetTcpProxies().Get(%v, %v) = _, nil; want error", ctx, key)
+	}
+
+	// Insert.
+	{
+		obj := &computealpha.TargetTcpProxy{}
+		if err := mock.AlphaRegionTargetTcpProxies().Insert(ctx, keyAlpha, obj); err != nil {
+			t.Errorf("AlphaRegionTargetTcpProxies().Insert(%v, %v, %v) = %v; want nil", ctx, keyAlpha, obj, err)
+		}
+	}
+	{
+		obj := &computebeta.TargetTcpProxy{}
+		if err := mock.BetaRegionTargetTcpProxies().Insert(ctx, keyBeta, obj); err != nil {
+			t.Errorf("BetaRegionTargetTcpProxies().Insert(%v, %v, %v) = %v; want nil", ctx, keyBeta, obj, err)
+		}
+	}
+	{
+		obj := &computega.TargetTcpProxy{}
+		if err := mock.RegionTargetTcpProxies().Insert(ctx, keyGA, obj); err != nil {
+			t.Errorf("RegionTargetTcpProxies().Insert(%v, %v, %v) = %v; want nil", ctx, keyGA, obj, err)
+		}
+	}
+
+	// Get across versions.
+	if obj, err := mock.AlphaRegionTargetTcpProxies().Get(ctx, key); err != nil {
+		t.Errorf("AlphaRegionTargetTcpProxies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+	if obj, err := mock.BetaRegionTargetTcpProxies().Get(ctx, key); err != nil {
+		t.Errorf("BetaRegionTargetTcpProxies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+	if obj, err := mock.RegionTargetTcpProxies().Get(ctx, key); err != nil {
+		t.Errorf("RegionTargetTcpProxies().Get(%v, %v) = %v, %v; want nil", ctx, key, obj, err)
+	}
+
+	// List.
+	mock.MockAlphaRegionTargetTcpProxies.Objects[*keyAlpha] = mock.MockAlphaRegionTargetTcpProxies.Obj(&computealpha.TargetTcpProxy{Name: keyAlpha.Name})
+	mock.MockBetaRegionTargetTcpProxies.Objects[*keyBeta] = mock.MockBetaRegionTargetTcpProxies.Obj(&computebeta.TargetTcpProxy{Name: keyBeta.Name})
+	mock.MockRegionTargetTcpProxies.Objects[*keyGA] = mock.MockRegionTargetTcpProxies.Obj(&computega.TargetTcpProxy{Name: keyGA.Name})
+	want := map[string]bool{
+		"key-alpha": true,
+		"key-beta":  true,
+		"key-ga":    true,
+	}
+	_ = want // ignore unused variables.
+	{
+		objs, err := mock.AlphaRegionTargetTcpProxies().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("AlphaRegionTargetTcpProxies().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("AlphaRegionTargetTcpProxies().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.BetaRegionTargetTcpProxies().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("BetaRegionTargetTcpProxies().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("BetaRegionTargetTcpProxies().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+	{
+		objs, err := mock.RegionTargetTcpProxies().List(ctx, location, filter.None)
+		if err != nil {
+			t.Errorf("RegionTargetTcpProxies().List(%v, %v, %v) = %v, %v; want _, nil", ctx, location, filter.None, objs, err)
+		} else {
+			got := map[string]bool{}
+			for _, obj := range objs {
+				got[obj.Name] = true
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("RegionTargetTcpProxies().List(); got %+v, want %+v", got, want)
+			}
+		}
+	}
+
+	// Delete across versions.
+	if err := mock.AlphaRegionTargetTcpProxies().Delete(ctx, keyAlpha); err != nil {
+		t.Errorf("AlphaRegionTargetTcpProxies().Delete(%v, %v) = %v; want nil", ctx, keyAlpha, err)
+	}
+	if err := mock.BetaRegionTargetTcpProxies().Delete(ctx, keyBeta); err != nil {
+		t.Errorf("BetaRegionTargetTcpProxies().Delete(%v, %v) = %v; want nil", ctx, keyBeta, err)
+	}
+	if err := mock.RegionTargetTcpProxies().Delete(ctx, keyGA); err != nil {
+		t.Errorf("RegionTargetTcpProxies().Delete(%v, %v) = %v; want nil", ctx, keyGA, err)
+	}
+
+	// Delete not found.
+	if err := mock.AlphaRegionTargetTcpProxies().Delete(ctx, keyAlpha); err == nil {
+		t.Errorf("AlphaRegionTargetTcpProxies().Delete(%v, %v) = nil; want error", ctx, keyAlpha)
+	}
+	if err := mock.BetaRegionTargetTcpProxies().Delete(ctx, keyBeta); err == nil {
+		t.Errorf("BetaRegionTargetTcpProxies().Delete(%v, %v) = nil; want error", ctx, keyBeta)
+	}
+	if err := mock.RegionTargetTcpProxies().Delete(ctx, keyGA); err == nil {
+		t.Errorf("RegionTargetTcpProxies().Delete(%v, %v) = nil; want error", ctx, keyGA)
+	}
+}
+
 func TestRegionUrlMapsGroup(t *testing.T) {
 	t.Parallel()
 
@@ -4895,6 +5030,7 @@ func TestResourceIDConversion(t *testing.T) {
 		NewRegionSslPoliciesResourceID("some-project", "us-central1", "my-sslPolicies-resource"),
 		NewRegionTargetHttpProxiesResourceID("some-project", "us-central1", "my-targetHttpProxies-resource"),
 		NewRegionTargetHttpsProxiesResourceID("some-project", "us-central1", "my-targetHttpsProxies-resource"),
+		NewRegionTargetTcpProxiesResourceID("some-project", "us-central1", "my-targetTcpProxies-resource"),
 		NewRegionUrlMapsResourceID("some-project", "us-central1", "my-urlMaps-resource"),
 		NewRegionsResourceID("some-project", "my-regions-resource"),
 		NewRoutersResourceID("some-project", "us-central1", "my-routers-resource"),

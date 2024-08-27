@@ -135,6 +135,9 @@ type Cloud interface {
 	AlphaTargetTcpProxies() AlphaTargetTcpProxies
 	BetaTargetTcpProxies() BetaTargetTcpProxies
 	TargetTcpProxies() TargetTcpProxies
+	AlphaRegionTargetTcpProxies() AlphaRegionTargetTcpProxies
+	BetaRegionTargetTcpProxies() BetaRegionTargetTcpProxies
+	RegionTargetTcpProxies() RegionTargetTcpProxies
 	AlphaUrlMaps() AlphaUrlMaps
 	BetaUrlMaps() BetaUrlMaps
 	UrlMaps() UrlMaps
@@ -242,6 +245,9 @@ func NewGCE(s *Service) *GCE {
 		gceAlphaTargetTcpProxies:              &GCEAlphaTargetTcpProxies{s},
 		gceBetaTargetTcpProxies:               &GCEBetaTargetTcpProxies{s},
 		gceTargetTcpProxies:                   &GCETargetTcpProxies{s},
+		gceAlphaRegionTargetTcpProxies:        &GCEAlphaRegionTargetTcpProxies{s},
+		gceBetaRegionTargetTcpProxies:         &GCEBetaRegionTargetTcpProxies{s},
+		gceRegionTargetTcpProxies:             &GCERegionTargetTcpProxies{s},
 		gceAlphaUrlMaps:                       &GCEAlphaUrlMaps{s},
 		gceBetaUrlMaps:                        &GCEBetaUrlMaps{s},
 		gceUrlMaps:                            &GCEUrlMaps{s},
@@ -353,6 +359,9 @@ type GCE struct {
 	gceAlphaTargetTcpProxies              *GCEAlphaTargetTcpProxies
 	gceBetaTargetTcpProxies               *GCEBetaTargetTcpProxies
 	gceTargetTcpProxies                   *GCETargetTcpProxies
+	gceAlphaRegionTargetTcpProxies        *GCEAlphaRegionTargetTcpProxies
+	gceBetaRegionTargetTcpProxies         *GCEBetaRegionTargetTcpProxies
+	gceRegionTargetTcpProxies             *GCERegionTargetTcpProxies
 	gceAlphaUrlMaps                       *GCEAlphaUrlMaps
 	gceBetaUrlMaps                        *GCEBetaUrlMaps
 	gceUrlMaps                            *GCEUrlMaps
@@ -821,6 +830,21 @@ func (gce *GCE) TargetTcpProxies() TargetTcpProxies {
 	return gce.gceTargetTcpProxies
 }
 
+// AlphaRegionTargetTcpProxies returns the interface for the alpha RegionTargetTcpProxies.
+func (gce *GCE) AlphaRegionTargetTcpProxies() AlphaRegionTargetTcpProxies {
+	return gce.gceAlphaRegionTargetTcpProxies
+}
+
+// BetaRegionTargetTcpProxies returns the interface for the beta RegionTargetTcpProxies.
+func (gce *GCE) BetaRegionTargetTcpProxies() BetaRegionTargetTcpProxies {
+	return gce.gceBetaRegionTargetTcpProxies
+}
+
+// RegionTargetTcpProxies returns the interface for the ga RegionTargetTcpProxies.
+func (gce *GCE) RegionTargetTcpProxies() RegionTargetTcpProxies {
+	return gce.gceRegionTargetTcpProxies
+}
+
 // AlphaUrlMaps returns the interface for the alpha UrlMaps.
 func (gce *GCE) AlphaUrlMaps() AlphaUrlMaps {
 	return gce.gceAlphaUrlMaps
@@ -908,6 +932,7 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 	mockRegionSslPoliciesObjs := map[meta.Key]*MockRegionSslPoliciesObj{}
 	mockRegionTargetHttpProxiesObjs := map[meta.Key]*MockRegionTargetHttpProxiesObj{}
 	mockRegionTargetHttpsProxiesObjs := map[meta.Key]*MockRegionTargetHttpsProxiesObj{}
+	mockRegionTargetTcpProxiesObjs := map[meta.Key]*MockRegionTargetTcpProxiesObj{}
 	mockRegionUrlMapsObjs := map[meta.Key]*MockRegionUrlMapsObj{}
 	mockRegionsObjs := map[meta.Key]*MockRegionsObj{}
 	mockRoutersObjs := map[meta.Key]*MockRoutersObj{}
@@ -1017,6 +1042,9 @@ func NewMockGCE(projectRouter ProjectRouter) *MockGCE {
 		MockAlphaTargetTcpProxies:              NewMockAlphaTargetTcpProxies(projectRouter, mockTargetTcpProxiesObjs),
 		MockBetaTargetTcpProxies:               NewMockBetaTargetTcpProxies(projectRouter, mockTargetTcpProxiesObjs),
 		MockTargetTcpProxies:                   NewMockTargetTcpProxies(projectRouter, mockTargetTcpProxiesObjs),
+		MockAlphaRegionTargetTcpProxies:        NewMockAlphaRegionTargetTcpProxies(projectRouter, mockRegionTargetTcpProxiesObjs),
+		MockBetaRegionTargetTcpProxies:         NewMockBetaRegionTargetTcpProxies(projectRouter, mockRegionTargetTcpProxiesObjs),
+		MockRegionTargetTcpProxies:             NewMockRegionTargetTcpProxies(projectRouter, mockRegionTargetTcpProxiesObjs),
 		MockAlphaUrlMaps:                       NewMockAlphaUrlMaps(projectRouter, mockUrlMapsObjs),
 		MockBetaUrlMaps:                        NewMockBetaUrlMaps(projectRouter, mockUrlMapsObjs),
 		MockUrlMaps:                            NewMockUrlMaps(projectRouter, mockUrlMapsObjs),
@@ -1128,6 +1156,9 @@ type MockGCE struct {
 	MockAlphaTargetTcpProxies              *MockAlphaTargetTcpProxies
 	MockBetaTargetTcpProxies               *MockBetaTargetTcpProxies
 	MockTargetTcpProxies                   *MockTargetTcpProxies
+	MockAlphaRegionTargetTcpProxies        *MockAlphaRegionTargetTcpProxies
+	MockBetaRegionTargetTcpProxies         *MockBetaRegionTargetTcpProxies
+	MockRegionTargetTcpProxies             *MockRegionTargetTcpProxies
 	MockAlphaUrlMaps                       *MockAlphaUrlMaps
 	MockBetaUrlMaps                        *MockBetaUrlMaps
 	MockUrlMaps                            *MockUrlMaps
@@ -1594,6 +1625,21 @@ func (mock *MockGCE) BetaTargetTcpProxies() BetaTargetTcpProxies {
 // TargetTcpProxies returns the interface for the ga TargetTcpProxies.
 func (mock *MockGCE) TargetTcpProxies() TargetTcpProxies {
 	return mock.MockTargetTcpProxies
+}
+
+// AlphaRegionTargetTcpProxies returns the interface for the alpha RegionTargetTcpProxies.
+func (mock *MockGCE) AlphaRegionTargetTcpProxies() AlphaRegionTargetTcpProxies {
+	return mock.MockAlphaRegionTargetTcpProxies
+}
+
+// BetaRegionTargetTcpProxies returns the interface for the beta RegionTargetTcpProxies.
+func (mock *MockGCE) BetaRegionTargetTcpProxies() BetaRegionTargetTcpProxies {
+	return mock.MockBetaRegionTargetTcpProxies
+}
+
+// RegionTargetTcpProxies returns the interface for the ga RegionTargetTcpProxies.
+func (mock *MockGCE) RegionTargetTcpProxies() RegionTargetTcpProxies {
+	return mock.MockRegionTargetTcpProxies
 }
 
 // AlphaUrlMaps returns the interface for the alpha UrlMaps.
@@ -2728,6 +2774,52 @@ func (m *MockRegionTargetHttpsProxiesObj) ToGA() *computega.TargetHttpsProxy {
 	ret := &computega.TargetHttpsProxy{}
 	if err := copyViaJSON(ret, m.Obj); err != nil {
 		klog.Errorf("Could not convert %T to *computega.TargetHttpsProxy via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// MockRegionTargetTcpProxiesObj is used to store the various object versions in the shared
+// map of mocked objects. This allows for multiple API versions to co-exist and
+// share the same "view" of the objects in the backend.
+type MockRegionTargetTcpProxiesObj struct {
+	Obj interface{}
+}
+
+// ToAlpha retrieves the given version of the object.
+func (m *MockRegionTargetTcpProxiesObj) ToAlpha() *computealpha.TargetTcpProxy {
+	if ret, ok := m.Obj.(*computealpha.TargetTcpProxy); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &computealpha.TargetTcpProxy{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *computealpha.TargetTcpProxy via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// ToBeta retrieves the given version of the object.
+func (m *MockRegionTargetTcpProxiesObj) ToBeta() *computebeta.TargetTcpProxy {
+	if ret, ok := m.Obj.(*computebeta.TargetTcpProxy); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &computebeta.TargetTcpProxy{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *computebeta.TargetTcpProxy via JSON: %v", m.Obj, err)
+	}
+	return ret
+}
+
+// ToGA retrieves the given version of the object.
+func (m *MockRegionTargetTcpProxiesObj) ToGA() *computega.TargetTcpProxy {
+	if ret, ok := m.Obj.(*computega.TargetTcpProxy); ok {
+		return ret
+	}
+	// Convert the object via JSON copying to the type that was requested.
+	ret := &computega.TargetTcpProxy{}
+	if err := copyViaJSON(ret, m.Obj); err != nil {
+		klog.Errorf("Could not convert %T to *computega.TargetTcpProxy via JSON: %v", m.Obj, err)
 	}
 	return ret
 }
@@ -47809,6 +47901,1116 @@ func (g *GCETargetTcpProxies) SetBackendService(ctx context.Context, key *meta.K
 	return err
 }
 
+// AlphaRegionTargetTcpProxies is an interface that allows for mocking of RegionTargetTcpProxies.
+type AlphaRegionTargetTcpProxies interface {
+	Get(ctx context.Context, key *meta.Key, options ...Option) (*computealpha.TargetTcpProxy, error)
+	List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computealpha.TargetTcpProxy, error)
+	Insert(ctx context.Context, key *meta.Key, obj *computealpha.TargetTcpProxy, options ...Option) error
+	Delete(ctx context.Context, key *meta.Key, options ...Option) error
+}
+
+// NewMockAlphaRegionTargetTcpProxies returns a new mock for RegionTargetTcpProxies.
+func NewMockAlphaRegionTargetTcpProxies(pr ProjectRouter, objs map[meta.Key]*MockRegionTargetTcpProxiesObj) *MockAlphaRegionTargetTcpProxies {
+	mock := &MockAlphaRegionTargetTcpProxies{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockAlphaRegionTargetTcpProxies is the mock for RegionTargetTcpProxies.
+type MockAlphaRegionTargetTcpProxies struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockRegionTargetTcpProxiesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockAlphaRegionTargetTcpProxies, options ...Option) (bool, *computealpha.TargetTcpProxy, error)
+	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockAlphaRegionTargetTcpProxies, options ...Option) (bool, []*computealpha.TargetTcpProxy, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *computealpha.TargetTcpProxy, m *MockAlphaRegionTargetTcpProxies, options ...Option) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockAlphaRegionTargetTcpProxies, options ...Option) (bool, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockAlphaRegionTargetTcpProxies) Get(ctx context.Context, key *meta.Key, options ...Option) (*computealpha.TargetTcpProxy, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m, options...); intercept {
+			klog.V(5).Infof("MockAlphaRegionTargetTcpProxies.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockAlphaRegionTargetTcpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToAlpha()
+		klog.V(5).Infof("MockAlphaRegionTargetTcpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockAlphaRegionTargetTcpProxies %v not found", key),
+	}
+	klog.V(5).Infof("MockAlphaRegionTargetTcpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock in the given region.
+func (m *MockAlphaRegionTargetTcpProxies) List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computealpha.TargetTcpProxy, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, region, fl, m, options...); intercept {
+			klog.V(5).Infof("MockAlphaRegionTargetTcpProxies.List(%v, %q, %v) = [%v items], %v", ctx, region, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockAlphaRegionTargetTcpProxies.List(%v, %q, %v) = nil, %v", ctx, region, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*computealpha.TargetTcpProxy
+	for key, obj := range m.Objects {
+		if key.Region != region {
+			continue
+		}
+		if !fl.Match(obj.ToAlpha()) {
+			continue
+		}
+		objs = append(objs, obj.ToAlpha())
+	}
+
+	klog.V(5).Infof("MockAlphaRegionTargetTcpProxies.List(%v, %q, %v) = [%v items], nil", ctx, region, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockAlphaRegionTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, obj *computealpha.TargetTcpProxy, options ...Option) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m, options...); intercept {
+			klog.V(5).Infof("MockAlphaRegionTargetTcpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	opts := mergeOptions(options)
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockAlphaRegionTargetTcpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockAlphaRegionTargetTcpProxies %v exists", key),
+		}
+		klog.V(5).Infof("MockAlphaRegionTargetTcpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := getProjectID(ctx, m.ProjectRouter, opts, "alpha", "targetTcpProxies")
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionAlpha, projectID, "targetTcpProxies", key)
+
+	m.Objects[*key] = &MockRegionTargetTcpProxiesObj{obj}
+	klog.V(5).Infof("MockAlphaRegionTargetTcpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockAlphaRegionTargetTcpProxies) Delete(ctx context.Context, key *meta.Key, options ...Option) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m, options...); intercept {
+			klog.V(5).Infof("MockAlphaRegionTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockAlphaRegionTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockAlphaRegionTargetTcpProxies %v not found", key),
+		}
+		klog.V(5).Infof("MockAlphaRegionTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockAlphaRegionTargetTcpProxies.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockAlphaRegionTargetTcpProxies) Obj(o *computealpha.TargetTcpProxy) *MockRegionTargetTcpProxiesObj {
+	return &MockRegionTargetTcpProxiesObj{o}
+}
+
+// GCEAlphaRegionTargetTcpProxies is a simplifying adapter for the GCE RegionTargetTcpProxies.
+type GCEAlphaRegionTargetTcpProxies struct {
+	s *Service
+}
+
+// Get the TargetTcpProxy named by key.
+func (g *GCEAlphaRegionTargetTcpProxies) Get(ctx context.Context, key *meta.Key, options ...Option) (*computealpha.TargetTcpProxy, error) {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEAlphaRegionTargetTcpProxies.Get(%v, %v, %v): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionTargetTcpProxies.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "alpha", "RegionTargetTcpProxies")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionTargetTcpProxies",
+	}
+
+	klog.V(5).Infof("GCEAlphaRegionTargetTcpProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionTargetTcpProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Alpha.RegionTargetTcpProxies.Get(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEAlphaRegionTargetTcpProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	return v, err
+}
+
+// List all TargetTcpProxy objects.
+func (g *GCEAlphaRegionTargetTcpProxies) List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computealpha.TargetTcpProxy, error) {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEAlphaRegionTargetTcpProxies.List(%v, %v, %v, %v) called", ctx, region, fl, opts)
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "alpha", "RegionTargetTcpProxies")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionTargetTcpProxies",
+	}
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEAlphaRegionTargetTcpProxies.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
+	call := g.s.Alpha.RegionTargetTcpProxies.List(projectID, region)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+
+	var all []*computealpha.TargetTcpProxy
+	f := func(l *computealpha.TargetTcpProxyList) error {
+		klog.V(5).Infof("GCEAlphaRegionTargetTcpProxies.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCEAlphaRegionTargetTcpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
+	if kLogEnabled(4) {
+		klog.V(4).Infof("GCEAlphaRegionTargetTcpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if kLogEnabled(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEAlphaRegionTargetTcpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert TargetTcpProxy with key of value obj.
+func (g *GCEAlphaRegionTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, obj *computealpha.TargetTcpProxy, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEAlphaRegionTargetTcpProxies.Insert(%v, %v, %+v, %v): called", ctx, key, obj, opts)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionTargetTcpProxies.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "alpha", "RegionTargetTcpProxies")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionTargetTcpProxies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionTargetTcpProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionTargetTcpProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Alpha.RegionTargetTcpProxies.Insert(projectID, key.Region, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	klog.V(4).Infof("GCEAlphaRegionTargetTcpProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	if err != nil {
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaRegionTargetTcpProxies.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the TargetTcpProxy referenced by key.
+func (g *GCEAlphaRegionTargetTcpProxies) Delete(ctx context.Context, key *meta.Key, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEAlphaRegionTargetTcpProxies.Delete(%v, %v, %v): called", ctx, key, opts)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaRegionTargetTcpProxies.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "alpha", "RegionTargetTcpProxies")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("alpha"),
+		Service:   "RegionTargetTcpProxies",
+	}
+	klog.V(5).Infof("GCEAlphaRegionTargetTcpProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEAlphaRegionTargetTcpProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.RegionTargetTcpProxies.Delete(projectID, key.Region, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	klog.V(4).Infof("GCEAlphaRegionTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	if err != nil {
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEAlphaRegionTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// BetaRegionTargetTcpProxies is an interface that allows for mocking of RegionTargetTcpProxies.
+type BetaRegionTargetTcpProxies interface {
+	Get(ctx context.Context, key *meta.Key, options ...Option) (*computebeta.TargetTcpProxy, error)
+	List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computebeta.TargetTcpProxy, error)
+	Insert(ctx context.Context, key *meta.Key, obj *computebeta.TargetTcpProxy, options ...Option) error
+	Delete(ctx context.Context, key *meta.Key, options ...Option) error
+}
+
+// NewMockBetaRegionTargetTcpProxies returns a new mock for RegionTargetTcpProxies.
+func NewMockBetaRegionTargetTcpProxies(pr ProjectRouter, objs map[meta.Key]*MockRegionTargetTcpProxiesObj) *MockBetaRegionTargetTcpProxies {
+	mock := &MockBetaRegionTargetTcpProxies{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockBetaRegionTargetTcpProxies is the mock for RegionTargetTcpProxies.
+type MockBetaRegionTargetTcpProxies struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockRegionTargetTcpProxiesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockBetaRegionTargetTcpProxies, options ...Option) (bool, *computebeta.TargetTcpProxy, error)
+	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockBetaRegionTargetTcpProxies, options ...Option) (bool, []*computebeta.TargetTcpProxy, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *computebeta.TargetTcpProxy, m *MockBetaRegionTargetTcpProxies, options ...Option) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockBetaRegionTargetTcpProxies, options ...Option) (bool, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockBetaRegionTargetTcpProxies) Get(ctx context.Context, key *meta.Key, options ...Option) (*computebeta.TargetTcpProxy, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m, options...); intercept {
+			klog.V(5).Infof("MockBetaRegionTargetTcpProxies.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockBetaRegionTargetTcpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToBeta()
+		klog.V(5).Infof("MockBetaRegionTargetTcpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockBetaRegionTargetTcpProxies %v not found", key),
+	}
+	klog.V(5).Infof("MockBetaRegionTargetTcpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock in the given region.
+func (m *MockBetaRegionTargetTcpProxies) List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computebeta.TargetTcpProxy, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, region, fl, m, options...); intercept {
+			klog.V(5).Infof("MockBetaRegionTargetTcpProxies.List(%v, %q, %v) = [%v items], %v", ctx, region, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockBetaRegionTargetTcpProxies.List(%v, %q, %v) = nil, %v", ctx, region, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*computebeta.TargetTcpProxy
+	for key, obj := range m.Objects {
+		if key.Region != region {
+			continue
+		}
+		if !fl.Match(obj.ToBeta()) {
+			continue
+		}
+		objs = append(objs, obj.ToBeta())
+	}
+
+	klog.V(5).Infof("MockBetaRegionTargetTcpProxies.List(%v, %q, %v) = [%v items], nil", ctx, region, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockBetaRegionTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, obj *computebeta.TargetTcpProxy, options ...Option) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m, options...); intercept {
+			klog.V(5).Infof("MockBetaRegionTargetTcpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	opts := mergeOptions(options)
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockBetaRegionTargetTcpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockBetaRegionTargetTcpProxies %v exists", key),
+		}
+		klog.V(5).Infof("MockBetaRegionTargetTcpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := getProjectID(ctx, m.ProjectRouter, opts, "beta", "targetTcpProxies")
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionBeta, projectID, "targetTcpProxies", key)
+
+	m.Objects[*key] = &MockRegionTargetTcpProxiesObj{obj}
+	klog.V(5).Infof("MockBetaRegionTargetTcpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockBetaRegionTargetTcpProxies) Delete(ctx context.Context, key *meta.Key, options ...Option) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m, options...); intercept {
+			klog.V(5).Infof("MockBetaRegionTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockBetaRegionTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockBetaRegionTargetTcpProxies %v not found", key),
+		}
+		klog.V(5).Infof("MockBetaRegionTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockBetaRegionTargetTcpProxies.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockBetaRegionTargetTcpProxies) Obj(o *computebeta.TargetTcpProxy) *MockRegionTargetTcpProxiesObj {
+	return &MockRegionTargetTcpProxiesObj{o}
+}
+
+// GCEBetaRegionTargetTcpProxies is a simplifying adapter for the GCE RegionTargetTcpProxies.
+type GCEBetaRegionTargetTcpProxies struct {
+	s *Service
+}
+
+// Get the TargetTcpProxy named by key.
+func (g *GCEBetaRegionTargetTcpProxies) Get(ctx context.Context, key *meta.Key, options ...Option) (*computebeta.TargetTcpProxy, error) {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEBetaRegionTargetTcpProxies.Get(%v, %v, %v): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaRegionTargetTcpProxies.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "beta", "RegionTargetTcpProxies")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("beta"),
+		Service:   "RegionTargetTcpProxies",
+	}
+
+	klog.V(5).Infof("GCEBetaRegionTargetTcpProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEBetaRegionTargetTcpProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.Beta.RegionTargetTcpProxies.Get(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCEBetaRegionTargetTcpProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	return v, err
+}
+
+// List all TargetTcpProxy objects.
+func (g *GCEBetaRegionTargetTcpProxies) List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computebeta.TargetTcpProxy, error) {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEBetaRegionTargetTcpProxies.List(%v, %v, %v, %v) called", ctx, region, fl, opts)
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "beta", "RegionTargetTcpProxies")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("beta"),
+		Service:   "RegionTargetTcpProxies",
+	}
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCEBetaRegionTargetTcpProxies.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
+	call := g.s.Beta.RegionTargetTcpProxies.List(projectID, region)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+
+	var all []*computebeta.TargetTcpProxy
+	f := func(l *computebeta.TargetTcpProxyList) error {
+		klog.V(5).Infof("GCEBetaRegionTargetTcpProxies.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCEBetaRegionTargetTcpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
+	if kLogEnabled(4) {
+		klog.V(4).Infof("GCEBetaRegionTargetTcpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if kLogEnabled(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCEBetaRegionTargetTcpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert TargetTcpProxy with key of value obj.
+func (g *GCEBetaRegionTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, obj *computebeta.TargetTcpProxy, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEBetaRegionTargetTcpProxies.Insert(%v, %v, %+v, %v): called", ctx, key, obj, opts)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaRegionTargetTcpProxies.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "beta", "RegionTargetTcpProxies")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("beta"),
+		Service:   "RegionTargetTcpProxies",
+	}
+	klog.V(5).Infof("GCEBetaRegionTargetTcpProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEBetaRegionTargetTcpProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.Beta.RegionTargetTcpProxies.Insert(projectID, key.Region, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	klog.V(4).Infof("GCEBetaRegionTargetTcpProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	if err != nil {
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaRegionTargetTcpProxies.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the TargetTcpProxy referenced by key.
+func (g *GCEBetaRegionTargetTcpProxies) Delete(ctx context.Context, key *meta.Key, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEBetaRegionTargetTcpProxies.Delete(%v, %v, %v): called", ctx, key, opts)
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaRegionTargetTcpProxies.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "beta", "RegionTargetTcpProxies")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("beta"),
+		Service:   "RegionTargetTcpProxies",
+	}
+	klog.V(5).Infof("GCEBetaRegionTargetTcpProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEBetaRegionTargetTcpProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.RegionTargetTcpProxies.Delete(projectID, key.Region, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	klog.V(4).Infof("GCEBetaRegionTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	if err != nil {
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCEBetaRegionTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// RegionTargetTcpProxies is an interface that allows for mocking of RegionTargetTcpProxies.
+type RegionTargetTcpProxies interface {
+	Get(ctx context.Context, key *meta.Key, options ...Option) (*computega.TargetTcpProxy, error)
+	List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computega.TargetTcpProxy, error)
+	Insert(ctx context.Context, key *meta.Key, obj *computega.TargetTcpProxy, options ...Option) error
+	Delete(ctx context.Context, key *meta.Key, options ...Option) error
+}
+
+// NewMockRegionTargetTcpProxies returns a new mock for RegionTargetTcpProxies.
+func NewMockRegionTargetTcpProxies(pr ProjectRouter, objs map[meta.Key]*MockRegionTargetTcpProxiesObj) *MockRegionTargetTcpProxies {
+	mock := &MockRegionTargetTcpProxies{
+		ProjectRouter: pr,
+
+		Objects:     objs,
+		GetError:    map[meta.Key]error{},
+		InsertError: map[meta.Key]error{},
+		DeleteError: map[meta.Key]error{},
+	}
+	return mock
+}
+
+// MockRegionTargetTcpProxies is the mock for RegionTargetTcpProxies.
+type MockRegionTargetTcpProxies struct {
+	Lock sync.Mutex
+
+	ProjectRouter ProjectRouter
+
+	// Objects maintained by the mock.
+	Objects map[meta.Key]*MockRegionTargetTcpProxiesObj
+
+	// If an entry exists for the given key and operation, then the error
+	// will be returned instead of the operation.
+	GetError    map[meta.Key]error
+	ListError   *error
+	InsertError map[meta.Key]error
+	DeleteError map[meta.Key]error
+
+	// xxxHook allow you to intercept the standard processing of the mock in
+	// order to add your own logic. Return (true, _, _) to prevent the normal
+	// execution flow of the mock. Return (false, nil, nil) to continue with
+	// normal mock behavior/ after the hook function executes.
+	GetHook    func(ctx context.Context, key *meta.Key, m *MockRegionTargetTcpProxies, options ...Option) (bool, *computega.TargetTcpProxy, error)
+	ListHook   func(ctx context.Context, region string, fl *filter.F, m *MockRegionTargetTcpProxies, options ...Option) (bool, []*computega.TargetTcpProxy, error)
+	InsertHook func(ctx context.Context, key *meta.Key, obj *computega.TargetTcpProxy, m *MockRegionTargetTcpProxies, options ...Option) (bool, error)
+	DeleteHook func(ctx context.Context, key *meta.Key, m *MockRegionTargetTcpProxies, options ...Option) (bool, error)
+
+	// X is extra state that can be used as part of the mock. Generated code
+	// will not use this field.
+	X interface{}
+}
+
+// Get returns the object from the mock.
+func (m *MockRegionTargetTcpProxies) Get(ctx context.Context, key *meta.Key, options ...Option) (*computega.TargetTcpProxy, error) {
+	if m.GetHook != nil {
+		if intercept, obj, err := m.GetHook(ctx, key, m, options...); intercept {
+			klog.V(5).Infof("MockRegionTargetTcpProxies.Get(%v, %s) = %+v, %v", ctx, key, obj, err)
+			return obj, err
+		}
+	}
+	if !key.Valid() {
+		return nil, fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.GetError[*key]; ok {
+		klog.V(5).Infof("MockRegionTargetTcpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
+		return nil, err
+	}
+	if obj, ok := m.Objects[*key]; ok {
+		typedObj := obj.ToGA()
+		klog.V(5).Infof("MockRegionTargetTcpProxies.Get(%v, %s) = %+v, nil", ctx, key, typedObj)
+		return typedObj, nil
+	}
+
+	err := &googleapi.Error{
+		Code:    http.StatusNotFound,
+		Message: fmt.Sprintf("MockRegionTargetTcpProxies %v not found", key),
+	}
+	klog.V(5).Infof("MockRegionTargetTcpProxies.Get(%v, %s) = nil, %v", ctx, key, err)
+	return nil, err
+}
+
+// List all of the objects in the mock in the given region.
+func (m *MockRegionTargetTcpProxies) List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computega.TargetTcpProxy, error) {
+	if m.ListHook != nil {
+		if intercept, objs, err := m.ListHook(ctx, region, fl, m, options...); intercept {
+			klog.V(5).Infof("MockRegionTargetTcpProxies.List(%v, %q, %v) = [%v items], %v", ctx, region, fl, len(objs), err)
+			return objs, err
+		}
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if m.ListError != nil {
+		err := *m.ListError
+		klog.V(5).Infof("MockRegionTargetTcpProxies.List(%v, %q, %v) = nil, %v", ctx, region, fl, err)
+
+		return nil, *m.ListError
+	}
+
+	var objs []*computega.TargetTcpProxy
+	for key, obj := range m.Objects {
+		if key.Region != region {
+			continue
+		}
+		if !fl.Match(obj.ToGA()) {
+			continue
+		}
+		objs = append(objs, obj.ToGA())
+	}
+
+	klog.V(5).Infof("MockRegionTargetTcpProxies.List(%v, %q, %v) = [%v items], nil", ctx, region, fl, len(objs))
+	return objs, nil
+}
+
+// Insert is a mock for inserting/creating a new object.
+func (m *MockRegionTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, obj *computega.TargetTcpProxy, options ...Option) error {
+	if m.InsertHook != nil {
+		if intercept, err := m.InsertHook(ctx, key, obj, m, options...); intercept {
+			klog.V(5).Infof("MockRegionTargetTcpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+			return err
+		}
+	}
+	opts := mergeOptions(options)
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.InsertError[*key]; ok {
+		klog.V(5).Infof("MockRegionTargetTcpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; ok {
+		err := &googleapi.Error{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("MockRegionTargetTcpProxies %v exists", key),
+		}
+		klog.V(5).Infof("MockRegionTargetTcpProxies.Insert(%v, %v, %+v) = %v", ctx, key, obj, err)
+		return err
+	}
+
+	obj.Name = key.Name
+	projectID := getProjectID(ctx, m.ProjectRouter, opts, "ga", "targetTcpProxies")
+	obj.SelfLink = SelfLinkWithGroup("compute", meta.VersionGA, projectID, "targetTcpProxies", key)
+
+	m.Objects[*key] = &MockRegionTargetTcpProxiesObj{obj}
+	klog.V(5).Infof("MockRegionTargetTcpProxies.Insert(%v, %v, %+v) = nil", ctx, key, obj)
+	return nil
+}
+
+// Delete is a mock for deleting the object.
+func (m *MockRegionTargetTcpProxies) Delete(ctx context.Context, key *meta.Key, options ...Option) error {
+	if m.DeleteHook != nil {
+		if intercept, err := m.DeleteHook(ctx, key, m, options...); intercept {
+			klog.V(5).Infof("MockRegionTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+			return err
+		}
+	}
+	if !key.Valid() {
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
+	if err, ok := m.DeleteError[*key]; ok {
+		klog.V(5).Infof("MockRegionTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+	if _, ok := m.Objects[*key]; !ok {
+		err := &googleapi.Error{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("MockRegionTargetTcpProxies %v not found", key),
+		}
+		klog.V(5).Infof("MockRegionTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+		return err
+	}
+
+	delete(m.Objects, *key)
+	klog.V(5).Infof("MockRegionTargetTcpProxies.Delete(%v, %v) = nil", ctx, key)
+	return nil
+}
+
+// Obj wraps the object for use in the mock.
+func (m *MockRegionTargetTcpProxies) Obj(o *computega.TargetTcpProxy) *MockRegionTargetTcpProxiesObj {
+	return &MockRegionTargetTcpProxiesObj{o}
+}
+
+// GCERegionTargetTcpProxies is a simplifying adapter for the GCE RegionTargetTcpProxies.
+type GCERegionTargetTcpProxies struct {
+	s *Service
+}
+
+// Get the TargetTcpProxy named by key.
+func (g *GCERegionTargetTcpProxies) Get(ctx context.Context, key *meta.Key, options ...Option) (*computega.TargetTcpProxy, error) {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCERegionTargetTcpProxies.Get(%v, %v, %v): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCERegionTargetTcpProxies.Get(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return nil, fmt.Errorf("invalid GCE key (%#v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "ga", "RegionTargetTcpProxies")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Get",
+		Version:   meta.Version("ga"),
+		Service:   "RegionTargetTcpProxies",
+	}
+
+	klog.V(5).Infof("GCERegionTargetTcpProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCERegionTargetTcpProxies.Get(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return nil, err
+	}
+	call := g.s.GA.RegionTargetTcpProxies.Get(projectID, key.Region, key.Name)
+	call.Context(ctx)
+	v, err := call.Do()
+	klog.V(4).Infof("GCERegionTargetTcpProxies.Get(%v, %v) = %+v, %v", ctx, key, v, err)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	return v, err
+}
+
+// List all TargetTcpProxy objects.
+func (g *GCERegionTargetTcpProxies) List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computega.TargetTcpProxy, error) {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCERegionTargetTcpProxies.List(%v, %v, %v, %v) called", ctx, region, fl, opts)
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "ga", "RegionTargetTcpProxies")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "List",
+		Version:   meta.Version("ga"),
+		Service:   "RegionTargetTcpProxies",
+	}
+
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		return nil, err
+	}
+	klog.V(5).Infof("GCERegionTargetTcpProxies.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)
+	call := g.s.GA.RegionTargetTcpProxies.List(projectID, region)
+	if fl != filter.None {
+		call.Filter(fl.String())
+	}
+
+	var all []*computega.TargetTcpProxy
+	f := func(l *computega.TargetTcpProxyList) error {
+		klog.V(5).Infof("GCERegionTargetTcpProxies.List(%v, ..., %v): page %+v", ctx, fl, l)
+		all = append(all, l.Items...)
+		return nil
+	}
+	if err := call.Pages(ctx, f); err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		klog.V(4).Infof("GCERegionTargetTcpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, nil, err)
+		return nil, err
+	}
+
+	callObserverEnd(ctx, ck, nil)
+	g.s.RateLimiter.Observe(ctx, nil, ck)
+
+	if kLogEnabled(4) {
+		klog.V(4).Infof("GCERegionTargetTcpProxies.List(%v, ..., %v) = [%v items], %v", ctx, fl, len(all), nil)
+	} else if kLogEnabled(5) {
+		var asStr []string
+		for _, o := range all {
+			asStr = append(asStr, fmt.Sprintf("%+v", o))
+		}
+		klog.V(5).Infof("GCERegionTargetTcpProxies.List(%v, ..., %v) = %v, %v", ctx, fl, asStr, nil)
+	}
+
+	return all, nil
+}
+
+// Insert TargetTcpProxy with key of value obj.
+func (g *GCERegionTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, obj *computega.TargetTcpProxy, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCERegionTargetTcpProxies.Insert(%v, %v, %+v, %v): called", ctx, key, obj, opts)
+	if !key.Valid() {
+		klog.V(2).Infof("GCERegionTargetTcpProxies.Insert(%v, %v, ...): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "ga", "RegionTargetTcpProxies")
+
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Insert",
+		Version:   meta.Version("ga"),
+		Service:   "RegionTargetTcpProxies",
+	}
+	klog.V(5).Infof("GCERegionTargetTcpProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCERegionTargetTcpProxies.Insert(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	obj.Name = key.Name
+	call := g.s.GA.RegionTargetTcpProxies.Insert(projectID, key.Region, obj)
+	call.Context(ctx)
+
+	op, err := call.Do()
+	klog.V(4).Infof("GCERegionTargetTcpProxies.Insert(%v, %v, ...) = %+v", ctx, key, err)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	if err != nil {
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCERegionTargetTcpProxies.Insert(%v, %v, %+v) = %+v", ctx, key, obj, err)
+	return err
+}
+
+// Delete the TargetTcpProxy referenced by key.
+func (g *GCERegionTargetTcpProxies) Delete(ctx context.Context, key *meta.Key, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCERegionTargetTcpProxies.Delete(%v, %v, %v): called", ctx, key, opts)
+	if !key.Valid() {
+		klog.V(2).Infof("GCERegionTargetTcpProxies.Delete(%v, %v): key is invalid (%#v)", ctx, key, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "ga", "RegionTargetTcpProxies")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Delete",
+		Version:   meta.Version("ga"),
+		Service:   "RegionTargetTcpProxies",
+	}
+	klog.V(5).Infof("GCERegionTargetTcpProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCERegionTargetTcpProxies.Delete(%v, %v): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.GA.RegionTargetTcpProxies.Delete(projectID, key.Region, key.Name)
+
+	call.Context(ctx)
+
+	op, err := call.Do()
+	klog.V(4).Infof("GCERegionTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck)
+
+	if err != nil {
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	klog.V(4).Infof("GCERegionTargetTcpProxies.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
 // AlphaUrlMaps is an interface that allows for mocking of UrlMaps.
 type AlphaUrlMaps interface {
 	Get(ctx context.Context, key *meta.Key, options ...Option) (*computealpha.UrlMap, error)
@@ -52399,6 +53601,12 @@ func NewRegionTargetHttpProxiesResourceID(project, region, name string) *Resourc
 func NewRegionTargetHttpsProxiesResourceID(project, region, name string) *ResourceID {
 	key := meta.RegionalKey(name, region)
 	return &ResourceID{project, "compute", "targetHttpsProxies", key}
+}
+
+// NewRegionTargetTcpProxiesResourceID creates a ResourceID for the RegionTargetTcpProxies resource.
+func NewRegionTargetTcpProxiesResourceID(project, region, name string) *ResourceID {
+	key := meta.RegionalKey(name, region)
+	return &ResourceID{project, "compute", "targetTcpProxies", key}
 }
 
 // NewRegionUrlMapsResourceID creates a ResourceID for the RegionUrlMaps resource.

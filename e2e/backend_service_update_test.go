@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"maps"
 	"testing"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
@@ -19,10 +20,7 @@ import (
 )
 
 func buildBackendServiceWithLBScheme(graphBuilder *rgraph.Builder, name string, hcID *cloud.ResourceID, lbScheme string) (*cloud.ResourceID, error) {
-	bsID := backendservice.ID(testFlags.project, meta.GlobalKey(resourceName(name)))
-
-	bsMutResource := backendservice.NewMutableBackendService(testFlags.project, bsID.Key)
-	bsMutResource.Access(func(x *compute.BackendService) {
+	f := func(x *compute.BackendService) {
 		x.LoadBalancingScheme = lbScheme
 		x.Protocol = "TCP"
 		x.PortName = "http"
@@ -31,12 +29,19 @@ func buildBackendServiceWithLBScheme(graphBuilder *rgraph.Builder, name string, 
 		x.TimeoutSec = 30
 		x.ConnectionDraining = &compute.ConnectionDraining{}
 		x.HealthChecks = []string{hcID.SelfLink(meta.VersionGA)}
-	})
+	}
+
+	return buildBackendServiceWith(graphBuilder, name, f)
+}
+
+func buildBackendServiceWith(graphBuilder *rgraph.Builder, name string, f func(x *compute.BackendService)) (*cloud.ResourceID, error) {
+	bsID := backendservice.ID(testFlags.project, meta.GlobalKey(resourceName(name)))
+	bsMutResource := backendservice.NewMutableBackendService(testFlags.project, bsID.Key)
+	bsMutResource.Access(f)
 	bsResource, err := bsMutResource.Freeze()
 	if err != nil {
 		return nil, err
 	}
-
 	bsBuilder := backendservice.NewBuilder(bsID)
 	bsBuilder.SetOwnership(rnode.OwnershipManaged)
 	bsBuilder.SetState(rnode.NodeExists)
@@ -44,6 +49,20 @@ func buildBackendServiceWithLBScheme(graphBuilder *rgraph.Builder, name string, 
 
 	graphBuilder.Add(bsBuilder)
 	return bsID, nil
+}
+
+func buildBackendServiceWithMetadata(graphBuilder *rgraph.Builder, name string, metadata map[string]string) (*cloud.ResourceID, error) {
+	f := func(x *compute.BackendService) {
+		x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
+		x.Protocol = "TCP"
+		x.PortName = "http"
+		x.SessionAffinity = "NONE"
+		x.Port = 80
+		x.TimeoutSec = 30
+		x.ConnectionDraining = &compute.ConnectionDraining{}
+		x.Metadatas = metadata
+	}
+	return buildBackendServiceWith(graphBuilder, name, f)
 }
 
 func checkTCPRoute(t *testing.T, ctx context.Context, cloud cloud.Cloud, tcprID *cloud.ResourceID, rulesToBs [][]string) {
@@ -225,6 +244,104 @@ func TestBackendServiceUpdate(t *testing.T) {
 
 	wantBS = &compute.BackendService{LoadBalancingScheme: "INTERNAL_MANAGED"}
 	checkBackendService(t, ctx, theCloud, bs1ID, wantBS, compareLBScheme)
+}
+
+func TestBackendServiceMetadataUpdate(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	graphBuilder := rgraph.NewBuilder()
+	resUniqueIdPart := "test-bs-metadata-update"
+
+	/* Create BackendService */
+	bsName := resUniqueIdPart + "-bs"
+	wantedMetadata := map[string]string{"foo": "1", "bar": "2", "baz": "2"}
+	bsID, err := buildBackendServiceWithMetadata(graphBuilder, bsName, wantedMetadata)
+
+	expectedActions := []exec.ActionMetadata{
+		{Type: exec.ActionTypeCreate, Name: actionName(exec.ActionTypeCreate, bsID)},
+	}
+
+	processGraphAndExpectActions(t, graphBuilder, expectedActions)
+	t.Cleanup(func() {
+		err = theCloud.BackendServices().Delete(ctx, bsID.Key)
+		if err != nil {
+			t.Logf("theCloud.BackendServices().Delete(_, %s): %v", bsID.Key, err)
+		}
+	})
+
+	/* Verify BackendService was created correctly */
+	bs, err := theCloud.BackendServices().Get(ctx, bsID.Key)
+	if err != nil {
+		t.Fatalf("theCloud.BackendServices().Get(_, %s) = (nil, %v) wanted (_, nil)", bsID.Key, err)
+	}
+	if !maps.Equal(bs.Metadatas, wantedMetadata) {
+		df := cmp.Diff(bs.Metadatas, wantedMetadata)
+		t.Fatalf("Metadata are not set correctly(-got, +want): %s", df)
+	}
+
+	wantedMetadata = map[string]string{"foo": "1", "bar": "2", "baz": "3"}
+
+	/* Edit BackendService metadatas field */
+	bsID, err = buildBackendServiceWithMetadata(graphBuilder, bsName, wantedMetadata)
+	expectedActions = []exec.ActionMetadata{
+		{Type: exec.ActionTypeUpdate, Name: actionName(exec.ActionTypeUpdate, bsID)},
+	}
+
+	processGraphAndExpectActions(t, graphBuilder, expectedActions)
+
+	/* Verify Metadatas field was updated correctly */
+	bs, err = theCloud.BackendServices().Get(ctx, bsID.Key)
+	if err != nil {
+		t.Fatalf("theCloud.BackendServices().Get(_, %s) = (nil, %v) wanted (_, nil)", bsID.Key, err)
+	}
+
+	if !maps.Equal(bs.Metadatas, wantedMetadata) {
+		df := cmp.Diff(bs.Metadatas, wantedMetadata)
+		t.Fatalf("Metadata keys are not updated correctly(-got, +want): %s", df)
+	}
+
+	wantedMetadata = map[string]string{"foo": "1", "bar": "2"}
+
+	/* Remove a key from BackendService metadatas field */
+	bsID, err = buildBackendServiceWithMetadata(graphBuilder, bsName, wantedMetadata)
+	expectedActions = []exec.ActionMetadata{
+		{Type: exec.ActionTypeUpdate, Name: actionName(exec.ActionTypeUpdate, bsID)},
+	}
+
+	processGraphAndExpectActions(t, graphBuilder, expectedActions)
+
+	/* Verify a key from BackendService metadatas field was removed correctly */
+	bs, err = theCloud.BackendServices().Get(ctx, bsID.Key)
+	if err != nil {
+		t.Fatalf("theCloud.BackendServices().Get(_, %s) = (nil, %v) wanted (_, nil)", bsID.Key, err)
+	}
+
+	if !maps.Equal(bs.Metadatas, wantedMetadata) {
+		df := cmp.Diff(bs.Metadatas, wantedMetadata)
+		t.Fatalf("Metadata keys are not deleted correctly(-got, +want): %s", df)
+	}
+	expectedActions = []exec.ActionMetadata{
+		{Type: exec.ActionTypeMeta, Name: eventName(bsID)},
+	}
+
+	graph, err := graphBuilder.Build()
+	if err != nil {
+		t.Fatalf("graphBuilder.Build() = %v want nil", err)
+	}
+	result, err := plan.Do(ctx, theCloud, graph)
+	if err != nil {
+		t.Fatalf("plan.Do(_, _, _) = %v, want nil", err)
+	}
+
+	t.Logf("\nPlan.Actions: %v", result.Actions)
+	t.Logf("\nPlan.Got: %v", result.Got)
+	t.Logf("\nPlan.Want: %v", result.Want)
+
+	err = expectActions(result.Actions, expectedActions)
+	if err != nil {
+		t.Fatalf("expectActions(_, _) = %v, want nil", err)
+	}
 }
 
 func TestEnsureBackendService(t *testing.T) {

@@ -23,10 +23,13 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/filter"
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/meta"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"k8s.io/klog/v2"
@@ -123,7 +126,9 @@ func TestMain(m *testing.M) {
 	}
 	theCloud = cloud.NewGCE(svc)
 
-	os.Exit(m.Run())
+	code := m.Run()
+	fallbackCleanup(ctx)
+	os.Exit(code)
 }
 
 func checkErrCode(t *testing.T, err error, wantCode int, fmtStr string, args ...interface{}) {
@@ -136,4 +141,79 @@ func checkErrCode(t *testing.T, err error, wantCode int, fmtStr string, args ...
 	if gerr.Code != wantCode {
 		t.Fatalf("%s: got code %d, want %d (err: %v)", fmt.Sprintf(fmtStr, args...), gerr.Code, wantCode, err)
 	}
+}
+
+func matchTestResource(name string) bool {
+	return strings.HasPrefix(name, testFlags.resourcePrefix) && strings.Contains(name, runID)
+}
+
+func cleanupMeshes(ctx context.Context) {
+	tcprs, err := theCloud.Meshes().List(ctx, filter.None)
+	if err != nil {
+		log.Printf("fallbackCleanup: theCloud.Meshes().List(ctx, _): %v\n", err)
+		return
+	}
+	for _, tcpr := range tcprs {
+		if !matchTestResource(tcpr.Name) {
+			continue
+		}
+		key := meta.GlobalKey(tcpr.Name)
+		err = theCloud.Meshes().Delete(ctx, key)
+		log.Printf("fallbackCleanup: theCloud.Meshes().Delete(ctx, %s): %v\n", key, err)
+	}
+}
+
+func cleanupTcpRoutes(ctx context.Context) {
+	tcprs, err := theCloud.TcpRoutes().List(ctx, filter.None)
+	if err != nil {
+		log.Printf("fallbackCleanup: theCloud.TcpRoutes().List(ctx, _): %v\n", err)
+		return
+	}
+	for _, tcpr := range tcprs {
+		if !matchTestResource(tcpr.Name) {
+			continue
+		}
+		key := meta.GlobalKey(tcpr.Name)
+		err = theCloud.TcpRoutes().Delete(ctx, key)
+		log.Printf("fallbackCleanup: theCloud.TcpRoutes().Delete(ctx, %s): %v\n", key, err)
+	}
+}
+
+func cleanupBackendServices(ctx context.Context) {
+	bss, err := theCloud.BackendServices().List(ctx, filter.None)
+	if err != nil {
+		log.Printf("fallbackCleanup: theCloud.BackendServices().List(ctx, _): %v\n", err)
+		return
+	}
+	for _, bs := range bss {
+		if !matchTestResource(bs.Name) {
+			continue
+		}
+		key := meta.GlobalKey(bs.Name)
+		err = theCloud.BackendServices().Delete(ctx, key)
+		log.Printf("fallbackCleanup: theCloud.BackendServices().Delete(ctx, %s): %v\n", key, err)
+	}
+}
+
+func cleanupHealthChecks(ctx context.Context) {
+	hcs, err := theCloud.HealthChecks().List(ctx, filter.None)
+	if err != nil {
+		log.Printf("fallbackCleanup: theCloud.HealthChecks().List(ctx, _): %v\n", err)
+		return
+	}
+	for _, hc := range hcs {
+		if !matchTestResource(hc.Name) {
+			continue
+		}
+		key := meta.GlobalKey(hc.Name)
+		err = theCloud.HealthChecks().Delete(ctx, key)
+		log.Printf("fallbackCleanup: theCloud.HealthChecks().Delete(ctx, %s): %v\n", key, err)
+	}
+}
+
+func fallbackCleanup(ctx context.Context) {
+	cleanupTcpRoutes(ctx)
+	cleanupBackendServices(ctx)
+	cleanupHealthChecks(ctx)
+	cleanupMeshes(ctx)
 }

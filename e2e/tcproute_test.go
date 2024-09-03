@@ -772,6 +772,23 @@ func TestEnsureTcpRoute(t *testing.T) {
 
 	processGraphAndExpectActions(t, graphBuilder, expectedActions)
 
+	t.Cleanup(func() {
+		for _, r := range tcprs {
+			err := theCloud.TcpRoutes().Delete(ctx, r.Key)
+			t.Logf("theCloud.TcpRoutes().Delete(ctx, %s): %v", r.Key, err)
+		}
+
+		for _, bs := range bss {
+			err = theCloud.BackendServices().Delete(ctx, bs.Key)
+			t.Logf("theCloud.BackendServices().Delete(ctx, %s): %v", bs.Key, err)
+		}
+
+		for _, hc := range hcs {
+			err = theCloud.HealthChecks().Delete(ctx, hc.Key)
+			t.Logf("theCloud.HealthChecks().Delete(ctx, %s): %v", hc.Key, err)
+		}
+	})
+
 	expectedActions = []exec.ActionMetadata{
 		{Type: exec.ActionTypeMeta, Name: eventName(bss[0])},
 		{Type: exec.ActionTypeMeta, Name: eventName(bss[1])},

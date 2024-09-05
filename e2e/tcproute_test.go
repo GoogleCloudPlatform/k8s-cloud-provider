@@ -433,7 +433,7 @@ func createHealthchecks(graphBuilder *rgraph.Builder, hcNum int, name string) ([
 	var e error
 	for i := 0; i < hcNum; i++ {
 		hc, err := buildHealthCheck(graphBuilder, "hc-"+name+"-"+strconv.Itoa(i), 15)
-		errors.Join(e, err)
+		e = errors.Join(e, err)
 		hcs = append(hcs, hc)
 	}
 	return hcs, e
@@ -448,7 +448,7 @@ func createBackendServicesWithHC(graphBuilder *rgraph.Builder, bsNum int, name s
 	var e error
 	for i := 0; i < bsNum; i++ {
 		bs, err := buildBackendServiceWithLBScheme(graphBuilder, name+"-"+strconv.Itoa(i)+"-bs", hcs[i], "INTERNAL_SELF_MANAGED")
-		errors.Join(e, err)
+		e = errors.Join(e, err)
 		bss = append(bss, bs)
 	}
 	return bss, e
@@ -490,7 +490,7 @@ func createTCPRoutes(t *testing.T, graphBuilder *rgraph.Builder, numTCPR int, na
 		name := namePrefix + "-" + strconv.Itoa(i/2)
 		tcpr, err := buildTCPRoute(graphBuilder, name, meshURL, tcprRules)
 		if err != nil {
-			errors.Join(e, fmt.Errorf("buildTcpRoute(_, %s, %s, %v) = %v, want nil", name, meshURL, tcprRules, err))
+			e = errors.Join(e, fmt.Errorf("buildTcpRoute(_, %s, %s, %v) = %v, want nil", name, meshURL, tcprRules, err))
 		}
 		tcprs = append(tcprs, tcpr)
 		t.Logf("%s = %s", name, pretty.Sprint(tcpr))
@@ -771,6 +771,23 @@ func TestEnsureTcpRoute(t *testing.T) {
 	t.Logf("\nPlan.Want: %v", result.Want)
 
 	processGraphAndExpectActions(t, graphBuilder, expectedActions)
+
+	t.Cleanup(func() {
+		for _, r := range tcprs {
+			err := theCloud.TcpRoutes().Delete(ctx, r.Key)
+			t.Logf("theCloud.TcpRoutes().Delete(ctx, %s): %v", r.Key, err)
+		}
+
+		for _, bs := range bss {
+			err = theCloud.BackendServices().Delete(ctx, bs.Key)
+			t.Logf("theCloud.BackendServices().Delete(ctx, %s): %v", bs.Key, err)
+		}
+
+		for _, hc := range hcs {
+			err = theCloud.HealthChecks().Delete(ctx, hc.Key)
+			t.Logf("theCloud.HealthChecks().Delete(ctx, %s): %v", hc.Key, err)
+		}
+	})
 
 	expectedActions = []exec.ActionMetadata{
 		{Type: exec.ActionTypeMeta, Name: eventName(bss[0])},

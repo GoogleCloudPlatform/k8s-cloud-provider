@@ -837,7 +837,12 @@ func (g *{{.GCPWrapType}}) List(ctx context.Context, zone string, fl *filter.F, 
 
 {{- if .KeyIsGlobal}}
 	klog.V(5).Infof("{{.GCPWrapType}}.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
+{{- if .IsNetworkServices }}
+	parent := fmt.Sprintf("projects/%s/locations/global", projectID)
+	call := g.s.{{.GroupVersionTitle}}.{{.Service}}.List(parent)
+{{- else}}
 	call := g.s.{{.GroupVersionTitle}}.{{.Service}}.List(projectID)
+{{- end -}}
 {{- end -}}
 {{- if .KeyIsRegional}}
 	klog.V(5).Infof("{{.GCPWrapType}}.List(%v, %v, %v): projectID = %v, ck = %+v", ctx, region, fl, projectID, ck)

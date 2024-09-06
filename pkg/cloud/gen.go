@@ -51999,7 +51999,8 @@ func (g *TDTcpRoutes) List(ctx context.Context, fl *filter.F, options ...Option)
 		return nil, err
 	}
 	klog.V(5).Infof("TDTcpRoutes.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
-	call := g.s.NetworkServicesGA.TcpRoutes.List(projectID)
+	parent := fmt.Sprintf("projects/%s/locations/global", projectID)
+	call := g.s.NetworkServicesGA.TcpRoutes.List(parent)
 
 	var all []*networkservicesga.TcpRoute
 	f := func(l *networkservicesga.ListTcpRoutesResponse) error {
@@ -52420,7 +52421,8 @@ func (g *TDBetaTcpRoutes) List(ctx context.Context, fl *filter.F, options ...Opt
 		return nil, err
 	}
 	klog.V(5).Infof("TDBetaTcpRoutes.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
-	call := g.s.NetworkServicesBeta.TcpRoutes.List(projectID)
+	parent := fmt.Sprintf("projects/%s/locations/global", projectID)
+	call := g.s.NetworkServicesBeta.TcpRoutes.List(parent)
 
 	var all []*networkservicesbeta.TcpRoute
 	f := func(l *networkservicesbeta.ListTcpRoutesResponse) error {
@@ -52841,7 +52843,8 @@ func (g *TDMeshes) List(ctx context.Context, fl *filter.F, options ...Option) ([
 		return nil, err
 	}
 	klog.V(5).Infof("TDMeshes.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
-	call := g.s.NetworkServicesGA.Meshes.List(projectID)
+	parent := fmt.Sprintf("projects/%s/locations/global", projectID)
+	call := g.s.NetworkServicesGA.Meshes.List(parent)
 
 	var all []*networkservicesga.Mesh
 	f := func(l *networkservicesga.ListMeshesResponse) error {
@@ -53262,7 +53265,8 @@ func (g *TDBetaMeshes) List(ctx context.Context, fl *filter.F, options ...Option
 		return nil, err
 	}
 	klog.V(5).Infof("TDBetaMeshes.List(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
-	call := g.s.NetworkServicesBeta.Meshes.List(projectID)
+	parent := fmt.Sprintf("projects/%s/locations/global", projectID)
+	call := g.s.NetworkServicesBeta.Meshes.List(parent)
 
 	var all []*networkservicesbeta.Mesh
 	f := func(l *networkservicesbeta.ListMeshesResponse) error {

@@ -794,6 +794,7 @@ func (g *{{.GCPWrapType}}) Get(ctx context.Context, key *meta.Key, options... Op
 		call := g.s.{{.GroupVersionTitle}}.{{.Service}}.Get(projectID, key.Zone, key.Name)
 	{{- end}}
 {{- end}}
+	handleHeaderOptions(&opts, call.Header())
 	call.Context(ctx)
 	v, err := call.Do()
 	klog.V(4).Infof("{{.GCPWrapType}}.Get(%v, %v) = %+v, %v", ctx, key, v, err)
@@ -944,6 +945,7 @@ func (g *{{.GCPWrapType}}) Insert(ctx context.Context, key *meta.Key, obj *{{.FQ
 {{- end}}
 	call.Context(ctx)
 
+	handleHeaderOptions(&opts, call.Header())
 	op, err := call.Do()
 	klog.V(4).Infof("{{.GCPWrapType}}.Insert(%v, %v, ...) = %+v", ctx, key, err)
 
@@ -1001,6 +1003,7 @@ func (g *{{.GCPWrapType}}) Delete(ctx context.Context, key *meta.Key, options...
 
 	call.Context(ctx)
 
+	handleHeaderOptions(&opts, call.Header())
 	op, err := call.Do()
 	klog.V(4).Infof("{{.GCPWrapType}}.Delete(%v, %v) = %v", ctx, key, err)
 
@@ -1181,6 +1184,7 @@ func (g *{{.GCPWrapType}}) {{.FcnArgs}} {
 {{- end}}
 {{- if .IsOperation}}
 	call.Context(ctx)
+	handleHeaderOptions(&opts, call.Header())
 	op, err := call.Do()
 	klog.V(4).Infof("{{.GCPWrapType}}.{{.Name}}(%v, %v, ...) = %+v", ctx, key, err)
 
@@ -1199,6 +1203,7 @@ func (g *{{.GCPWrapType}}) {{.FcnArgs}} {
 	return err
 {{- else if .IsGet}}
 	call.Context(ctx)
+	handleHeaderOptions(&opts, call.Header())
 	v, err := call.Do()
 
         callObserverEnd(ctx, ck, err)

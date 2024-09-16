@@ -771,6 +771,7 @@ func (g *{{.GCPWrapType}}) Get(ctx context.Context, key *meta.Key, options... Op
 		Operation: "Get",
 		Version: meta.Version("{{.Version}}"),
 		Service: "{{.Service}}",
+		Resource: key,
 	}
 
 	klog.V(5).Infof("{{.GCPWrapType}}.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
@@ -810,16 +811,19 @@ func (g *{{.GCPWrapType}}) Get(ctx context.Context, key *meta.Key, options... Op
 func (g *{{.GCPWrapType}}) List(ctx context.Context, fl *filter.F, options... Option) ([]*{{.FQObjectType}}, error) {
         opts := mergeOptions(options)
 	klog.V(5).Infof("{{.GCPWrapType}}.List(%v, %v, %v) called", ctx, fl, opts)
+	key := &meta.Key{}
 {{- end -}}
 {{- if .KeyIsRegional}}
 func (g *{{.GCPWrapType}}) List(ctx context.Context, region string, fl *filter.F, options... Option) ([]*{{.FQObjectType}}, error) {
         opts := mergeOptions(options)
 	klog.V(5).Infof("{{.GCPWrapType}}.List(%v, %v, %v, %v) called", ctx, region, fl, opts)
+	key := &meta.Key{Region: region}
 {{- end -}}
 {{- if .KeyIsZonal}}
 func (g *{{.GCPWrapType}}) List(ctx context.Context, zone string, fl *filter.F, options... Option) ([]*{{.FQObjectType}}, error) {
         opts := mergeOptions(options)
 	klog.V(5).Infof("{{.GCPWrapType}}.List(%v, %v, %v, %v) called", ctx, zone, fl, opts)
+	key := &meta.Key{Name: zone}
 {{- end}}
         projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "{{.Version}}", "{{.Service}}")
 
@@ -828,6 +832,7 @@ func (g *{{.GCPWrapType}}) List(ctx context.Context, zone string, fl *filter.F, 
 		Operation: "List",
 		Version: meta.Version("{{.Version}}"),
 		Service: "{{.Service}}",
+		Resource: key,
 	}
 
 	callObserverStart(ctx, ck)
@@ -906,6 +911,7 @@ func (g *{{.GCPWrapType}}) Insert(ctx context.Context, key *meta.Key, obj *{{.FQ
 		Operation: "Insert",
 		Version: meta.Version("{{.Version}}"),
 		Service: "{{.Service}}",
+		Resource: key,
 	}
 	{{- if .IsNetworkServices}}
 	klog.V(5).Infof("{{.GCPWrapType}}.Create(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
@@ -970,6 +976,7 @@ func (g *{{.GCPWrapType}}) Delete(ctx context.Context, key *meta.Key, options...
 		Operation: "Delete",
 		Version: meta.Version("{{.Version}}"),
 		Service: "{{.Service}}",
+		Resource: key,
 	}
 	klog.V(5).Infof("{{.GCPWrapType}}.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
 	callObserverStart(ctx, ck)
@@ -1022,6 +1029,7 @@ func (g *{{.GCPWrapType}}) AggregatedList(ctx context.Context, fl *filter.F, opt
 		Operation: "AggregatedList",
 		Version: meta.Version("{{.Version}}"),
 		Service: "{{.Service}}",
+		Resource: &meta.Key{},
 	}
 
 	klog.V(5).Infof("{{.GCPWrapType}}.AggregatedList(%v, %v): projectID = %v, ck = %+v", ctx, fl, projectID, ck)
@@ -1079,6 +1087,7 @@ func (g *{{.GCPWrapType}}) ListUsable(ctx context.Context, fl *filter.F, options
 		Operation: "ListUsable",
 		Version: meta.Version("{{.Version}}"),
 		Service: "{{.Service}}",
+		Resource: &meta.Key{},
 	}
         callObserverStart(ctx, ck)
 	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
@@ -1143,6 +1152,7 @@ func (g *{{.GCPWrapType}}) {{.FcnArgs}} {
 		Operation: "{{.Name}}",
 		Version: meta.Version("{{.Version}}"),
 		Service: "{{.Service}}",
+		Resource: key,
 	}
 	klog.V(5).Infof("{{.GCPWrapType}}.{{.Name}}(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
 	callObserverStart(ctx, ck)

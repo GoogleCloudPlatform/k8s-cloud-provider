@@ -35,8 +35,8 @@ func buildBackendServiceWithLBScheme(graphBuilder *rgraph.Builder, name string, 
 }
 
 func buildBackendServiceWith(graphBuilder *rgraph.Builder, name string, f func(x *compute.BackendService)) (*cloud.ResourceID, error) {
-	bsID := backendservice.ID(testFlags.project, meta.GlobalKey(resourceName(name)))
-	bsMutResource := backendservice.NewMutableBackendService(testFlags.project, bsID.Key)
+	bsID := backendservice.ID(TestFlags.Project, meta.GlobalKey(resourceName(name)))
+	bsMutResource := backendservice.NewMutableBackendService(TestFlags.Project, bsID.Key)
 	bsMutResource.Access(f)
 	bsResource, err := bsMutResource.Freeze()
 	if err != nil {

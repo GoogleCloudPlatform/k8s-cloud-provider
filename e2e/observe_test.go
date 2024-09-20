@@ -60,6 +60,7 @@ func TestObserve(t *testing.T) {
 		Operation: "Get",
 		Version:   meta.VersionGA,
 		Service:   "Zones",
+		Resource:  &meta.Key{Name: "moonbase1-b"},
 	}
 
 	// Ignore differences in ProjectID as they could change when run manually

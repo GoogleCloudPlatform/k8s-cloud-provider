@@ -49235,6 +49235,7 @@ func (g *GCEAlphaRegionTargetTcpProxies) Get(ctx context.Context, key *meta.Key,
 		Operation: "Get",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionTargetTcpProxies",
+		Resource:  key,
 	}
 
 	klog.V(5).Infof("GCEAlphaRegionTargetTcpProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
@@ -49259,6 +49260,7 @@ func (g *GCEAlphaRegionTargetTcpProxies) Get(ctx context.Context, key *meta.Key,
 func (g *GCEAlphaRegionTargetTcpProxies) List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computealpha.TargetTcpProxy, error) {
 	opts := mergeOptions(options)
 	klog.V(5).Infof("GCEAlphaRegionTargetTcpProxies.List(%v, %v, %v, %v) called", ctx, region, fl, opts)
+	key := &meta.Key{Region: region}
 	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "alpha", "RegionTargetTcpProxies")
 
 	ck := &CallContextKey{
@@ -49266,6 +49268,7 @@ func (g *GCEAlphaRegionTargetTcpProxies) List(ctx context.Context, region string
 		Operation: "List",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionTargetTcpProxies",
+		Resource:  key,
 	}
 
 	callObserverStart(ctx, ck)
@@ -49324,6 +49327,7 @@ func (g *GCEAlphaRegionTargetTcpProxies) Insert(ctx context.Context, key *meta.K
 		Operation: "Insert",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionTargetTcpProxies",
+		Resource:  key,
 	}
 	klog.V(5).Infof("GCEAlphaRegionTargetTcpProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
 	callObserverStart(ctx, ck)
@@ -49366,6 +49370,7 @@ func (g *GCEAlphaRegionTargetTcpProxies) Delete(ctx context.Context, key *meta.K
 		Operation: "Delete",
 		Version:   meta.Version("alpha"),
 		Service:   "RegionTargetTcpProxies",
+		Resource:  key,
 	}
 	klog.V(5).Infof("GCEAlphaRegionTargetTcpProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
 	callObserverStart(ctx, ck)
@@ -49608,6 +49613,7 @@ func (g *GCEBetaRegionTargetTcpProxies) Get(ctx context.Context, key *meta.Key, 
 		Operation: "Get",
 		Version:   meta.Version("beta"),
 		Service:   "RegionTargetTcpProxies",
+		Resource:  key,
 	}
 
 	klog.V(5).Infof("GCEBetaRegionTargetTcpProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
@@ -49632,6 +49638,7 @@ func (g *GCEBetaRegionTargetTcpProxies) Get(ctx context.Context, key *meta.Key, 
 func (g *GCEBetaRegionTargetTcpProxies) List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computebeta.TargetTcpProxy, error) {
 	opts := mergeOptions(options)
 	klog.V(5).Infof("GCEBetaRegionTargetTcpProxies.List(%v, %v, %v, %v) called", ctx, region, fl, opts)
+	key := &meta.Key{Region: region}
 	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "beta", "RegionTargetTcpProxies")
 
 	ck := &CallContextKey{
@@ -49639,6 +49646,7 @@ func (g *GCEBetaRegionTargetTcpProxies) List(ctx context.Context, region string,
 		Operation: "List",
 		Version:   meta.Version("beta"),
 		Service:   "RegionTargetTcpProxies",
+		Resource:  key,
 	}
 
 	callObserverStart(ctx, ck)
@@ -49697,6 +49705,7 @@ func (g *GCEBetaRegionTargetTcpProxies) Insert(ctx context.Context, key *meta.Ke
 		Operation: "Insert",
 		Version:   meta.Version("beta"),
 		Service:   "RegionTargetTcpProxies",
+		Resource:  key,
 	}
 	klog.V(5).Infof("GCEBetaRegionTargetTcpProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
 	callObserverStart(ctx, ck)
@@ -49739,6 +49748,7 @@ func (g *GCEBetaRegionTargetTcpProxies) Delete(ctx context.Context, key *meta.Ke
 		Operation: "Delete",
 		Version:   meta.Version("beta"),
 		Service:   "RegionTargetTcpProxies",
+		Resource:  key,
 	}
 	klog.V(5).Infof("GCEBetaRegionTargetTcpProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
 	callObserverStart(ctx, ck)
@@ -49981,6 +49991,7 @@ func (g *GCERegionTargetTcpProxies) Get(ctx context.Context, key *meta.Key, opti
 		Operation: "Get",
 		Version:   meta.Version("ga"),
 		Service:   "RegionTargetTcpProxies",
+		Resource:  key,
 	}
 
 	klog.V(5).Infof("GCERegionTargetTcpProxies.Get(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
@@ -50005,6 +50016,7 @@ func (g *GCERegionTargetTcpProxies) Get(ctx context.Context, key *meta.Key, opti
 func (g *GCERegionTargetTcpProxies) List(ctx context.Context, region string, fl *filter.F, options ...Option) ([]*computega.TargetTcpProxy, error) {
 	opts := mergeOptions(options)
 	klog.V(5).Infof("GCERegionTargetTcpProxies.List(%v, %v, %v, %v) called", ctx, region, fl, opts)
+	key := &meta.Key{Region: region}
 	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "ga", "RegionTargetTcpProxies")
 
 	ck := &CallContextKey{
@@ -50012,6 +50024,7 @@ func (g *GCERegionTargetTcpProxies) List(ctx context.Context, region string, fl 
 		Operation: "List",
 		Version:   meta.Version("ga"),
 		Service:   "RegionTargetTcpProxies",
+		Resource:  key,
 	}
 
 	callObserverStart(ctx, ck)
@@ -50070,6 +50083,7 @@ func (g *GCERegionTargetTcpProxies) Insert(ctx context.Context, key *meta.Key, o
 		Operation: "Insert",
 		Version:   meta.Version("ga"),
 		Service:   "RegionTargetTcpProxies",
+		Resource:  key,
 	}
 	klog.V(5).Infof("GCERegionTargetTcpProxies.Insert(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
 	callObserverStart(ctx, ck)
@@ -50112,6 +50126,7 @@ func (g *GCERegionTargetTcpProxies) Delete(ctx context.Context, key *meta.Key, o
 		Operation: "Delete",
 		Version:   meta.Version("ga"),
 		Service:   "RegionTargetTcpProxies",
+		Resource:  key,
 	}
 	klog.V(5).Infof("GCERegionTargetTcpProxies.Delete(%v, %v): projectID = %v, ck = %+v", ctx, key, projectID, ck)
 	callObserverStart(ctx, ck)

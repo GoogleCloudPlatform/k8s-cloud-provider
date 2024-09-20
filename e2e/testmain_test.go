@@ -26,7 +26,7 @@ import (
 )
 
 func resourceName(name string) string {
-	return TestFlags.ResourcePrefix + runID + "-" + name
+	return TestFlags.ResourcePrefix + RunID + "-" + name
 }
 
 func TestMain(m *testing.M) {

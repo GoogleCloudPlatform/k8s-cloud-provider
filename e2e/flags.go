@@ -15,12 +15,13 @@ var (
 		Project            string
 		ResourcePrefix     string
 		ServiceAccountName string
+		RunID              string
 	}{
 		Project:            "",
 		ResourcePrefix:     "k8scp-",
 		ServiceAccountName: "",
 	}
-	runID string
+	RunID string
 )
 
 func init() {
@@ -29,8 +30,7 @@ func init() {
 	flag.StringVar(&TestFlags.Project, "project", TestFlags.Project, "GCP Project ID")
 	flag.StringVar(&TestFlags.ResourcePrefix, "resourcePrefix", TestFlags.ResourcePrefix, "Prefix used to name all resources created in the tests. Any resources with this prefix will be removed during cleanup.")
 	flag.StringVar(&TestFlags.ServiceAccountName, "sa-name", TestFlags.ServiceAccountName, "Name of the Service Account to impersonate")
-
-	runID = fmt.Sprintf("%0x", rand.Int63()&0xffff)
+	flag.StringVar(&RunID, "run-id", fmt.Sprintf("%0x", rand.Int63()&0xffff), "The RunID to use when managing resources.")
 }
 func ParseFlagsOrDie() {
 	flag.Parse()

@@ -2,7 +2,9 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"path"
 	"strings"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/filter"
@@ -10,7 +12,11 @@ import (
 )
 
 func matchTestResource(name string) bool {
-	return strings.HasPrefix(name, TestFlags.ResourcePrefix) && strings.Contains(name, runID)
+	if RunID == "" {
+		return strings.HasPrefix(name, TestFlags.ResourcePrefix)
+	} else {
+		return strings.HasPrefix(name, fmt.Sprintf("%s%s-", TestFlags.ResourcePrefix, RunID))
+	}
 }
 
 func cleanupMeshes(ctx context.Context) {
@@ -20,10 +26,11 @@ func cleanupMeshes(ctx context.Context) {
 		return
 	}
 	for _, tcpr := range tcprs {
-		if !matchTestResource(tcpr.Name) {
+		name := path.Base(tcpr.Name)
+		if !matchTestResource(name) {
 			continue
 		}
-		key := meta.GlobalKey(tcpr.Name)
+		key := meta.GlobalKey(name)
 		err = theCloud.Meshes().Delete(ctx, key)
 		log.Printf("FallbackCleanup: theCloud.Meshes().Delete(ctx, %s): %v\n", key, err)
 	}
@@ -36,10 +43,11 @@ func cleanupTcpRoutes(ctx context.Context) {
 		return
 	}
 	for _, tcpr := range tcprs {
-		if !matchTestResource(tcpr.Name) {
+		name := path.Base(tcpr.Name)
+		if !matchTestResource(name) {
 			continue
 		}
-		key := meta.GlobalKey(tcpr.Name)
+		key := meta.GlobalKey(name)
 		err = theCloud.TcpRoutes().Delete(ctx, key)
 		log.Printf("FallbackCleanup: theCloud.TcpRoutes().Delete(ctx, %s): %v\n", key, err)
 	}

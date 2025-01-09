@@ -23,8 +23,13 @@ import (
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode"
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/all"
 	"k8s.io/klog/v2"
 )
+
+func init() {
+	all.RegisterBuilder(resourcePlural, func(id *cloud.ResourceID) rnode.Builder { return NewBuilder(id) })
+}
 
 // NewBuilder returns a Node builder.
 func NewBuilder(id *cloud.ResourceID) *Builder {

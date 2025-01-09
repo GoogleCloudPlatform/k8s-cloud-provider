@@ -23,6 +23,7 @@ import (
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/api"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode"
+	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/all"
 	"google.golang.org/api/networkservices/v1"
 	beta "google.golang.org/api/networkservices/v1beta1"
 )
@@ -30,6 +31,8 @@ import (
 const (
 	resourceName = "TcpRoute"
 )
+
+func init() { all.RegisterBuilder(resourcePlural, NewBuilder) }
 
 // NewBuilder creates builder for tcp route.
 func NewBuilder(id *cloud.ResourceID) rnode.Builder {

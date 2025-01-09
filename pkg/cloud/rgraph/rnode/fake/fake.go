@@ -33,10 +33,14 @@ type FakeResource struct {
 	ForceSendFields []string
 }
 
+const (
+	resourcePlural = "fakes"
+)
+
 // ID for the resource.
 func ID(project string, key *meta.Key) *cloud.ResourceID {
 	return &cloud.ResourceID{
-		Resource:  "fakes",
+		Resource:  resourcePlural,
 		APIGroup:  "",
 		ProjectID: project,
 		Key:       key,

@@ -1047,6 +1047,7 @@ func (g *{{.GCPWrapType}}) AggregatedList(ctx context.Context, fl *filter.F, opt
 	if fl != filter.None {
 		call.Filter(fl.String())
 	}
+	call.ReturnPartialSuccess(opts.returnPartialSuccess)
 
 	all := map[string][]*{{.FQObjectType}}{}
 	f := func(l *{{.ObjectAggregatedListType}}) error {

@@ -9,8 +9,9 @@ type Option func(*allOptions)
 
 // allOptions that can be configured for the generated methods.
 type allOptions struct {
-	projectID  string
-	addHeaders http.Header
+	projectID            string
+	addHeaders           http.Header
+	returnPartialSuccess bool
 }
 
 func mergeOptions(options []Option) allOptions {
@@ -19,6 +20,15 @@ func mergeOptions(options []Option) allOptions {
 		opt(&ret)
 	}
 	return ret
+}
+
+// ReturnPartialSuccess only affects AggregatedList calls, and will have the call return success
+// when fanout calls fail. For example, when partial success behavior is enabled, aggregatedList for
+// a single zone scope either returns all resources in the zone or no resources, with an error code.
+func ReturnPartialSuccess(returnPartialSuccess bool) Option {
+	return func(opts *allOptions) {
+		opts.returnPartialSuccess = returnPartialSuccess
+	}
 }
 
 // ForceProjectID forces the projectID to be used in the call to be the one

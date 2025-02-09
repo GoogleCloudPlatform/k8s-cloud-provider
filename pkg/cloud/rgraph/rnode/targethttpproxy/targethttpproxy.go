@@ -43,7 +43,7 @@ func NewMutableTargetHttpProxy(project string, key *meta.Key) MutableTargetHttpP
 		compute.TargetHttpProxy,
 		alpha.TargetHttpProxy,
 		beta.TargetHttpProxy,
-	](id, &targetHttpProxyTypeTrait{})
+	](id, &TypeTrait{})
 }
 
 type TargetHttpProxy = api.Resource[compute.TargetHttpProxy, alpha.TargetHttpProxy, beta.TargetHttpProxy]

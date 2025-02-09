@@ -39,7 +39,7 @@ type MutableAddress = api.MutableResource[compute.Address, alpha.Address, beta.A
 
 func NewMutableAddress(project string, key *meta.Key) MutableAddress {
 	id := ID(project, key)
-	return api.NewResource[compute.Address, alpha.Address, beta.Address](id, &typeTrait{})
+	return api.NewResource[compute.Address, alpha.Address, beta.Address](id, &TypeTrait{})
 }
 
 type Address = api.Resource[compute.Address, alpha.Address, beta.Address]

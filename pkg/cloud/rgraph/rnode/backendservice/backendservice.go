@@ -43,7 +43,7 @@ func NewMutableBackendService(project string, key *meta.Key) MutableBackendServi
 		compute.BackendService,
 		alpha.BackendService,
 		beta.BackendService,
-	](id, &typeTrait{})
+	](id, &TypeTrait{})
 }
 
 type BackendService = api.Resource[compute.BackendService, alpha.BackendService, beta.BackendService]

@@ -43,7 +43,7 @@ func NewMutableUrlMap(project string, key *meta.Key) MutableUrlMap {
 		compute.UrlMap,
 		alpha.UrlMap,
 		beta.UrlMap,
-	](id, &urlMapTypeTrait{})
+	](id, &TypeTrait{})
 }
 
 type UrlMap = api.Resource[compute.UrlMap, alpha.UrlMap, beta.UrlMap]

@@ -43,7 +43,7 @@ func NewMutableNetworkEndpointGroup(project string, key *meta.Key) MutableNetwor
 		compute.NetworkEndpointGroup,
 		alpha.NetworkEndpointGroup,
 		beta.NetworkEndpointGroup,
-	](id, &typeTrait{})
+	](id, &TypeTrait{})
 }
 
 type NetworkEndpointGroup = api.Resource[compute.NetworkEndpointGroup, alpha.NetworkEndpointGroup, beta.NetworkEndpointGroup]

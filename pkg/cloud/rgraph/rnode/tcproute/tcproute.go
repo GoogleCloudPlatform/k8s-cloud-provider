@@ -42,7 +42,7 @@ func NewMutableTcpRoute(project string, key *meta.Key) MutableTcpRoute {
 		networkservices.TcpRoute,
 		api.PlaceholderType,
 		beta.TcpRoute,
-	](id, &tcpRouteTypeTrait{})
+	](id, &TypeTrait{})
 }
 
 type TcpRoute = api.Resource[networkservices.TcpRoute, api.PlaceholderType, beta.TcpRoute]

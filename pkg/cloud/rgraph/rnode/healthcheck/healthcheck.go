@@ -43,7 +43,7 @@ func NewMutableHealthCheck(project string, key *meta.Key) MutableHealthCheck {
 		compute.HealthCheck,
 		alpha.HealthCheck,
 		beta.HealthCheck,
-	](id, &typeTrait{})
+	](id, &TypeTrait{})
 }
 
 type HealthCheck = api.Resource[compute.HealthCheck, alpha.HealthCheck, beta.HealthCheck]

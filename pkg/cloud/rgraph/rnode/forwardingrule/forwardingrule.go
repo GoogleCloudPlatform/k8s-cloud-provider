@@ -43,7 +43,7 @@ func NewMutableForwardingRule(project string, key *meta.Key) MutableForwardingRu
 		compute.ForwardingRule,
 		alpha.ForwardingRule,
 		beta.ForwardingRule,
-	](id, &typeTrait{})
+	](id, &TypeTrait{})
 }
 
 type ForwardingRule = api.Resource[compute.ForwardingRule, alpha.ForwardingRule, beta.ForwardingRule]

@@ -41,13 +41,13 @@ func ID(project string, key *meta.Key) *cloud.ResourceID {
 
 type MutableTargetHttpProxy = api.MutableResource[compute.TargetHttpProxy, alpha.TargetHttpProxy, beta.TargetHttpProxy]
 
-func NewMutableTargetHttpProxy(project string, key *meta.Key) MutableTargetHttpProxy {
+func NewMutableTargetHttpProxyWithTraits(project string, key *meta.Key, tr api.TypeTrait[compute.TargetHttpProxy, alpha.TargetHttpProxy, beta.TargetHttpProxy]) MutableTargetHttpProxy {
 	id := ID(project, key)
-	return api.NewResource[
-		compute.TargetHttpProxy,
-		alpha.TargetHttpProxy,
-		beta.TargetHttpProxy,
-	](id, &targetHttpProxyTypeTrait{})
+	return api.NewResource[compute.TargetHttpProxy, alpha.TargetHttpProxy, beta.TargetHttpProxy](id, tr)
+}
+
+func NewMutableTargetHttpProxy(project string, key *meta.Key) MutableTargetHttpProxy {
+	return NewMutableTargetHttpProxyWithTraits(project, key, &TypeTrait{})
 }
 
 type TargetHttpProxy = api.Resource[compute.TargetHttpProxy, alpha.TargetHttpProxy, beta.TargetHttpProxy]

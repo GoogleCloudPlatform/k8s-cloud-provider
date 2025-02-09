@@ -70,7 +70,7 @@ func (b *builder) SetResource(u rnode.UntypedResource) error {
 
 func (b *builder) SyncFromCloud(ctx context.Context, gcp cloud.Cloud) error {
 	return rnode.GenericGet[networkservices.TcpRoute, api.PlaceholderType, beta.TcpRoute](
-		ctx, gcp, resourceName, &tcpRouteOps{}, &tcpRouteTypeTrait{}, b)
+		ctx, gcp, resourceName, &tcpRouteOps{}, &TypeTrait{}, b)
 }
 
 func (b *builder) OutRefs() ([]rnode.ResourceRef, error) {

@@ -24,12 +24,14 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
+// Default TypeTrait for TargetHttpProxy.
+//
 // https://cloud.google.com/compute/docs/reference/rest/v1/targetHttpProxies
-type targetHttpProxyTypeTrait struct {
+type TypeTrait struct {
 	api.BaseTypeTrait[compute.TargetHttpProxy, alpha.TargetHttpProxy, beta.TargetHttpProxy]
 }
 
-func (*targetHttpProxyTypeTrait) FieldTraits(meta.Version) *api.FieldTraits {
+func (*TypeTrait) FieldTraits(meta.Version) *api.FieldTraits {
 	dt := api.NewFieldTraits()
 	// Built-ins
 	dt.OutputOnly(api.Path{}.Pointer().Field("Fingerprint"))

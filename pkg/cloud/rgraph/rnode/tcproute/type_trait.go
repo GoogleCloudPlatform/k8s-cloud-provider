@@ -23,12 +23,14 @@ import (
 	beta "google.golang.org/api/networkservices/v1beta1"
 )
 
+// Default TypeTrait for TcpRoute.
+//
 // https://cloud.google.com/traffic-director/docs/reference/network-services/rest/v1beta1/projects.locations.tcpRoutes
-type tcpRouteTypeTrait struct {
+type TypeTrait struct {
 	api.BaseTypeTrait[networkservices.TcpRoute, api.PlaceholderType, beta.TcpRoute]
 }
 
-func (*tcpRouteTypeTrait) FieldTraits(meta.Version) *api.FieldTraits {
+func (*TypeTrait) FieldTraits(meta.Version) *api.FieldTraits {
 	dt := api.NewFieldTraits()
 	dt.OutputOnly(api.Path{}.Pointer().Field("SelfLink"))
 	dt.OutputOnly(api.Path{}.Pointer().Field("CreateTime"))

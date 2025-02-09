@@ -24,12 +24,14 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
+// Default TypeTrait for UrlMap.
+//
 // https://cloud.google.com/compute/docs/reference/rest/v1/urlMaps
-type urlMapTypeTrait struct {
+type TypeTrait struct {
 	api.BaseTypeTrait[compute.UrlMap, alpha.UrlMap, beta.UrlMap]
 }
 
-func (*urlMapTypeTrait) FieldTraits(meta.Version) *api.FieldTraits {
+func (*TypeTrait) FieldTraits(meta.Version) *api.FieldTraits {
 	dt := api.NewFieldTraits()
 
 	dt.OutputOnly(api.Path{}.Pointer().Field("CreationTimestamp"))

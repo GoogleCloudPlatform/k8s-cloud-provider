@@ -65,7 +65,7 @@ func (b *builder) SetResource(u rnode.UntypedResource) error {
 
 func (b *builder) SyncFromCloud(ctx context.Context, gcp cloud.Cloud) error {
 	return rnode.GenericGet[compute.ForwardingRule, alpha.ForwardingRule, beta.ForwardingRule](
-		ctx, gcp, "ForwardingRule", &ops{}, &typeTrait{}, b)
+		ctx, gcp, "ForwardingRule", &ops{}, &TypeTrait{}, b)
 }
 
 func (b *builder) OutRefs() ([]rnode.ResourceRef, error) {

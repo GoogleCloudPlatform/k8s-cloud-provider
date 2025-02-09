@@ -41,13 +41,13 @@ func ID(project string, key *meta.Key) *cloud.ResourceID {
 
 type MutableForwardingRule = api.MutableResource[compute.ForwardingRule, alpha.ForwardingRule, beta.ForwardingRule]
 
-func NewMutableForwardingRule(project string, key *meta.Key) MutableForwardingRule {
+func NewMutableForwardingRuleWithTraits(project string, key *meta.Key, tr api.TypeTrait[compute.ForwardingRule, alpha.ForwardingRule, beta.ForwardingRule]) MutableForwardingRule {
 	id := ID(project, key)
-	return api.NewResource[
-		compute.ForwardingRule,
-		alpha.ForwardingRule,
-		beta.ForwardingRule,
-	](id, &typeTrait{})
+	return api.NewResource[compute.ForwardingRule, alpha.ForwardingRule, beta.ForwardingRule](id, tr)
+}
+
+func NewMutableForwardingRule(project string, key *meta.Key) MutableForwardingRule {
+	return NewMutableForwardingRuleWithTraits(project, key, &TypeTrait{})
 }
 
 type ForwardingRule = api.Resource[compute.ForwardingRule, alpha.ForwardingRule, beta.ForwardingRule]

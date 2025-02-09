@@ -64,7 +64,7 @@ func (b *builder) SetResource(u rnode.UntypedResource) error {
 
 func (b *builder) SyncFromCloud(ctx context.Context, gcp cloud.Cloud) error {
 	return rnode.GenericGet[compute.UrlMap, alpha.UrlMap, beta.UrlMap](
-		ctx, gcp, "UrlMap", &urlMapOps{}, &urlMapTypeTrait{}, b)
+		ctx, gcp, "UrlMap", &urlMapOps{}, &TypeTrait{}, b)
 }
 
 func (b *builder) OutRefs() ([]rnode.ResourceRef, error) {

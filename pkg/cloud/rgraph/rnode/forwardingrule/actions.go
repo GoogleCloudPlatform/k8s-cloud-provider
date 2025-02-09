@@ -73,7 +73,7 @@ func (act *forwardingRuleCreateAction) Run(ctx context.Context, cl cloud.Cloud) 
 	ga, _ := act.res.ToGA()
 	labels := ga.Labels
 	if labels != nil && len(labels) > 0 {
-		res, err := ops.GetFuncs(cl).Do(ctx, meta.VersionGA, act.id, &typeTrait{})
+		res, err := ops.GetFuncs(cl).Do(ctx, meta.VersionGA, act.id, &TypeTrait{})
 		if err != nil {
 			return nil, err
 

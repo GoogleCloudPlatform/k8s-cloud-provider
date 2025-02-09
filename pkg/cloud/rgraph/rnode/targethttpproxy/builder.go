@@ -64,7 +64,7 @@ func (b *builder) SetResource(u rnode.UntypedResource) error {
 
 func (b *builder) SyncFromCloud(ctx context.Context, gcp cloud.Cloud) error {
 	return rnode.GenericGet[compute.TargetHttpProxy, alpha.TargetHttpProxy, beta.TargetHttpProxy](
-		ctx, gcp, "TargetHttpProxy", &targetHttpProxyOps{}, &targetHttpProxyTypeTrait{}, b)
+		ctx, gcp, "TargetHttpProxy", &targetHttpProxyOps{}, &TypeTrait{}, b)
 }
 
 func (b *builder) OutRefs() ([]rnode.ResourceRef, error) {

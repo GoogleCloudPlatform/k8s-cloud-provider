@@ -32,7 +32,7 @@ func nodeErr(s string, args ...any) error { return fmt.Errorf("forwardingRule: "
 
 type forwardingRuleNode struct {
 	rnode.NodeBase
-	resource ForwardingRule
+	resource Resource
 }
 
 var _ rnode.Node = (*forwardingRuleNode)(nil)

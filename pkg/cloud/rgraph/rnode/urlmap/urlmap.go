@@ -39,15 +39,12 @@ func ID(project string, key *meta.Key) *cloud.ResourceID {
 	}
 }
 
-type MutableUrlMap = api.MutableResource[compute.UrlMap, alpha.UrlMap, beta.UrlMap]
+type Resource = api.Resource[compute.UrlMap, alpha.UrlMap, beta.UrlMap]
+type Mutable = api.MutableResource[compute.UrlMap, alpha.UrlMap, beta.UrlMap]
 
-func NewMutableUrlMapWithTraits(project string, key *meta.Key, tr api.TypeTrait[compute.UrlMap, alpha.UrlMap, beta.UrlMap]) MutableUrlMap {
+func NewWithTraits(project string, key *meta.Key, tr api.TypeTrait[compute.UrlMap, alpha.UrlMap, beta.UrlMap]) Mutable {
 	id := ID(project, key)
 	return api.NewResource[compute.UrlMap, alpha.UrlMap, beta.UrlMap](id, tr)
 }
 
-func NewMutableUrlMap(project string, key *meta.Key) MutableUrlMap {
-	return NewMutableUrlMapWithTraits(project, key, &TypeTrait{})
-}
-
-type UrlMap = api.Resource[compute.UrlMap, alpha.UrlMap, beta.UrlMap]
+func New(project string, key *meta.Key) Mutable { return NewWithTraits(project, key, &TypeTrait{}) }

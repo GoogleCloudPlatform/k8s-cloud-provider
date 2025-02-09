@@ -39,15 +39,12 @@ func ID(project string, key *meta.Key) *cloud.ResourceID {
 	}
 }
 
-type MutableHealthCheck = api.MutableResource[compute.HealthCheck, alpha.HealthCheck, beta.HealthCheck]
+type Resource = api.Resource[compute.HealthCheck, alpha.HealthCheck, beta.HealthCheck]
+type Mutable = api.MutableResource[compute.HealthCheck, alpha.HealthCheck, beta.HealthCheck]
 
-func NewMutableHealthCheckWithTraits(project string, key *meta.Key, tr api.TypeTrait[compute.HealthCheck, alpha.HealthCheck, beta.HealthCheck]) MutableHealthCheck {
+func NewWithTraits(project string, key *meta.Key, tr api.TypeTrait[compute.HealthCheck, alpha.HealthCheck, beta.HealthCheck]) Mutable {
 	id := ID(project, key)
 	return api.NewResource[compute.HealthCheck, alpha.HealthCheck, beta.HealthCheck](id, tr)
 }
 
-func NewMutableHealthCheck(project string, key *meta.Key) MutableHealthCheck {
-	return NewMutableHealthCheckWithTraits(project, key, &TypeTrait{})
-}
-
-type HealthCheck = api.Resource[compute.HealthCheck, alpha.HealthCheck, beta.HealthCheck]
+func New(project string, key *meta.Key) Mutable { return NewWithTraits(project, key, &TypeTrait{}) }

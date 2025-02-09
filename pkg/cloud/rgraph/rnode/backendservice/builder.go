@@ -37,7 +37,7 @@ func NewBuilder(id *cloud.ResourceID) rnode.Builder {
 	return b
 }
 
-func NewBuilderWithResource(r BackendService) rnode.Builder {
+func NewBuilderWithResource(r Resource) rnode.Builder {
 	b := &builder{resource: r}
 	b.Init(r.ResourceID(), rnode.NodeUnknown, rnode.OwnershipUnknown, r)
 	return b
@@ -45,7 +45,7 @@ func NewBuilderWithResource(r BackendService) rnode.Builder {
 
 type builder struct {
 	rnode.BuilderBase
-	resource BackendService
+	resource Resource
 }
 
 // builder implements node.Builder.
@@ -54,7 +54,7 @@ var _ rnode.Builder = (*builder)(nil)
 func (b *builder) Resource() rnode.UntypedResource { return b.resource }
 
 func (b *builder) SetResource(u rnode.UntypedResource) error {
-	r, ok := u.(BackendService)
+	r, ok := u.(Resource)
 	if !ok {
 		return fmt.Errorf("XXX")
 	}

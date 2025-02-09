@@ -36,7 +36,7 @@ func TestLocalPlan(t *testing.T) {
 	newNodeWithValue := func(i int, v string) rnode.Builder {
 		id := makeID(i)
 		nb := fake.NewBuilder(id)
-		mr := fake.NewMutableFake(project, id.Key)
+		mr := fake.New(project, id.Key)
 		mr.Access(func(x *fake.FakeResource) { x.Value = v })
 		r, _ := mr.Freeze()
 		nb.SetResource(r)

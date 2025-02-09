@@ -28,7 +28,7 @@ import (
 
 type targetHttpProxyNode struct {
 	rnode.NodeBase
-	resource TargetHttpProxy
+	resource Resource
 }
 
 var _ rnode.Node = (*targetHttpProxyNode)(nil)

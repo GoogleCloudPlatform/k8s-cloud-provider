@@ -47,20 +47,18 @@ func ID(project string, key *meta.Key) *cloud.ResourceID {
 	}
 }
 
-type MutableFake = api.MutableResource[FakeResource, FakeResource, FakeResource]
+// Resource for testing.
+type Resource = api.Resource[FakeResource, FakeResource, FakeResource]
 
-func NewMutableFake(project string, key *meta.Key) MutableFake {
-	res := &cloud.ResourceID{
-		Resource:  "fakes",
-		ProjectID: project,
-		Key:       key,
-	}
-	return api.NewResource[FakeResource, FakeResource, FakeResource](res, &fakeTypeTrait{})
+type Mutable = api.MutableResource[FakeResource, FakeResource, FakeResource]
+
+func NewWithTraits(project string, key *meta.Key, tr api.TypeTrait[FakeResource, FakeResource, FakeResource]) Mutable {
+	id := ID(project, key)
+	return api.NewResource[FakeResource, FakeResource, FakeResource](id, tr)
 }
 
-// Fake resource for testing.
-type Fake = api.Resource[FakeResource, FakeResource, FakeResource]
+func New(project string, key *meta.Key) Mutable { return NewWithTraits(project, key, &TypeTrait{}) }
 
-type fakeTypeTrait struct {
+type TypeTrait struct {
 	api.BaseTypeTrait[FakeResource, FakeResource, FakeResource]
 }

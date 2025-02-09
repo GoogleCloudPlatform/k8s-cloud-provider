@@ -31,7 +31,7 @@ const projectID = "proj-1"
 
 func TestTcpRouteSchema(t *testing.T) {
 	key := meta.GlobalKey("key-1")
-	x := NewMutableTcpRoute(projectID, key)
+	x := New(projectID, key)
 	if err := x.CheckSchema(); err != nil {
 		t.Fatalf("CheckSchema() = %v, want nil", err)
 	}
@@ -231,7 +231,7 @@ func TestSyncFromCloud(t *testing.T) {
 		t.Fatalf("node state mismatch, got: %v, want %v", b.State(), rnode.NodeExists)
 	}
 	r := b.Resource()
-	got, ok := r.(TcpRoute)
+	got, ok := r.(Resource)
 	if !ok {
 		t.Fatalf("node's resource has uncastable type: %T", got)
 	}
@@ -271,7 +271,7 @@ func validateOutRefs(t *testing.T, b rnode.Builder) {
 	}
 }
 
-func defaultTCPRouteResource(t *testing.T, id *cloud.ResourceID) MutableTcpRoute {
+func defaultTCPRouteResource(t *testing.T, id *cloud.ResourceID) Mutable {
 	d := &networkservices.TcpRouteRouteDestination{
 		ServiceName: "https://networkservices.googleapis.com/v1/projects/proj-1/global/backendServices/bs",
 		Weight:      10,
@@ -283,7 +283,7 @@ func defaultTCPRouteResource(t *testing.T, id *cloud.ResourceID) MutableTcpRoute
 		},
 		Matches: []*networkservices.TcpRouteRouteMatch{},
 	}
-	tcpMutResource := NewMutableTcpRoute(projectID, id.Key)
+	tcpMutResource := New(projectID, id.Key)
 	err := tcpMutResource.Access(func(x *networkservices.TcpRoute) {
 		x.Description = "desc"
 		x.Name = id.Key.Name

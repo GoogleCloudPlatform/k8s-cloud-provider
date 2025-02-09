@@ -33,7 +33,7 @@ func TestBuilderSetResource(t *testing.T) {
 	id := ID("proj", meta.GlobalKey("fr"))
 
 	newR := func() rnode.UntypedResource {
-		mr := NewMutableForwardingRule(id.ProjectID, id.Key)
+		mr := New(id.ProjectID, id.Key)
 		r, _ := mr.Freeze()
 		return r
 	}
@@ -49,7 +49,7 @@ func TestBuilderSetResource(t *testing.T) {
 		},
 		{
 			name:    "wrong type",
-			r:       fake.Fake(nil), // this will fail to cast.
+			r:       fake.Resource(nil), // this will fail to cast.
 			wantErr: true,
 		},
 	} {
@@ -126,7 +126,7 @@ func TestOutRefs(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			mr := NewMutableForwardingRule(id.ProjectID, id.Key)
+			mr := New(id.ProjectID, id.Key)
 			mr.Access(tc.f)
 			r, _ := mr.Freeze()
 			b := NewBuilderWithResource(r)

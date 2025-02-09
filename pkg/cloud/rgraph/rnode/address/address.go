@@ -39,15 +39,14 @@ func ID(project string, key *meta.Key) *cloud.ResourceID {
 	}
 }
 
-type MutableAddress = api.MutableResource[compute.Address, alpha.Address, beta.Address]
+type Resource = api.Resource[compute.Address, alpha.Address, beta.Address]
+type Mutable = api.MutableResource[compute.Address, alpha.Address, beta.Address]
 
-func NewMutableAddress(project string, key *meta.Key) MutableAddress {
-	return NewMutableAddressWithTraits(project, key, &TypeTrait{})
+func New(project string, key *meta.Key) Mutable {
+	return NewWithTraits(project, key, &TypeTrait{})
 }
 
-func NewMutableAddressWithTraits(project string, key *meta.Key, tr api.TypeTrait[compute.Address, alpha.Address, beta.Address]) MutableAddress {
+func NewWithTraits(project string, key *meta.Key, tr api.TypeTrait[compute.Address, alpha.Address, beta.Address]) Mutable {
 	id := ID(project, key)
 	return api.NewResource[compute.Address, alpha.Address, beta.Address](id, tr)
 }
-
-type Address = api.Resource[compute.Address, alpha.Address, beta.Address]

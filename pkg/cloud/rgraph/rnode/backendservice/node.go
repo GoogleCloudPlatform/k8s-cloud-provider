@@ -31,7 +31,7 @@ import (
 
 type backendServiceNode struct {
 	rnode.NodeBase
-	resource BackendService
+	resource Resource
 }
 
 var _ rnode.Node = (*backendServiceNode)(nil)

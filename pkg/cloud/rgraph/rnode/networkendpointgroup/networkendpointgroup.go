@@ -39,15 +39,12 @@ func ID(project string, key *meta.Key) *cloud.ResourceID {
 	}
 }
 
-type MutableNetworkEndpointGroup = api.MutableResource[compute.NetworkEndpointGroup, alpha.NetworkEndpointGroup, beta.NetworkEndpointGroup]
+type Resource = api.Resource[compute.NetworkEndpointGroup, alpha.NetworkEndpointGroup, beta.NetworkEndpointGroup]
+type Mutable = api.MutableResource[compute.NetworkEndpointGroup, alpha.NetworkEndpointGroup, beta.NetworkEndpointGroup]
 
-func NewMutableNetworkEndpointGroupWithTraits(project string, key *meta.Key, tr api.TypeTrait[compute.NetworkEndpointGroup, alpha.NetworkEndpointGroup, beta.NetworkEndpointGroup]) MutableNetworkEndpointGroup {
+func NewWithTraits(project string, key *meta.Key, tr api.TypeTrait[compute.NetworkEndpointGroup, alpha.NetworkEndpointGroup, beta.NetworkEndpointGroup]) Mutable {
 	id := ID(project, key)
 	return api.NewResource[compute.NetworkEndpointGroup, alpha.NetworkEndpointGroup, beta.NetworkEndpointGroup](id, tr)
 }
 
-func NewMutableNetworkEndpointGroup(project string, key *meta.Key) MutableNetworkEndpointGroup {
-	return NewMutableNetworkEndpointGroupWithTraits(project, key, &TypeTrait{})
-}
-
-type NetworkEndpointGroup = api.Resource[compute.NetworkEndpointGroup, alpha.NetworkEndpointGroup, beta.NetworkEndpointGroup]
+func New(project string, key *meta.Key) Mutable { return NewWithTraits(project, key, &TypeTrait{}) }

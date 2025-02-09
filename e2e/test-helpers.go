@@ -45,7 +45,7 @@ func expectActions(got []exec.Action, want []exec.ActionMetadata) error {
 	}
 
 	if diff := cmp.Diff(gotMap, wantMap); diff != "" {
-		return fmt.Errorf(diff)
+		return errors.New(diff)
 	}
 	return nil
 }

@@ -48,7 +48,7 @@ func forwardingRuleSetLabels(
 	return fmt.Errorf("forwardingRuleMethodsByScope: invalid scope %v", key.Type())
 }
 
-func newForwardingRuleCreateAction(id *cloud.ResourceID, res ForwardingRule, want exec.EventList) exec.Action {
+func newForwardingRuleCreateAction(id *cloud.ResourceID, res Resource, want exec.EventList) exec.Action {
 	return &forwardingRuleCreateAction{
 		ActionBase: exec.ActionBase{Want: want},
 		id:         id,
@@ -59,7 +59,7 @@ func newForwardingRuleCreateAction(id *cloud.ResourceID, res ForwardingRule, wan
 type forwardingRuleCreateAction struct {
 	exec.ActionBase
 	id  *cloud.ResourceID
-	res ForwardingRule
+	res Resource
 }
 
 func (act *forwardingRuleCreateAction) Run(ctx context.Context, cl cloud.Cloud) (exec.EventList, error) {

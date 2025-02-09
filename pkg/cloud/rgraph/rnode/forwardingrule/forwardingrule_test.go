@@ -26,7 +26,7 @@ import (
 func TestForwardingRuleSchema(t *testing.T) {
 	const proj = "proj-1"
 	key := meta.GlobalKey("key-1")
-	x := NewMutableForwardingRule(proj, key)
+	x := New(proj, key)
 	if err := x.CheckSchema(); err != nil {
 		t.Fatalf("CheckSchema() = %v, want nil", err)
 	}
@@ -82,9 +82,9 @@ func TestForwardingRuleFieldTraits(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			a := NewMutableForwardingRule("p1", meta.GlobalKey("addr-1"))
+			a := New("p1", meta.GlobalKey("addr-1"))
 			a.Set(tc.a)
-			b := NewMutableForwardingRule("p1", meta.GlobalKey("addr-1"))
+			b := New("p1", meta.GlobalKey("addr-1"))
 			b.Set(tc.b)
 
 			fa, _ := a.Freeze()

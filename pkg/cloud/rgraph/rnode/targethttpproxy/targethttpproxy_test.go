@@ -25,7 +25,7 @@ import (
 func TestTargetHttpProxySchema(t *testing.T) {
 	const proj = "proj-1"
 	key := meta.GlobalKey("key-1")
-	x := NewMutableTargetHttpProxy(proj, key)
+	x := New(proj, key)
 	if err := x.CheckSchema(); err != nil {
 		t.Fatalf("CheckSchema() = %v, want nil", err)
 	}

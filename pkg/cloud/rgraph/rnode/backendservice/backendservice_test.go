@@ -41,15 +41,15 @@ const (
 
 func TestBackendServiceSchema(t *testing.T) {
 	key := meta.GlobalKey("key-1")
-	x := NewMutableBackendService(proj, key)
+	x := New(proj, key)
 	if err := x.CheckSchema(); err != nil {
 		t.Fatalf("CheckSchema() = %v, want nil", err)
 	}
 }
 
-func createBackendServiceNode(name string, setFun func(x MutableBackendService) error) (*backendServiceNode, error) {
+func createBackendServiceNode(name string, setFun func(x Mutable) error) (*backendServiceNode, error) {
 	bsID := ID(proj, meta.GlobalKey(name))
-	bsMutResource := NewMutableBackendService(proj, bsID.Key)
+	bsMutResource := New(proj, bsID.Key)
 	err := setFun(bsMutResource)
 	if err != nil {
 		return nil, fmt.Errorf("setFun(_) = %v, want nil", err)
@@ -75,8 +75,8 @@ func createBackendServiceNode(name string, setFun func(x MutableBackendService) 
 	return gotNode, nil
 }
 
-func createBackendServiceResource(t *testing.T, bsID *cloud.ResourceID, modifyFun func(x MutableBackendService) error) rnode.UntypedResource {
-	bsMutResource := NewMutableBackendService(proj, bsID.Key)
+func createBackendServiceResource(t *testing.T, bsID *cloud.ResourceID, modifyFun func(x Mutable) error) rnode.UntypedResource {
+	bsMutResource := New(proj, bsID.Key)
 	err := bsMutResource.Access(func(x *compute.BackendService) {
 		x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 		x.Protocol = "TCP"
@@ -102,14 +102,14 @@ func createBackendServiceResource(t *testing.T, bsID *cloud.ResourceID, modifyFu
 func TestActionUpdate(t *testing.T) {
 	for _, tc := range []struct {
 		desc           string
-		setUpFn        func(m MutableBackendService) error
+		setUpFn        func(m Mutable) error
 		wantGAError    bool
 		wantAlphaError bool
 		wantBetaError  bool
 	}{
 		{
 			desc: "ga",
-			setUpFn: func(m MutableBackendService) error {
+			setUpFn: func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -124,7 +124,7 @@ func TestActionUpdate(t *testing.T) {
 		},
 		{
 			desc: "alpha",
-			setUpFn: func(m MutableBackendService) error {
+			setUpFn: func(m Mutable) error {
 				return m.AccessAlpha(func(x *alpha.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -149,7 +149,7 @@ func TestActionUpdate(t *testing.T) {
 		},
 		{
 			desc: "beta",
-			setUpFn: func(m MutableBackendService) error {
+			setUpFn: func(m Mutable) error {
 				return m.AccessBeta(func(x *beta.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -172,7 +172,7 @@ func TestActionUpdate(t *testing.T) {
 			if err != nil {
 				t.Fatalf("createBackendServiceNode(bs-name, _) = %v, want nil", err)
 			}
-			gotBs := gotNode.Resource().(BackendService)
+			gotBs := gotNode.Resource().(Resource)
 
 			_, gaErr := gotBs.ToGA()
 			gotGAError := gaErr != nil
@@ -222,15 +222,15 @@ func TestBackendServiceDiff(t *testing.T) {
 	bsName := "bs-name"
 	for _, tc := range []struct {
 		desc         string
-		setUpFn      func(m MutableBackendService) error
-		updateFn     func(m MutableBackendService) error
+		setUpFn      func(m Mutable) error
+		updateFn     func(m Mutable) error
 		expectedOp   rnode.Operation
 		expectedDiff bool
 	}{
 		{
 			desc:       "no diff ga",
 			expectedOp: rnode.OpNothing,
-			setUpFn: func(m MutableBackendService) error {
+			setUpFn: func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -243,7 +243,7 @@ func TestBackendServiceDiff(t *testing.T) {
 					x.TimeoutSec = 30
 				})
 			},
-			updateFn: func(m MutableBackendService) error {
+			updateFn: func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -261,7 +261,7 @@ func TestBackendServiceDiff(t *testing.T) {
 			desc:         "expected recreation on internal schema change",
 			expectedOp:   rnode.OpRecreate,
 			expectedDiff: true,
-			setUpFn: func(m MutableBackendService) error {
+			setUpFn: func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -274,7 +274,7 @@ func TestBackendServiceDiff(t *testing.T) {
 					x.TimeoutSec = 30
 				})
 			},
-			updateFn: func(m MutableBackendService) error {
+			updateFn: func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.LoadBalancingScheme = "EXTERNAL"
 					x.Protocol = "TCP"
@@ -292,7 +292,7 @@ func TestBackendServiceDiff(t *testing.T) {
 			desc:         "expected recreation on network change",
 			expectedOp:   rnode.OpRecreate,
 			expectedDiff: true,
-			setUpFn: func(m MutableBackendService) error {
+			setUpFn: func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -305,7 +305,7 @@ func TestBackendServiceDiff(t *testing.T) {
 					x.TimeoutSec = 30
 				})
 			},
-			updateFn: func(m MutableBackendService) error {
+			updateFn: func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -323,7 +323,7 @@ func TestBackendServiceDiff(t *testing.T) {
 			desc:         "expected update on port change",
 			expectedOp:   rnode.OpUpdate,
 			expectedDiff: true,
-			setUpFn: func(m MutableBackendService) error {
+			setUpFn: func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -336,7 +336,7 @@ func TestBackendServiceDiff(t *testing.T) {
 					x.TimeoutSec = 30
 				})
 			},
-			updateFn: func(m MutableBackendService) error {
+			updateFn: func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -353,7 +353,7 @@ func TestBackendServiceDiff(t *testing.T) {
 		{
 			desc:       "no diff beta",
 			expectedOp: rnode.OpNothing,
-			setUpFn: func(m MutableBackendService) error {
+			setUpFn: func(m Mutable) error {
 				return m.AccessBeta(func(x *beta.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -367,7 +367,7 @@ func TestBackendServiceDiff(t *testing.T) {
 					x.IpAddressSelectionPolicy = "NONE"
 				})
 			},
-			updateFn: func(m MutableBackendService) error {
+			updateFn: func(m Mutable) error {
 				return m.AccessBeta(func(x *beta.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -386,7 +386,7 @@ func TestBackendServiceDiff(t *testing.T) {
 			desc:         "expected update for beta",
 			expectedOp:   rnode.OpUpdate,
 			expectedDiff: true,
-			setUpFn: func(m MutableBackendService) error {
+			setUpFn: func(m Mutable) error {
 				return m.AccessBeta(func(x *beta.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -403,7 +403,7 @@ func TestBackendServiceDiff(t *testing.T) {
 					}
 				})
 			},
-			updateFn: func(m MutableBackendService) error {
+			updateFn: func(m Mutable) error {
 				return m.AccessBeta(func(x *beta.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -425,7 +425,7 @@ func TestBackendServiceDiff(t *testing.T) {
 			desc:         "expected update between beta and ga",
 			expectedOp:   rnode.OpUpdate,
 			expectedDiff: true,
-			setUpFn: func(m MutableBackendService) error {
+			setUpFn: func(m Mutable) error {
 				return m.AccessBeta(func(x *beta.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -442,7 +442,7 @@ func TestBackendServiceDiff(t *testing.T) {
 					}
 				})
 			},
-			updateFn: func(m MutableBackendService) error {
+			updateFn: func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -463,7 +463,7 @@ func TestBackendServiceDiff(t *testing.T) {
 			desc:         "expected update between ga and beta",
 			expectedOp:   rnode.OpUpdate,
 			expectedDiff: true,
-			setUpFn: func(m MutableBackendService) error {
+			setUpFn: func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -476,7 +476,7 @@ func TestBackendServiceDiff(t *testing.T) {
 					x.TimeoutSec = 30
 				})
 			},
-			updateFn: func(m MutableBackendService) error {
+			updateFn: func(m Mutable) error {
 				return m.AccessBeta(func(x *beta.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -497,7 +497,7 @@ func TestBackendServiceDiff(t *testing.T) {
 		{
 			desc:       "no diff alpha",
 			expectedOp: rnode.OpNothing,
-			setUpFn: func(m MutableBackendService) error {
+			setUpFn: func(m Mutable) error {
 				return m.AccessAlpha(func(x *alpha.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -517,7 +517,7 @@ func TestBackendServiceDiff(t *testing.T) {
 					}
 				})
 			},
-			updateFn: func(m MutableBackendService) error {
+			updateFn: func(m Mutable) error {
 				return m.AccessAlpha(func(x *alpha.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -542,7 +542,7 @@ func TestBackendServiceDiff(t *testing.T) {
 			desc:         "expected update for alpha",
 			expectedOp:   rnode.OpUpdate,
 			expectedDiff: true,
-			setUpFn: func(m MutableBackendService) error {
+			setUpFn: func(m Mutable) error {
 				return m.AccessAlpha(func(x *alpha.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -562,7 +562,7 @@ func TestBackendServiceDiff(t *testing.T) {
 					}
 				})
 			},
-			updateFn: func(m MutableBackendService) error {
+			updateFn: func(m Mutable) error {
 				return m.AccessAlpha(func(x *alpha.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -587,7 +587,7 @@ func TestBackendServiceDiff(t *testing.T) {
 			desc:         "expected update between ga and alpha",
 			expectedOp:   rnode.OpUpdate,
 			expectedDiff: true,
-			setUpFn: func(m MutableBackendService) error {
+			setUpFn: func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -600,7 +600,7 @@ func TestBackendServiceDiff(t *testing.T) {
 					x.TimeoutSec = 30
 				})
 			},
-			updateFn: func(m MutableBackendService) error {
+			updateFn: func(m Mutable) error {
 				return m.AccessAlpha(func(x *alpha.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -625,7 +625,7 @@ func TestBackendServiceDiff(t *testing.T) {
 			desc:         "expected update between  alpha and ga",
 			expectedOp:   rnode.OpUpdate,
 			expectedDiff: true,
-			setUpFn: func(m MutableBackendService) error {
+			setUpFn: func(m Mutable) error {
 				return m.AccessAlpha(func(x *alpha.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -645,7 +645,7 @@ func TestBackendServiceDiff(t *testing.T) {
 					}
 				})
 			},
-			updateFn: func(m MutableBackendService) error {
+			updateFn: func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 					x.Protocol = "TCP"
@@ -688,7 +688,7 @@ func TestBackendServiceDiff(t *testing.T) {
 
 func TestBackendServiceDiffError(t *testing.T) {
 	bsName := "bs-name"
-	setUpFn := func(m MutableBackendService) error {
+	setUpFn := func(m Mutable) error {
 		return m.Access(func(x *compute.BackendService) {
 			x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 			x.Protocol = "TCP"
@@ -707,7 +707,7 @@ func TestBackendServiceDiffError(t *testing.T) {
 	}
 	fakeId := ID(proj, meta.GlobalKey(bsName))
 	fakeBuilder := fake.NewBuilder(fakeId)
-	fakeRes := fake.NewMutableFake(proj, fakeId.Key)
+	fakeRes := fake.New(proj, fakeId.Key)
 	res, err := fakeRes.Freeze()
 	fakeBuilder.SetResource(res)
 	fakeNode, err := fakeBuilder.Build()
@@ -720,7 +720,7 @@ func TestBackendServiceDiffError(t *testing.T) {
 
 func TestGAFields(t *testing.T) {
 	bsID := ID(proj, meta.GlobalKey("bs-test"))
-	bsMutResource := NewMutableBackendService(proj, bsID.Key)
+	bsMutResource := New(proj, bsID.Key)
 	err := bsMutResource.Access(func(x *compute.BackendService) {
 		x.HealthChecks = []string{hcSelfLink}
 		x.Network = "default"
@@ -768,7 +768,7 @@ func TestGAFields(t *testing.T) {
 }
 func TestAlphaFields(t *testing.T) {
 	bsID := ID(proj, meta.GlobalKey("bs-test"))
-	bsMutResource := NewMutableBackendService(proj, bsID.Key)
+	bsMutResource := New(proj, bsID.Key)
 	err := bsMutResource.Access(func(x *compute.BackendService) {
 		x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 		x.Protocol = "TCP"
@@ -836,7 +836,7 @@ func TestAlphaFields(t *testing.T) {
 }
 func TestBetaFields(t *testing.T) {
 	bsID := ID(proj, meta.GlobalKey("bs-test"))
-	bsMutResource := NewMutableBackendService(proj, bsID.Key)
+	bsMutResource := New(proj, bsID.Key)
 	err := bsMutResource.Access(func(x *compute.BackendService) {
 		x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 		x.Protocol = "TCP"
@@ -896,7 +896,7 @@ func TestBetaFields(t *testing.T) {
 }
 
 func TestBackendServiceActions(t *testing.T) {
-	setUpResource := func(m MutableBackendService) error {
+	setUpResource := func(m Mutable) error {
 		return m.Access(func(x *compute.BackendService) {
 			x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 			x.Protocol = "TCP"
@@ -1027,7 +1027,7 @@ func TestOutRefs(t *testing.T) {
 		},
 		{
 			desc: "with health check",
-			resource: createBackendServiceResource(t, bsID, func(m MutableBackendService) error {
+			resource: createBackendServiceResource(t, bsID, func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.HealthChecks = []string{hcID.SelfLink(meta.VersionGA)}
 				})
@@ -1042,7 +1042,7 @@ func TestOutRefs(t *testing.T) {
 		},
 		{
 			desc: "with health check wrong format",
-			resource: createBackendServiceResource(t, bsID, func(m MutableBackendService) error {
+			resource: createBackendServiceResource(t, bsID, func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.HealthChecks = []string{"https://apigroup.googleapis.com/alpha/projects/proj1/global/healthchecks/hcname"}
 				})
@@ -1051,7 +1051,7 @@ func TestOutRefs(t *testing.T) {
 		},
 		{
 			desc: "with backends",
-			resource: createBackendServiceResource(t, bsID, func(m MutableBackendService) error {
+			resource: createBackendServiceResource(t, bsID, func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.Backends = []*compute.Backend{
 						{Group: negID.SelfLink(meta.VersionGA)},
@@ -1068,7 +1068,7 @@ func TestOutRefs(t *testing.T) {
 		},
 		{
 			desc: "with health check wrong format",
-			resource: createBackendServiceResource(t, bsID, func(m MutableBackendService) error {
+			resource: createBackendServiceResource(t, bsID, func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.Backends = []*compute.Backend{
 						{Group: "https://apigroup.googleapis.com/alpha/projects/proj1/global/negs/negname"},
@@ -1079,7 +1079,7 @@ func TestOutRefs(t *testing.T) {
 		},
 		{
 			desc: "with  securityPolicy",
-			resource: createBackendServiceResource(t, bsID, func(m MutableBackendService) error {
+			resource: createBackendServiceResource(t, bsID, func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.SecurityPolicy = spID.SelfLink(meta.VersionGA)
 				})
@@ -1094,7 +1094,7 @@ func TestOutRefs(t *testing.T) {
 		},
 		{
 			desc: "with securityPolicy wrong format",
-			resource: createBackendServiceResource(t, bsID, func(m MutableBackendService) error {
+			resource: createBackendServiceResource(t, bsID, func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.SecurityPolicy = "https://apigroup.googleapis.com/alpha/projects/proj1/global/negs/negname"
 				})
@@ -1103,7 +1103,7 @@ func TestOutRefs(t *testing.T) {
 		},
 		{
 			desc: "with edge securityPolicy",
-			resource: createBackendServiceResource(t, bsID, func(m MutableBackendService) error {
+			resource: createBackendServiceResource(t, bsID, func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.EdgeSecurityPolicy = espID.SelfLink(meta.VersionGA)
 				})
@@ -1118,7 +1118,7 @@ func TestOutRefs(t *testing.T) {
 		},
 		{
 			desc: "with edge securityPolicy wrong format",
-			resource: createBackendServiceResource(t, bsID, func(m MutableBackendService) error {
+			resource: createBackendServiceResource(t, bsID, func(m Mutable) error {
 				return m.Access(func(x *compute.BackendService) {
 					x.EdgeSecurityPolicy = "https://apigroup.googleapis.com/alpha/projects/proj1/global/negs/negname"
 				})

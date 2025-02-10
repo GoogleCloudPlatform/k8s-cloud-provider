@@ -54,7 +54,7 @@ func TestCreateActions(t *testing.T) {
 	id := ID("proj", meta.GlobalKey("fr"))
 	addrID := targethttpproxy.ID("proj", meta.GlobalKey("addr"))
 	targetID := targethttpproxy.ID("proj", meta.GlobalKey("tp"))
-	mr := NewMutableForwardingRule(id.ProjectID, id.Key)
+	mr := New(id.ProjectID, id.Key)
 	mr.Access(func(x *compute.ForwardingRule) {
 		x.Name = "fr"
 		x.IPAddress = addrID.SelfLink(meta.VersionGA)
@@ -96,10 +96,10 @@ func TestDiffAndActions(t *testing.T) {
 		ignoreAccessErr = 1 << iota
 	)
 
-	makeFR := func(f func(x *compute.ForwardingRule), flags int) ForwardingRule {
+	makeFR := func(f func(x *compute.ForwardingRule), flags int) Resource {
 		t.Helper()
 
-		fr := NewMutableForwardingRule(id.ProjectID, id.Key)
+		fr := New(id.ProjectID, id.Key)
 		fr.Access(func(x *compute.ForwardingRule) {
 			x.Name = "fr"
 		})
@@ -145,8 +145,8 @@ func TestDiffAndActions(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		frw  ForwardingRule
-		frg  ForwardingRule
+		frw  Resource
+		frg  Resource
 
 		wantDiff       bool
 		wantOp         rnode.Operation

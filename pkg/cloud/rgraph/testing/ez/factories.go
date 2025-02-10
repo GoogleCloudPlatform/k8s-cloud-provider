@@ -114,7 +114,7 @@ func (f addressFactory) builder(g *Graph, n *Node) rnode.Builder {
 	setCommonOptions(n, b)
 
 	if b.State() == rnode.NodeExists {
-		ma := address.NewMutableAddress(id.ProjectID, id.Key)
+		ma := address.New(id.ProjectID, id.Key)
 		err := ma.Access(func(x *compute.Address) {
 			if n.SetupFunc != nil {
 				sf, ok := n.SetupFunc.(func(x *compute.Address))
@@ -161,7 +161,7 @@ func (f backendServiceFactory) builder(g *Graph, n *Node) rnode.Builder {
 	setCommonOptions(n, b)
 
 	if b.State() == rnode.NodeExists {
-		ma := backendservice.NewMutableBackendService(id.ProjectID, id.Key)
+		ma := backendservice.New(id.ProjectID, id.Key)
 		err := ma.Access(func(x *compute.BackendService) {
 			for _, ref := range n.Refs {
 				switch ref.Field {
@@ -243,7 +243,7 @@ func (f forwardingRuleFactory) builder(g *Graph, n *Node) rnode.Builder {
 	setCommonOptions(n, b)
 
 	if b.State() == rnode.NodeExists {
-		ma := forwardingrule.NewMutableForwardingRule(id.ProjectID, id.Key)
+		ma := forwardingrule.New(id.ProjectID, id.Key)
 		err := ma.Access(func(x *compute.ForwardingRule) {
 			for _, ref := range n.Refs {
 				switch ref.Field {
@@ -301,7 +301,7 @@ func (f healthCheckFactory) builder(g *Graph, n *Node) rnode.Builder {
 	setCommonOptions(n, b)
 
 	if b.State() == rnode.NodeExists {
-		ma := healthcheck.NewMutableHealthCheck(id.ProjectID, id.Key)
+		ma := healthcheck.New(id.ProjectID, id.Key)
 		err := ma.Access(func(x *compute.HealthCheck) {
 			if n.SetupFunc != nil {
 				sf, ok := n.SetupFunc.(func(x *compute.HealthCheck))
@@ -346,7 +346,7 @@ func (f negFactory) builder(g *Graph, n *Node) rnode.Builder {
 	setCommonOptions(n, b)
 
 	if b.State() == rnode.NodeExists {
-		ma := networkendpointgroup.NewMutableNetworkEndpointGroup(id.ProjectID, id.Key)
+		ma := networkendpointgroup.New(id.ProjectID, id.Key)
 		err := ma.Access(func(x *compute.NetworkEndpointGroup) {
 			if n.SetupFunc != nil {
 				sf, ok := n.SetupFunc.(func(x *compute.NetworkEndpointGroup))
@@ -393,7 +393,7 @@ func (f targetHttpProxyFactory) builder(g *Graph, n *Node) rnode.Builder {
 	setCommonOptions(n, b)
 
 	if b.State() == rnode.NodeExists {
-		ma := targethttpproxy.NewMutableTargetHttpProxy(id.ProjectID, id.Key)
+		ma := targethttpproxy.New(id.ProjectID, id.Key)
 		err := ma.Access(func(x *compute.TargetHttpProxy) {
 			for _, ref := range n.Refs {
 				switch ref.Field {
@@ -449,7 +449,7 @@ func (f urlMapFactory) builder(g *Graph, n *Node) rnode.Builder {
 	setCommonOptions(n, b)
 
 	if b.State() == rnode.NodeExists {
-		ma := urlmap.NewMutableUrlMap(id.ProjectID, id.Key)
+		ma := urlmap.New(id.ProjectID, id.Key)
 		err := ma.Access(func(x *compute.UrlMap) {
 			for _, ref := range n.Refs {
 				switch ref.Field {
@@ -503,7 +503,7 @@ func (f tcpRouteFactory) builder(g *Graph, n *Node) rnode.Builder {
 	setCommonOptions(n, b)
 
 	if b.State() == rnode.NodeExists {
-		ma := tcproute.NewMutableTcpRoute(id.ProjectID, id.Key)
+		ma := tcproute.New(id.ProjectID, id.Key)
 		err := ma.Access(func(x *networkservices.TcpRoute) {
 			for _, ref := range n.Refs {
 				switch ref.Field {

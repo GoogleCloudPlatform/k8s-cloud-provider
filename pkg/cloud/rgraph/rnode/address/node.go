@@ -28,7 +28,7 @@ import (
 
 type addressNode struct {
 	rnode.NodeBase
-	resource Address
+	resource Resource
 }
 
 var _ rnode.Node = (*addressNode)(nil)
@@ -36,7 +36,7 @@ var _ rnode.Node = (*addressNode)(nil)
 func (n *addressNode) Resource() rnode.UntypedResource { return n.resource }
 
 func (n *addressNode) Diff(gotNode rnode.Node) (*rnode.PlanDetails, error) {
-	gotRes, ok := gotNode.Resource().(Address)
+	gotRes, ok := gotNode.Resource().(Resource)
 	if !ok {
 		return nil, fmt.Errorf("AddressNode: invalid type to Diff: %T", gotNode.Resource())
 	}

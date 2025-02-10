@@ -35,7 +35,7 @@ func NewBuilder(id *cloud.ResourceID) rnode.Builder {
 	return b
 }
 
-func NewBuilderWithResource(r ForwardingRule) rnode.Builder {
+func NewBuilderWithResource(r Resource) rnode.Builder {
 	b := &builder{resource: r}
 	b.Init(r.ResourceID(), rnode.NodeUnknown, rnode.OwnershipUnknown, r)
 	return b
@@ -43,7 +43,7 @@ func NewBuilderWithResource(r ForwardingRule) rnode.Builder {
 
 type builder struct {
 	rnode.BuilderBase
-	resource ForwardingRule
+	resource Resource
 }
 
 // builder implements node.Builder.
@@ -52,7 +52,7 @@ var _ rnode.Builder = (*builder)(nil)
 func (b *builder) Resource() rnode.UntypedResource { return b.resource }
 
 func (b *builder) SetResource(u rnode.UntypedResource) error {
-	r, ok := u.(ForwardingRule)
+	r, ok := u.(Resource)
 	if !ok {
 		return fmt.Errorf("SetResource: invalid type: %T, want ForwardingRule", u)
 	}
@@ -62,7 +62,7 @@ func (b *builder) SetResource(u rnode.UntypedResource) error {
 
 func (b *builder) SyncFromCloud(ctx context.Context, gcp cloud.Cloud) error {
 	return rnode.GenericGet[compute.ForwardingRule, alpha.ForwardingRule, beta.ForwardingRule](
-		ctx, gcp, "ForwardingRule", &ops{}, &typeTrait{}, b)
+		ctx, gcp, "ForwardingRule", &ops{}, &TypeTrait{}, b)
 }
 
 func (b *builder) OutRefs() ([]rnode.ResourceRef, error) {

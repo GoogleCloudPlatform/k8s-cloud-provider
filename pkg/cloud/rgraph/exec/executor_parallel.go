@@ -110,7 +110,7 @@ func (ex *parallelExecutor) runActionQueue(ctx context.Context) error {
 		defer cancel()
 		msg = fmt.Sprintf("%s with timeout %v.", msg, ex.config.Timeout)
 	}
-	klog.Infof(msg)
+	klog.Info(msg)
 	return ex.pq.Run(ctx, ex.runAction)
 }
 
@@ -122,7 +122,7 @@ func (ex *parallelExecutor) waitForQueueOrphans(ctx context.Context) error {
 		defer cancel()
 		msg = fmt.Sprintf("%s with timeout %v.", msg, ex.config.WaitForOrphansTimeout)
 	}
-	klog.V(4).Infof(msg)
+	klog.V(4).Info(msg)
 	return ex.pq.WaitForOrphans(ctx)
 }
 

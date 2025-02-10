@@ -606,7 +606,7 @@ func TestMeshWithMultipleTCPRoutes(t *testing.T) {
 	// Update TCP rules by removing rule pointing to removed BackendService
 	tcprs[0], err = buildTCPRoute(graphBuilder, "multiple-tcpr-0", meshURL, rules)
 	if err != nil {
-		t.Fatalf(fmt.Sprintf("buildTcpRoute(_, %s, multiple-tcpr-0, %v) = %v, want nil", meshURL, rules, err))
+		t.Fatal(fmt.Sprintf("buildTcpRoute(_, %s, multiple-tcpr-0, %v) = %v, want nil", meshURL, rules, err))
 	}
 
 	expectedActions := []exec.ActionMetadata{

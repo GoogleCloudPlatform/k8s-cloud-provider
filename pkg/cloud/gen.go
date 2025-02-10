@@ -1,5 +1,5 @@
 /*
-Copyright 2024 Google LLC
+Copyright 2025 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -3833,6 +3833,7 @@ func (g *GCEAddresses) AggregatedList(ctx context.Context, fl *filter.F, options
 	if fl != filter.None {
 		call.Filter(fl.String())
 	}
+	call.ReturnPartialSuccess(opts.returnPartialSuccess)
 
 	all := map[string][]*computega.Address{}
 	f := func(l *computega.AddressAggregatedList) error {
@@ -4306,6 +4307,7 @@ func (g *GCEAlphaAddresses) AggregatedList(ctx context.Context, fl *filter.F, op
 	if fl != filter.None {
 		call.Filter(fl.String())
 	}
+	call.ReturnPartialSuccess(opts.returnPartialSuccess)
 
 	all := map[string][]*computealpha.Address{}
 	f := func(l *computealpha.AddressAggregatedList) error {
@@ -4779,6 +4781,7 @@ func (g *GCEBetaAddresses) AggregatedList(ctx context.Context, fl *filter.F, opt
 	if fl != filter.None {
 		call.Filter(fl.String())
 	}
+	call.ReturnPartialSuccess(opts.returnPartialSuccess)
 
 	all := map[string][]*computebeta.Address{}
 	f := func(l *computebeta.AddressAggregatedList) error {
@@ -6434,6 +6437,7 @@ func (g *GCEBackendServices) AggregatedList(ctx context.Context, fl *filter.F, o
 	if fl != filter.None {
 		call.Filter(fl.String())
 	}
+	call.ReturnPartialSuccess(opts.returnPartialSuccess)
 
 	all := map[string][]*computega.BackendService{}
 	f := func(l *computega.BackendServiceAggregatedList) error {
@@ -7209,6 +7213,7 @@ func (g *GCEBetaBackendServices) AggregatedList(ctx context.Context, fl *filter.
 	if fl != filter.None {
 		call.Filter(fl.String())
 	}
+	call.ReturnPartialSuccess(opts.returnPartialSuccess)
 
 	all := map[string][]*computebeta.BackendService{}
 	f := func(l *computebeta.BackendServiceAggregatedList) error {
@@ -7949,6 +7954,7 @@ func (g *GCEAlphaBackendServices) AggregatedList(ctx context.Context, fl *filter
 	if fl != filter.None {
 		call.Filter(fl.String())
 	}
+	call.ReturnPartialSuccess(opts.returnPartialSuccess)
 
 	all := map[string][]*computealpha.BackendService{}
 	f := func(l *computealpha.BackendServiceAggregatedList) error {
@@ -27623,6 +27629,7 @@ func (g *GCEAlphaNetworkEndpointGroups) AggregatedList(ctx context.Context, fl *
 	if fl != filter.None {
 		call.Filter(fl.String())
 	}
+	call.ReturnPartialSuccess(opts.returnPartialSuccess)
 
 	all := map[string][]*computealpha.NetworkEndpointGroup{}
 	f := func(l *computealpha.NetworkEndpointGroupAggregatedList) error {
@@ -28267,6 +28274,7 @@ func (g *GCEBetaNetworkEndpointGroups) AggregatedList(ctx context.Context, fl *f
 	if fl != filter.None {
 		call.Filter(fl.String())
 	}
+	call.ReturnPartialSuccess(opts.returnPartialSuccess)
 
 	all := map[string][]*computebeta.NetworkEndpointGroup{}
 	f := func(l *computebeta.NetworkEndpointGroupAggregatedList) error {
@@ -28911,6 +28919,7 @@ func (g *GCENetworkEndpointGroups) AggregatedList(ctx context.Context, fl *filte
 	if fl != filter.None {
 		call.Filter(fl.String())
 	}
+	call.ReturnPartialSuccess(opts.returnPartialSuccess)
 
 	all := map[string][]*computega.NetworkEndpointGroup{}
 	f := func(l *computega.NetworkEndpointGroupAggregatedList) error {
@@ -33108,6 +33117,7 @@ func (g *GCEAlphaRouters) AggregatedList(ctx context.Context, fl *filter.F, opti
 	if fl != filter.None {
 		call.Filter(fl.String())
 	}
+	call.ReturnPartialSuccess(opts.returnPartialSuccess)
 
 	all := map[string][]*computealpha.Router{}
 	f := func(l *computealpha.RouterAggregatedList) error {
@@ -33770,6 +33780,7 @@ func (g *GCEBetaRouters) AggregatedList(ctx context.Context, fl *filter.F, optio
 	if fl != filter.None {
 		call.Filter(fl.String())
 	}
+	call.ReturnPartialSuccess(opts.returnPartialSuccess)
 
 	all := map[string][]*computebeta.Router{}
 	f := func(l *computebeta.RouterAggregatedList) error {
@@ -34422,6 +34433,7 @@ func (g *GCERouters) AggregatedList(ctx context.Context, fl *filter.F, options .
 	if fl != filter.None {
 		call.Filter(fl.String())
 	}
+	call.ReturnPartialSuccess(opts.returnPartialSuccess)
 
 	all := map[string][]*computega.Router{}
 	f := func(l *computega.RouterAggregatedList) error {

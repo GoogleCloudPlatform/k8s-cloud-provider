@@ -34,7 +34,7 @@ func NewBuilder(id *cloud.ResourceID) rnode.Builder {
 	return b
 }
 
-func NewBuilderWithResource(r TargetHttpProxy) rnode.Builder {
+func NewBuilderWithResource(r Resource) rnode.Builder {
 	b := &builder{resource: r}
 	b.Init(r.ResourceID(), rnode.NodeUnknown, rnode.OwnershipUnknown, r)
 	return b
@@ -42,7 +42,7 @@ func NewBuilderWithResource(r TargetHttpProxy) rnode.Builder {
 
 type builder struct {
 	rnode.BuilderBase
-	resource TargetHttpProxy
+	resource Resource
 }
 
 // builder implements node.Builder.
@@ -51,7 +51,7 @@ var _ rnode.Builder = (*builder)(nil)
 func (b *builder) Resource() rnode.UntypedResource { return b.resource }
 
 func (b *builder) SetResource(u rnode.UntypedResource) error {
-	r, ok := u.(TargetHttpProxy)
+	r, ok := u.(Resource)
 	if !ok {
 		return fmt.Errorf("XXX")
 	}
@@ -61,7 +61,7 @@ func (b *builder) SetResource(u rnode.UntypedResource) error {
 
 func (b *builder) SyncFromCloud(ctx context.Context, gcp cloud.Cloud) error {
 	return rnode.GenericGet[compute.TargetHttpProxy, alpha.TargetHttpProxy, beta.TargetHttpProxy](
-		ctx, gcp, "TargetHttpProxy", &targetHttpProxyOps{}, &targetHttpProxyTypeTrait{}, b)
+		ctx, gcp, "TargetHttpProxy", &targetHttpProxyOps{}, &TypeTrait{}, b)
 }
 
 func (b *builder) OutRefs() ([]rnode.ResourceRef, error) {

@@ -24,12 +24,14 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
+// Default TypeTrait for HealthCheck.
+//
 // https://cloud.google.com/compute/docs/reference/rest/v1/HealthChecks
-type typeTrait struct {
+type TypeTrait struct {
 	api.BaseTypeTrait[compute.HealthCheck, alpha.HealthCheck, beta.HealthCheck]
 }
 
-func (*typeTrait) FieldTraits(v meta.Version) *api.FieldTraits {
+func (*TypeTrait) FieldTraits(v meta.Version) *api.FieldTraits {
 	dt := api.NewFieldTraits()
 	// [Output Only]
 	dt.OutputOnly(api.Path{}.Pointer().Field("CreationTimestamp"))

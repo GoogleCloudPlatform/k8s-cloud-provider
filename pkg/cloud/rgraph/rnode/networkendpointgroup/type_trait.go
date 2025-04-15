@@ -24,12 +24,14 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
+// Default TypeTrait for NetworkEndpointGroup.
+//
 // https://cloud.google.com/compute/docs/reference/rest/v1/networkEndpointGroups
-type typeTrait struct {
+type TypeTrait struct {
 	api.BaseTypeTrait[compute.NetworkEndpointGroup, alpha.NetworkEndpointGroup, beta.NetworkEndpointGroup]
 }
 
-func (*typeTrait) FieldTraits(meta.Version) *api.FieldTraits {
+func (*TypeTrait) FieldTraits(meta.Version) *api.FieldTraits {
 	dt := api.NewFieldTraits()
 	// Built-ins
 	dt.OutputOnly(api.Path{}.Pointer().Field("Fingerprint"))

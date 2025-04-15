@@ -114,7 +114,7 @@ func TestTcpRoute(t *testing.T) {
 
 func buildNEG(graphBuilder *rgraph.Builder, name, zone string) (*cloud.ResourceID, error) {
 	negID := networkendpointgroup.ID(TestFlags.Project, meta.ZonalKey(resourceName(name), zone))
-	negMut := networkendpointgroup.NewMutableNetworkEndpointGroup(TestFlags.Project, negID.Key)
+	negMut := networkendpointgroup.New(TestFlags.Project, negID.Key)
 	negMut.Access(func(x *compute.NetworkEndpointGroup) {
 		x.Zone = zone
 		x.NetworkEndpointType = "GCE_VM_IP_PORT"
@@ -161,7 +161,7 @@ func buildBackendServiceWithNEG(graphBuilder *rgraph.Builder, name string, hcID,
 
 func buildTCPRoute(graphBuilder *rgraph.Builder, name, meshURL string, rules []*networkservices.TcpRouteRouteRule) (*cloud.ResourceID, error) {
 	tcpID := tcproute.ID(TestFlags.Project, meta.GlobalKey(resourceName(name)))
-	tcpMutRes := tcproute.NewMutableTcpRoute(TestFlags.Project, tcpID.Key)
+	tcpMutRes := tcproute.New(TestFlags.Project, tcpID.Key)
 
 	tcpMutRes.Access(func(x *networkservices.TcpRoute) {
 		x.Description = "tcp route for rGraph test"
@@ -191,7 +191,7 @@ type routesServices struct {
 
 func buildTCPRouteWithBackends(graphBuilder *rgraph.Builder, name, meshURL string, services []routesServices) (*cloud.ResourceID, error) {
 	tcpID := tcproute.ID(TestFlags.Project, meta.GlobalKey(resourceName(name)))
-	tcpMutRes := tcproute.NewMutableTcpRoute(TestFlags.Project, tcpID.Key)
+	tcpMutRes := tcproute.New(TestFlags.Project, tcpID.Key)
 
 	tcpMutRes.Access(func(x *networkservices.TcpRoute) {
 		x.Description = "tcp route for rGraph test"

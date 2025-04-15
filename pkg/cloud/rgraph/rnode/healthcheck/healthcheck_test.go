@@ -33,7 +33,7 @@ const projectID = "proj-1"
 
 func TestHealthCheckSchema(t *testing.T) {
 	key := meta.GlobalKey("key-1")
-	x := NewMutableHealthCheck(projectID, key)
+	x := New(projectID, key)
 	if err := x.CheckSchema(); err != nil {
 		t.Fatalf("CheckSchema() = %v, want nil", err)
 	}
@@ -73,7 +73,7 @@ func newDefaultBetaHC() beta.HealthCheck {
 }
 func TestHealthCheckBuilder(t *testing.T) {
 	id := ID(projectID, meta.GlobalKey("hc-1"))
-	hcMutRes := NewMutableHealthCheck(projectID, id.Key)
+	hcMutRes := New(projectID, id.Key)
 	hc := newDefaultHC()
 	err := hcMutRes.Access(func(x *compute.HealthCheck) {
 		*x = hc
@@ -90,7 +90,7 @@ func TestHealthCheckBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("b.Build() = %v, want nil", err)
 	}
-	res := node.Resource().(HealthCheck)
+	res := node.Resource().(Resource)
 	ga, err := res.ToGA()
 	if err != nil {
 		t.Fatalf("hcNode.resource.ToGA() = %v, want nil", err)
@@ -108,7 +108,7 @@ func TestHealthCheckBuilder(t *testing.T) {
 
 func TestHealthCheckSetAllRequiredFields(t *testing.T) {
 	id := ID(projectID, meta.GlobalKey("hc-1"))
-	hcMutRes := NewMutableHealthCheck(projectID, id.Key)
+	hcMutRes := New(projectID, id.Key)
 	err := hcMutRes.Access(func(x *compute.HealthCheck) {
 		x.Name = "hc-1"
 	})
@@ -152,7 +152,7 @@ func TestHealthCheckSetAllRequiredFields(t *testing.T) {
 
 func TestHealthCheckAlphaFields(t *testing.T) {
 	id := ID(projectID, meta.GlobalKey("hc-1"))
-	hcMutRes := NewMutableHealthCheck(projectID, id.Key)
+	hcMutRes := New(projectID, id.Key)
 	err := hcMutRes.Access(func(x *compute.HealthCheck) {
 		x.Name = "hc-1"
 		x.HealthyThreshold = 10
@@ -208,7 +208,7 @@ func TestHealthCheckAlphaFields(t *testing.T) {
 }
 func TestHealthCheckBeta(t *testing.T) {
 	id := ID(projectID, meta.GlobalKey("hc-1"))
-	hcMutRes := NewMutableHealthCheck(projectID, id.Key)
+	hcMutRes := New(projectID, id.Key)
 	err := hcMutRes.AccessBeta(func(x *beta.HealthCheck) {
 		x.Name = "hc-1"
 		x.HealthyThreshold = 10
@@ -247,7 +247,7 @@ func TestHealthCheckBeta(t *testing.T) {
 
 func buildHCNode(t *testing.T, name string, hc compute.HealthCheck) rnode.Node {
 	id := ID(projectID, meta.GlobalKey(name))
-	hcMutRes := NewMutableHealthCheck(projectID, id.Key)
+	hcMutRes := New(projectID, id.Key)
 	err := hcMutRes.Access(func(x *compute.HealthCheck) {
 		*x = hc
 	})
@@ -294,7 +294,7 @@ func TestHealthCheckDiff(t *testing.T) {
 
 	//compare alpha and ga node
 	id := ID(projectID, meta.GlobalKey("hc-1"))
-	hcMutRes := NewMutableHealthCheck(projectID, id.Key)
+	hcMutRes := New(projectID, id.Key)
 	err = hcMutRes.Access(func(x *compute.HealthCheck) {
 		*x = hc
 	})
@@ -327,7 +327,7 @@ func TestHealthCheckDiff(t *testing.T) {
 	// compare with fake Node
 	fakeId := ID(projectID, meta.GlobalKey("fake-resource"))
 	fakeBuilder := fake.NewBuilder(fakeId)
-	fakeRes := fake.NewMutableFake(projectID, fakeId.Key)
+	fakeRes := fake.New(projectID, fakeId.Key)
 	res, err := fakeRes.Freeze()
 	fakeBuilder.SetResource(res)
 	fakeNode, err := fakeBuilder.Build()

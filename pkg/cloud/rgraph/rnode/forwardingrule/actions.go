@@ -48,7 +48,7 @@ func forwardingRuleSetLabels(
 	return fmt.Errorf("forwardingRuleMethodsByScope: invalid scope %v", key.Type())
 }
 
-func newForwardingRuleCreateAction(id *cloud.ResourceID, res ForwardingRule, want exec.EventList) exec.Action {
+func newForwardingRuleCreateAction(id *cloud.ResourceID, res Resource, want exec.EventList) exec.Action {
 	return &forwardingRuleCreateAction{
 		ActionBase: exec.ActionBase{Want: want},
 		id:         id,
@@ -59,7 +59,7 @@ func newForwardingRuleCreateAction(id *cloud.ResourceID, res ForwardingRule, wan
 type forwardingRuleCreateAction struct {
 	exec.ActionBase
 	id  *cloud.ResourceID
-	res ForwardingRule
+	res Resource
 }
 
 func (act *forwardingRuleCreateAction) Run(ctx context.Context, cl cloud.Cloud) (exec.EventList, error) {
@@ -73,7 +73,7 @@ func (act *forwardingRuleCreateAction) Run(ctx context.Context, cl cloud.Cloud) 
 	ga, _ := act.res.ToGA()
 	labels := ga.Labels
 	if labels != nil && len(labels) > 0 {
-		res, err := ops.GetFuncs(cl).Do(ctx, meta.VersionGA, act.id, &typeTrait{})
+		res, err := ops.GetFuncs(cl).Do(ctx, meta.VersionGA, act.id, &TypeTrait{})
 		if err != nil {
 			return nil, err
 

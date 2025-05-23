@@ -40,7 +40,7 @@ type Builder struct {
 	FakeOutRefs []rnode.ResourceRef
 	OutRefsErr  error
 
-	resource Fake
+	resource Resource
 
 	FakeSyncError error
 }
@@ -51,7 +51,7 @@ var _ rnode.Builder = (*Builder)(nil)
 func (b *Builder) Resource() rnode.UntypedResource { return nil }
 
 func (b *Builder) SetResource(u rnode.UntypedResource) error {
-	r, ok := u.(Fake)
+	r, ok := u.(Resource)
 	if !ok {
 		return fmt.Errorf("Fake: invalid type for SetResource: %T", u)
 	}

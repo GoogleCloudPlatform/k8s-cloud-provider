@@ -28,7 +28,7 @@ import (
 
 type urlMapNode struct {
 	rnode.NodeBase
-	resource UrlMap
+	resource Resource
 }
 
 var _ rnode.Node = (*urlMapNode)(nil)

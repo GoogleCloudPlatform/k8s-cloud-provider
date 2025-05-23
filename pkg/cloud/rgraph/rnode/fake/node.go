@@ -25,7 +25,7 @@ import (
 
 type fakeNode struct {
 	rnode.NodeBase
-	resource Fake
+	resource Resource
 }
 
 var _ rnode.Node = (*fakeNode)(nil)
@@ -33,7 +33,7 @@ var _ rnode.Node = (*fakeNode)(nil)
 func (n *fakeNode) Resource() rnode.UntypedResource { return n.resource }
 
 func (n *fakeNode) Diff(gotNode rnode.Node) (*rnode.PlanDetails, error) {
-	gotRes, ok := gotNode.Resource().(Fake)
+	gotRes, ok := gotNode.Resource().(Resource)
 	if !ok {
 		return nil, fmt.Errorf("fakeNode %s: invalid type to Diff: %T", n.ID(), gotNode.Resource())
 	}

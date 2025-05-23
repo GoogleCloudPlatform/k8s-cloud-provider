@@ -24,12 +24,14 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
+// Default TypeTrait for BackendService.
+//
 // https://cloud.google.com/compute/docs/reference/rest/v1/backendServices
-type typeTrait struct {
+type TypeTrait struct {
 	api.BaseTypeTrait[compute.BackendService, alpha.BackendService, beta.BackendService]
 }
 
-func (*typeTrait) FieldTraits(v meta.Version) *api.FieldTraits {
+func (*TypeTrait) FieldTraits(v meta.Version) *api.FieldTraits {
 	dt := api.NewFieldTraits()
 	// Built-ins
 	dt.OutputOnly(api.Path{}.Pointer().Field("Fingerprint"))

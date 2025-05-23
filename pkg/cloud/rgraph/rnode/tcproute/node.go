@@ -28,7 +28,7 @@ import (
 
 type tcpRouteNode struct {
 	rnode.NodeBase
-	resource TcpRoute
+	resource Resource
 }
 
 var _ rnode.Node = (*tcpRouteNode)(nil)

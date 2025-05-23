@@ -44463,6 +44463,7 @@ type AlphaTargetHttpsProxies interface {
 	List(ctx context.Context, fl *filter.F, options ...Option) ([]*computealpha.TargetHttpsProxy, error)
 	Insert(ctx context.Context, key *meta.Key, obj *computealpha.TargetHttpsProxy, options ...Option) error
 	Delete(ctx context.Context, key *meta.Key, options ...Option) error
+	Patch(context.Context, *meta.Key, *computealpha.TargetHttpsProxy, ...Option) error
 	SetCertificateMap(context.Context, *meta.Key, *computealpha.TargetHttpsProxiesSetCertificateMapRequest, ...Option) error
 	SetSslCertificates(context.Context, *meta.Key, *computealpha.TargetHttpsProxiesSetSslCertificatesRequest, ...Option) error
 	SetSslPolicy(context.Context, *meta.Key, *computealpha.SslPolicyReference, ...Option) error
@@ -44506,6 +44507,7 @@ type MockAlphaTargetHttpsProxies struct {
 	ListHook               func(ctx context.Context, fl *filter.F, m *MockAlphaTargetHttpsProxies, options ...Option) (bool, []*computealpha.TargetHttpsProxy, error)
 	InsertHook             func(ctx context.Context, key *meta.Key, obj *computealpha.TargetHttpsProxy, m *MockAlphaTargetHttpsProxies, options ...Option) (bool, error)
 	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockAlphaTargetHttpsProxies, options ...Option) (bool, error)
+	PatchHook              func(context.Context, *meta.Key, *computealpha.TargetHttpsProxy, *MockAlphaTargetHttpsProxies, ...Option) error
 	SetCertificateMapHook  func(context.Context, *meta.Key, *computealpha.TargetHttpsProxiesSetCertificateMapRequest, *MockAlphaTargetHttpsProxies, ...Option) error
 	SetSslCertificatesHook func(context.Context, *meta.Key, *computealpha.TargetHttpsProxiesSetSslCertificatesRequest, *MockAlphaTargetHttpsProxies, ...Option) error
 	SetSslPolicyHook       func(context.Context, *meta.Key, *computealpha.SslPolicyReference, *MockAlphaTargetHttpsProxies, ...Option) error
@@ -44654,6 +44656,14 @@ func (m *MockAlphaTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key,
 // Obj wraps the object for use in the mock.
 func (m *MockAlphaTargetHttpsProxies) Obj(o *computealpha.TargetHttpsProxy) *MockTargetHttpsProxiesObj {
 	return &MockTargetHttpsProxiesObj{o}
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockAlphaTargetHttpsProxies) Patch(ctx context.Context, key *meta.Key, arg0 *computealpha.TargetHttpsProxy, options ...Option) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetCertificateMap is a mock for the corresponding method.
@@ -44872,6 +44882,50 @@ func (g *GCEAlphaTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key, 
 	return err
 }
 
+// Patch is a method on GCEAlphaTargetHttpsProxies.
+func (g *GCEAlphaTargetHttpsProxies) Patch(ctx context.Context, key *meta.Key, arg0 *computealpha.TargetHttpsProxy, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.Patch(%v, %v, %v, ...): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEAlphaTargetHttpsProxies.Patch(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "alpha", "TargetHttpsProxies")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("alpha"),
+		Service:   "TargetHttpsProxies",
+		Resource:  key,
+	}
+	klog.V(5).Infof("GCEAlphaTargetHttpsProxies.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEAlphaTargetHttpsProxies.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Alpha.TargetHttpsProxies.Patch(projectID, key.Name, arg0)
+	call.Context(ctx)
+	handleHeaderOptions(&opts, call.Header())
+	op, err := call.Do()
+	klog.V(4).Infof("GCEAlphaTargetHttpsProxies.Patch(%v, %v, ...) = %+v", ctx, key, err)
+
+	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
+	klog.V(4).Infof("GCEAlphaTargetHttpsProxies.Patch(%v, %v, ...) = %+v", ctx, key, err)
+	return err
+}
+
 // SetCertificateMap is a method on GCEAlphaTargetHttpsProxies.
 func (g *GCEAlphaTargetHttpsProxies) SetCertificateMap(ctx context.Context, key *meta.Key, arg0 *computealpha.TargetHttpsProxiesSetCertificateMapRequest, options ...Option) error {
 	opts := mergeOptions(options)
@@ -45054,6 +45108,7 @@ type BetaTargetHttpsProxies interface {
 	List(ctx context.Context, fl *filter.F, options ...Option) ([]*computebeta.TargetHttpsProxy, error)
 	Insert(ctx context.Context, key *meta.Key, obj *computebeta.TargetHttpsProxy, options ...Option) error
 	Delete(ctx context.Context, key *meta.Key, options ...Option) error
+	Patch(context.Context, *meta.Key, *computebeta.TargetHttpsProxy, ...Option) error
 	SetCertificateMap(context.Context, *meta.Key, *computebeta.TargetHttpsProxiesSetCertificateMapRequest, ...Option) error
 	SetSslCertificates(context.Context, *meta.Key, *computebeta.TargetHttpsProxiesSetSslCertificatesRequest, ...Option) error
 	SetSslPolicy(context.Context, *meta.Key, *computebeta.SslPolicyReference, ...Option) error
@@ -45097,6 +45152,7 @@ type MockBetaTargetHttpsProxies struct {
 	ListHook               func(ctx context.Context, fl *filter.F, m *MockBetaTargetHttpsProxies, options ...Option) (bool, []*computebeta.TargetHttpsProxy, error)
 	InsertHook             func(ctx context.Context, key *meta.Key, obj *computebeta.TargetHttpsProxy, m *MockBetaTargetHttpsProxies, options ...Option) (bool, error)
 	DeleteHook             func(ctx context.Context, key *meta.Key, m *MockBetaTargetHttpsProxies, options ...Option) (bool, error)
+	PatchHook              func(context.Context, *meta.Key, *computebeta.TargetHttpsProxy, *MockBetaTargetHttpsProxies, ...Option) error
 	SetCertificateMapHook  func(context.Context, *meta.Key, *computebeta.TargetHttpsProxiesSetCertificateMapRequest, *MockBetaTargetHttpsProxies, ...Option) error
 	SetSslCertificatesHook func(context.Context, *meta.Key, *computebeta.TargetHttpsProxiesSetSslCertificatesRequest, *MockBetaTargetHttpsProxies, ...Option) error
 	SetSslPolicyHook       func(context.Context, *meta.Key, *computebeta.SslPolicyReference, *MockBetaTargetHttpsProxies, ...Option) error
@@ -45245,6 +45301,14 @@ func (m *MockBetaTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key, 
 // Obj wraps the object for use in the mock.
 func (m *MockBetaTargetHttpsProxies) Obj(o *computebeta.TargetHttpsProxy) *MockTargetHttpsProxiesObj {
 	return &MockTargetHttpsProxiesObj{o}
+}
+
+// Patch is a mock for the corresponding method.
+func (m *MockBetaTargetHttpsProxies) Patch(ctx context.Context, key *meta.Key, arg0 *computebeta.TargetHttpsProxy, options ...Option) error {
+	if m.PatchHook != nil {
+		return m.PatchHook(ctx, key, arg0, m)
+	}
+	return nil
 }
 
 // SetCertificateMap is a mock for the corresponding method.
@@ -45460,6 +45524,50 @@ func (g *GCEBetaTargetHttpsProxies) Delete(ctx context.Context, key *meta.Key, o
 
 	err = g.s.WaitForCompletion(ctx, op)
 	klog.V(4).Infof("GCEBetaTargetHttpsProxies.Delete(%v, %v) = %v", ctx, key, err)
+	return err
+}
+
+// Patch is a method on GCEBetaTargetHttpsProxies.
+func (g *GCEBetaTargetHttpsProxies) Patch(ctx context.Context, key *meta.Key, arg0 *computebeta.TargetHttpsProxy, options ...Option) error {
+	opts := mergeOptions(options)
+	klog.V(5).Infof("GCEBetaTargetHttpsProxies.Patch(%v, %v, %v, ...): called", ctx, key, opts)
+
+	if !key.Valid() {
+		klog.V(2).Infof("GCEBetaTargetHttpsProxies.Patch(%v, %v, %v, ...): key is invalid (%#v)", ctx, key, opts, key)
+		return fmt.Errorf("invalid GCE key (%+v)", key)
+	}
+	projectID := getProjectID(ctx, g.s.ProjectRouter, opts, "beta", "TargetHttpsProxies")
+	ck := &CallContextKey{
+		ProjectID: projectID,
+		Operation: "Patch",
+		Version:   meta.Version("beta"),
+		Service:   "TargetHttpsProxies",
+		Resource:  key,
+	}
+	klog.V(5).Infof("GCEBetaTargetHttpsProxies.Patch(%v, %v, ...): projectID = %v, ck = %+v", ctx, key, projectID, ck)
+	callObserverStart(ctx, ck)
+	if err := g.s.RateLimiter.Accept(ctx, ck); err != nil {
+		klog.V(4).Infof("GCEBetaTargetHttpsProxies.Patch(%v, %v, ...): RateLimiter error: %v", ctx, key, err)
+		return err
+	}
+	call := g.s.Beta.TargetHttpsProxies.Patch(projectID, key.Name, arg0)
+	call.Context(ctx)
+	handleHeaderOptions(&opts, call.Header())
+	op, err := call.Do()
+	klog.V(4).Infof("GCEBetaTargetHttpsProxies.Patch(%v, %v, ...) = %+v", ctx, key, err)
+
+	if err != nil {
+		callObserverEnd(ctx, ck, err)
+		g.s.RateLimiter.Observe(ctx, err, ck)
+
+		return err
+	}
+
+	err = g.s.WaitForCompletion(ctx, op)
+	callObserverEnd(ctx, ck, err)
+	g.s.RateLimiter.Observe(ctx, err, ck) // XXX
+
+	klog.V(4).Infof("GCEBetaTargetHttpsProxies.Patch(%v, %v, ...) = %+v", ctx, key, err)
 	return err
 }
 

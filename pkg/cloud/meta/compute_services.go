@@ -994,6 +994,7 @@ var ComputeServices = []*ServiceInfo{
 		keyType:     Global,
 		serviceType: reflect.TypeOf(&alpha.TargetHttpsProxiesService{}),
 		additionalMethods: []string{
+			"Patch",
 			"SetCertificateMap",
 			"SetSslCertificates",
 			"SetSslPolicy",
@@ -1008,6 +1009,7 @@ var ComputeServices = []*ServiceInfo{
 		keyType:     Global,
 		serviceType: reflect.TypeOf(&beta.TargetHttpsProxiesService{}),
 		additionalMethods: []string{
+			"Patch",
 			"SetCertificateMap",
 			"SetSslCertificates",
 			"SetSslPolicy",

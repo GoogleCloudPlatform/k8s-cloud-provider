@@ -25,9 +25,13 @@ import (
 	beta "google.golang.org/api/networkservices/v1beta1"
 )
 
+const (
+	resourcePlural = "tcpRoutes"
+)
+
 func ID(project string, key *meta.Key) *cloud.ResourceID {
 	return &cloud.ResourceID{
-		Resource:  "tcpRoutes",
+		Resource:  resourcePlural,
 		APIGroup:  meta.APIGroupNetworkServices,
 		ProjectID: project,
 		Key:       key,

@@ -18,40 +18,38 @@ package all
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud"
 	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode"
-	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/address"
-	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/backendservice"
-	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/fake"
-	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/forwardingrule"
-	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/healthcheck"
-	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/networkendpointgroup"
-	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/targethttpproxy"
-	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/tcproute"
-	"github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/rgraph/rnode/urlmap"
 )
 
+type newBuilderFunc func(id *cloud.ResourceID) rnode.Builder
+
+var (
+	builderFuncsLock sync.RWMutex
+	builderFuncs     = map[string]newBuilderFunc{}
+)
+
+// RegisterBuilder registers constructors. shortName is the plural
+// lowerCamelCase resource name (e.g. "addresses"). This should only be called
+// from init().
+func RegisterBuilder(pluralName string, f func(id *cloud.ResourceID) rnode.Builder) {
+	builderFuncsLock.Lock()
+	defer builderFuncsLock.Unlock()
+
+	if _, ok := builderFuncs[pluralName]; ok {
+		panic(fmt.Sprintf("duplicate registration of Builder %q", pluralName))
+	}
+	builderFuncs[pluralName] = f
+}
+
 func NewBuilderByID(id *cloud.ResourceID) (rnode.Builder, error) {
-	switch id.Resource {
-	case "addresses":
-		return address.NewBuilder(id), nil
-	case "backendServices":
-		return backendservice.NewBuilder(id), nil
-	case "fakes":
-		return fake.NewBuilder(id), nil
-	case "forwardingRules":
-		return forwardingrule.NewBuilder(id), nil
-	case "healthChecks":
-		return healthcheck.NewBuilder(id), nil
-	case "networkEndpointGroups":
-		return networkendpointgroup.NewBuilder(id), nil
-	case "targetHttpProxies":
-		return targethttpproxy.NewBuilder(id), nil
-	case "urlMaps":
-		return urlmap.NewBuilder(id), nil
-	case "tcpRoute":
-		return tcproute.NewBuilder(id), nil
+	builderFuncsLock.RLock()
+	defer builderFuncsLock.RUnlock()
+
+	if f, ok := builderFuncs[id.Resource]; ok {
+		return f(id), nil
 	}
 	return nil, fmt.Errorf("NewBuilderByID: invalid Resource %q", id.Resource)
 }

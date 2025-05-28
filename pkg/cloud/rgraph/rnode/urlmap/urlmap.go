@@ -26,9 +26,13 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
+const (
+	resourcePlural = "urlMaps"
+)
+
 func ID(project string, key *meta.Key) *cloud.ResourceID {
 	return &cloud.ResourceID{
-		Resource:  "urlMaps",
+		Resource:  resourcePlural,
 		APIGroup:  meta.APIGroupCompute,
 		ProjectID: project,
 		Key:       key,

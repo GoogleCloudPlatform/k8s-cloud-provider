@@ -40,15 +40,12 @@ func ID(project string, key *meta.Key) *cloud.ResourceID {
 	}
 }
 
-type MutableBackendService = api.MutableResource[compute.BackendService, alpha.BackendService, beta.BackendService]
+type Resource = api.Resource[compute.BackendService, alpha.BackendService, beta.BackendService]
+type Mutable = api.MutableResource[compute.BackendService, alpha.BackendService, beta.BackendService]
 
-func NewMutableBackendService(project string, key *meta.Key) MutableBackendService {
+func NewWithTraits(project string, key *meta.Key, tr api.TypeTrait[compute.BackendService, alpha.BackendService, beta.BackendService]) Mutable {
 	id := ID(project, key)
-	return api.NewResource[
-		compute.BackendService,
-		alpha.BackendService,
-		beta.BackendService,
-	](id, &typeTrait{})
+	return api.NewResource[compute.BackendService, alpha.BackendService, beta.BackendService](id, tr)
 }
 
-type BackendService = api.Resource[compute.BackendService, alpha.BackendService, beta.BackendService]
+func New(project string, key *meta.Key) Mutable { return NewWithTraits(project, key, &TypeTrait{}) }

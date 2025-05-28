@@ -28,7 +28,7 @@ import (
 
 type networkEndpointGroupNode struct {
 	rnode.NodeBase
-	resource NetworkEndpointGroup
+	resource Resource
 }
 
 var _ rnode.Node = (*networkEndpointGroupNode)(nil)

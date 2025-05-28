@@ -24,12 +24,14 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
+// Default TypeTrait for ForwardingRule.
+//
 // https://cloud.google.com/compute/docs/reference/rest/beta/forwardingRules
-type typeTrait struct {
+type TypeTrait struct {
 	api.BaseTypeTrait[compute.ForwardingRule, alpha.ForwardingRule, beta.ForwardingRule]
 }
 
-func (*typeTrait) FieldTraits(meta.Version) *api.FieldTraits {
+func (*TypeTrait) FieldTraits(meta.Version) *api.FieldTraits {
 	dt := api.NewFieldTraits()
 
 	dt.OutputOnly(api.Path{}.Pointer().Field("BaseForwardingRule"))

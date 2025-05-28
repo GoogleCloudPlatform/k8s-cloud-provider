@@ -36,7 +36,7 @@ func NewBuilder(id *cloud.ResourceID) rnode.Builder {
 	return b
 }
 
-func NewBuilderWithResource(r Address) rnode.Builder {
+func NewBuilderWithResource(r Resource) rnode.Builder {
 	b := &builder{resource: r}
 	b.Init(r.ResourceID(), rnode.NodeExists, rnode.OwnershipUnknown, r)
 	return b
@@ -47,7 +47,7 @@ func NewBuilderWithResource(r Address) rnode.Builder {
 
 type builder struct {
 	rnode.BuilderBase
-	resource Address
+	resource Resource
 }
 
 // builder implements node.Builder.
@@ -56,7 +56,7 @@ var _ rnode.Builder = (*builder)(nil)
 func (b *builder) Resource() rnode.UntypedResource { return b.resource }
 
 func (b *builder) SetResource(u rnode.UntypedResource) error {
-	r, ok := u.(Address)
+	r, ok := u.(Resource)
 	if !ok {
 		return fmt.Errorf("XXX")
 	}
@@ -65,7 +65,7 @@ func (b *builder) SetResource(u rnode.UntypedResource) error {
 }
 
 func (b *builder) SyncFromCloud(ctx context.Context, gcp cloud.Cloud) error {
-	return rnode.GenericGet[compute.Address, alpha.Address, beta.Address](ctx, gcp, "Address", &ops{}, &typeTrait{}, b)
+	return rnode.GenericGet[compute.Address, alpha.Address, beta.Address](ctx, gcp, "Address", &ops{}, &TypeTrait{}, b)
 }
 
 func (b *builder) OutRefs() ([]rnode.ResourceRef, error) {

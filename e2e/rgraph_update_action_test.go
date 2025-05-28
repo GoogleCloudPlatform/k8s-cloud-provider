@@ -34,7 +34,7 @@ import (
 func buildBackendService(graphBuilder *rgraph.Builder, name string, hcID *cloud.ResourceID, port int64) (*cloud.ResourceID, error) {
 	bsID := backendservice.ID(TestFlags.Project, meta.GlobalKey(resourceName(name)))
 
-	bsMutResource := backendservice.NewMutableBackendService(TestFlags.Project, bsID.Key)
+	bsMutResource := backendservice.New(TestFlags.Project, bsID.Key)
 	bsMutResource.Access(func(x *compute.BackendService) {
 		x.LoadBalancingScheme = "INTERNAL_SELF_MANAGED"
 		x.Protocol = "TCP"
@@ -61,7 +61,7 @@ func buildBackendService(graphBuilder *rgraph.Builder, name string, hcID *cloud.
 
 func buildHealthCheck(graphBuilder *rgraph.Builder, name string, checkIntervalSec int64) (*cloud.ResourceID, error) {
 	hcID := healthcheck.ID(TestFlags.Project, meta.GlobalKey(resourceName(name)))
-	hcMutRes := healthcheck.NewMutableHealthCheck(TestFlags.Project, hcID.Key)
+	hcMutRes := healthcheck.New(TestFlags.Project, hcID.Key)
 	hcMutRes.Access(func(x *compute.HealthCheck) {
 		x.CheckIntervalSec = checkIntervalSec
 		x.HealthyThreshold = 5
@@ -87,7 +87,7 @@ func buildHealthCheck(graphBuilder *rgraph.Builder, name string, checkIntervalSe
 }
 func buildTCPHealthCheck(graphBuilder *rgraph.Builder, name string, checkIntervalSec int64) (*cloud.ResourceID, error) {
 	hcID := healthcheck.ID(TestFlags.Project, meta.GlobalKey(resourceName(name)))
-	hcMutRes := healthcheck.NewMutableHealthCheck(TestFlags.Project, hcID.Key)
+	hcMutRes := healthcheck.New(TestFlags.Project, hcID.Key)
 	hcMutRes.Access(func(x *compute.HealthCheck) {
 		x.CheckIntervalSec = checkIntervalSec
 		x.HealthyThreshold = 5

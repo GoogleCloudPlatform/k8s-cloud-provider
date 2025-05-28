@@ -97,8 +97,8 @@ type AddressBuilder struct{ ResourceBuilder }
 
 func (b *AddressBuilder) ID() *cloud.ResourceID { return address.ID(b.Project, b.Key()) }
 func (b *AddressBuilder) SelfLink() string      { return b.ID().SelfLink(meta.VersionGA) }
-func (b *AddressBuilder) Resource() address.MutableAddress {
-	return address.NewMutableAddress(b.Project, b.Key())
+func (b *AddressBuilder) Resource() address.Mutable {
+	return address.New(b.Project, b.Key())
 }
 
 func (b *AddressBuilder) Build(f func(*compute.Address)) rnode.Builder {
@@ -119,8 +119,8 @@ func (b *BackendServiceBuilder) ID() *cloud.ResourceID {
 	return backendservice.ID(b.Project, b.Key())
 }
 func (b *BackendServiceBuilder) SelfLink() string { return b.ID().SelfLink(meta.VersionGA) }
-func (b *BackendServiceBuilder) Resource() backendservice.MutableBackendService {
-	return backendservice.NewMutableBackendService(b.Project, b.Key())
+func (b *BackendServiceBuilder) Resource() backendservice.Mutable {
+	return backendservice.New(b.Project, b.Key())
 }
 
 func (b *BackendServiceBuilder) Build(f func(*compute.BackendService)) rnode.Builder {
@@ -141,8 +141,8 @@ func (b *ForwardingRuleBuilder) ID() *cloud.ResourceID {
 	return forwardingrule.ID(b.Project, b.Key())
 }
 func (b *ForwardingRuleBuilder) SelfLink() string { return b.ID().SelfLink(meta.VersionGA) }
-func (b *ForwardingRuleBuilder) Resource() forwardingrule.MutableForwardingRule {
-	return forwardingrule.NewMutableForwardingRule(b.Project, b.Key())
+func (b *ForwardingRuleBuilder) Resource() forwardingrule.Mutable {
+	return forwardingrule.New(b.Project, b.Key())
 }
 
 func (b *ForwardingRuleBuilder) Build(f func(*compute.ForwardingRule)) rnode.Builder {
@@ -161,8 +161,8 @@ type HealthCheckBuilder struct{ ResourceBuilder }
 
 func (b *HealthCheckBuilder) ID() *cloud.ResourceID { return healthcheck.ID(b.Project, b.Key()) }
 func (b *HealthCheckBuilder) SelfLink() string      { return b.ID().SelfLink(meta.VersionGA) }
-func (b *HealthCheckBuilder) Resource() healthcheck.MutableHealthCheck {
-	return healthcheck.NewMutableHealthCheck(b.Project, b.Key())
+func (b *HealthCheckBuilder) Resource() healthcheck.Mutable {
+	return healthcheck.New(b.Project, b.Key())
 }
 
 func (b *HealthCheckBuilder) Build(f func(*compute.HealthCheck)) rnode.Builder {
@@ -183,8 +183,8 @@ func (b *NetworkEndpointGroupBuilder) ID() *cloud.ResourceID {
 	return networkendpointgroup.ID(b.Project, b.Key())
 }
 func (b *NetworkEndpointGroupBuilder) SelfLink() string { return b.ID().SelfLink(meta.VersionGA) }
-func (b *NetworkEndpointGroupBuilder) Resource() networkendpointgroup.MutableNetworkEndpointGroup {
-	return networkendpointgroup.NewMutableNetworkEndpointGroup(b.Project, b.Key())
+func (b *NetworkEndpointGroupBuilder) Resource() networkendpointgroup.Mutable {
+	return networkendpointgroup.New(b.Project, b.Key())
 }
 
 func (b *NetworkEndpointGroupBuilder) Build(f func(*compute.NetworkEndpointGroup)) rnode.Builder {
@@ -205,8 +205,8 @@ func (b *TargetHttpProxyBuilder) ID() *cloud.ResourceID {
 	return targethttpproxy.ID(b.Project, b.Key())
 }
 func (b *TargetHttpProxyBuilder) SelfLink() string { return b.ID().SelfLink(meta.VersionGA) }
-func (b *TargetHttpProxyBuilder) Resource() targethttpproxy.MutableTargetHttpProxy {
-	return targethttpproxy.NewMutableTargetHttpProxy(b.Project, b.Key())
+func (b *TargetHttpProxyBuilder) Resource() targethttpproxy.Mutable {
+	return targethttpproxy.New(b.Project, b.Key())
 }
 
 func (b *TargetHttpProxyBuilder) Build(f func(*compute.TargetHttpProxy)) rnode.Builder {
@@ -225,8 +225,8 @@ type UrlMapBuilder struct{ ResourceBuilder }
 
 func (b *UrlMapBuilder) ID() *cloud.ResourceID { return urlmap.ID(b.Project, b.Key()) }
 func (b *UrlMapBuilder) SelfLink() string      { return b.ID().SelfLink(meta.VersionGA) }
-func (b *UrlMapBuilder) Resource() urlmap.MutableUrlMap {
-	return urlmap.NewMutableUrlMap(b.Project, b.Key())
+func (b *UrlMapBuilder) Resource() urlmap.Mutable {
+	return urlmap.New(b.Project, b.Key())
 }
 
 func (b *UrlMapBuilder) Build(f func(*compute.UrlMap)) rnode.Builder {
@@ -245,8 +245,8 @@ type TcpRouteBuilder struct{ ResourceBuilder }
 
 func (b *TcpRouteBuilder) ID() *cloud.ResourceID { return tcproute.ID(b.Project, b.Key()) }
 func (b *TcpRouteBuilder) SelfLink() string      { return b.ID().SelfLink(meta.VersionGA) }
-func (b *TcpRouteBuilder) Resource() tcproute.MutableTcpRoute {
-	return tcproute.NewMutableTcpRoute(b.Project, b.Key())
+func (b *TcpRouteBuilder) Resource() tcproute.Mutable {
+	return tcproute.New(b.Project, b.Key())
 }
 
 func (b *TcpRouteBuilder) Build(f func(*networkservices.TcpRoute)) rnode.Builder {

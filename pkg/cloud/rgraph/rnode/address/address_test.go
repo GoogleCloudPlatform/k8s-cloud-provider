@@ -26,7 +26,7 @@ import (
 func TestAddressSchema(t *testing.T) {
 	const proj = "proj-1"
 	key := meta.GlobalKey("key-1")
-	x := NewMutableAddress(proj, key)
+	x := New(proj, key)
 	if err := x.CheckSchema(); err != nil {
 		t.Fatalf("CheckSchema() = %v, want nil", err)
 	}
@@ -83,9 +83,9 @@ func TestAddressFieldTraits(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			a := NewMutableAddress("p1", meta.GlobalKey("addr-1"))
+			a := New("p1", meta.GlobalKey("addr-1"))
 			a.Set(tc.a)
-			b := NewMutableAddress("p1", meta.GlobalKey("addr-1"))
+			b := New("p1", meta.GlobalKey("addr-1"))
 			b.Set(tc.b)
 
 			fa, err := a.Freeze()

@@ -28,7 +28,7 @@ import (
 
 type healthCheckNode struct {
 	rnode.NodeBase
-	resource HealthCheck
+	resource Resource
 }
 
 var _ rnode.Node = (*healthCheckNode)(nil)

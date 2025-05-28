@@ -38,15 +38,12 @@ func ID(project string, key *meta.Key) *cloud.ResourceID {
 	}
 }
 
-type MutableTcpRoute = api.MutableResource[networkservices.TcpRoute, api.PlaceholderType, beta.TcpRoute]
+type Resource = api.Resource[networkservices.TcpRoute, api.PlaceholderType, beta.TcpRoute]
+type Mutable = api.MutableResource[networkservices.TcpRoute, api.PlaceholderType, beta.TcpRoute]
 
-func NewMutableTcpRoute(project string, key *meta.Key) MutableTcpRoute {
+func NewWithTraits(project string, key *meta.Key, tr api.TypeTrait[networkservices.TcpRoute, api.PlaceholderType, beta.TcpRoute]) Mutable {
 	id := ID(project, key)
-	return api.NewResource[
-		networkservices.TcpRoute,
-		api.PlaceholderType,
-		beta.TcpRoute,
-	](id, &tcpRouteTypeTrait{})
+	return api.NewResource[networkservices.TcpRoute, api.PlaceholderType, beta.TcpRoute](id, tr)
 }
 
-type TcpRoute = api.Resource[networkservices.TcpRoute, api.PlaceholderType, beta.TcpRoute]
+func New(project string, key *meta.Key) Mutable { return NewWithTraits(project, key, &TypeTrait{}) }

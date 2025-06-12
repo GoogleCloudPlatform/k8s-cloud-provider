@@ -864,20 +864,9 @@ func TestBetaFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("bsMutResource.AccessBeta(_) = %v, want nil", err)
 	}
-	bsMutResource.AccessBeta(func(x *beta.BackendService) {
-		x.Fingerprint = fingerprintStr
-	})
 	bsResource, err := bsMutResource.Freeze()
 	if err != nil {
 		t.Fatalf("bsMutResource.Freeze() = %v, want nil", err)
-	}
-	_, err = bsResource.ToGA()
-	if err == nil {
-		t.Fatalf("bsResource.ToGA() = %v, want error", err)
-	}
-	_, err = bsResource.ToBeta()
-	if err != nil {
-		t.Fatalf("bsResource.ToBeta() = %v, want nil", err)
 	}
 
 	bsBuilder := NewBuilderWithResource(bsResource)
@@ -885,13 +874,16 @@ func TestBetaFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("bsBuilder.Build() = %v, want nil", err)
 	}
-	gotNode := bsNode.(*backendServiceNode)
-	gotFingerprint, err := fingerprint(gotNode)
+
+	gotBs := bsNode.Resource().(BackendService)
+
+	betaResource, err := gotBs.ToBeta()
 	if err != nil {
-		t.Fatalf("fingerprint(_) = %v, want nil", err)
+		t.Fatalf("bsResource.ToBeta() = %v, want nil", err)
 	}
-	if gotFingerprint != fingerprintStr {
-		t.Fatalf("Fingerprint mismatch got: %s want: %s", gotFingerprint, fingerprintStr)
+
+	if betaResource.IpAddressSelectionPolicy != "IPV6_ONLY" {
+		t.Errorf("IpAddressSelectionPolicy mismatch got: %s want: %s", betaResource.IpAddressSelectionPolicy, "IPV6_ONLY")
 	}
 }
 

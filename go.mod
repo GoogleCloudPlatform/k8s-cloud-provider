@@ -1,12 +1,13 @@
 module github.com/GoogleCloudPlatform/k8s-cloud-provider
 
-go 1.21
+go 1.23.0
+
 toolchain go1.24.1
 
 require (
 	github.com/google/go-cmp v0.6.0
 	github.com/kr/pretty v0.3.0
-	golang.org/x/oauth2 v0.21.0
+	golang.org/x/oauth2 v0.27.0
 	google.golang.org/api v0.187.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/klog/v2 v2.120.1
